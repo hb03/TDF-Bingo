@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#ffd21a">
+<title>Tour-de-France Bingo</title>
+
+<!-- Einzige externe Ressource: Google Font "Fredoka" -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* ---------- Farb-Variablen (Tour-de-France-Palette) ---------- */
+  :root{
+    --gelb:  #ffd21a;
+    --gruen: #35a35f;
+    --rot:   #e23b45;
+    --blau:  #3d8bdd;
+    --ink:   #24303a;   /* dunkles Tintenblau für Text & Konturen */
+    --papier:#fbf7 ;    /* Hintergrund hell */
+    --papier:#fdfaf2;
+    --feld:  #ffffff;
+    --schatten: 0 3px 0 rgba(36,48,58,.18);
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html,body{ margin:0; padding:0; }
+
+  body{
+    font-family:'Fredoka', system-ui, sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 12% 8%,  rgba(61,139,221,.14), transparent 40%),
+      radial-gradient(circle at 88% 4%,  rgba(53,163,95,.14),  transparent 40%),
+      radial-gradient(circle at 50% 100%, rgba(255,210,26,.20), transparent 55%),
+      var(--papier);
+    min-height:100dvh;
+    padding:10px 10px 30px;
+    -webkit-text-size-adjust:100%;
+  }
+
+  /* ---------- Kopfbereich ---------- */
+  header{
+    max-width:620px;
+    margin:0 auto 10px;
+    text-align:center;
+  }
+  .titel{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-weight:700;
+    font-size:clamp(22px, 6vw, 34px);
+    line-height:1;
+    margin:4px 0 2px;
+  }
+  .titel .tri{ display:flex; gap:3px; }
+  .titel .tri span{ width:12px; height:22px; border-radius:3px; display:block; }
+  .subtitel{ font-size:14px; font-weight:500; opacity:.75; margin:0 0 10px; }
+
+  /* ---------- Bedien-Leiste ---------- */
+  .leiste{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:center;
+    max-width:620px;
+    margin:0 auto 8px;
+  }
+  button{
+    font-family:inherit;
+    font-weight:600;
+    font-size:15px;
+    color:var(--ink);
+    background:var(--feld);
+    border:2.5px solid var(--ink);
+    border-radius:14px;
+    padding:11px 15px;
+    min-height:48px;
+    cursor:pointer;
+    box-shadow:var(--schatten);
+    transition:transform .06s ease, box-shadow .06s ease, background .15s ease;
+    touch-action:manipulation;
+  }
+  button:active{ transform:translateY(2px); box-shadow:0 1px 0 rgba(36,48,58,.18); }
+  button.primaer{ background:var(--gelb); }
+  button.gruen{ background:var(--gruen); color:#fff; border-color:#1f7a43; }
+
+  /* ---------- Spieler-Tabs ---------- */
+  .tabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    justify-content:center;
+    max-width:620px;
+    margin:2px auto 10px;
+  }
+  .tab{
+    font-weight:600;
+    font-size:14px;
+    padding:8px 12px;
+    min-height:42px;
+    border:2.5px solid var(--ink);
+    border-radius:12px;
+    background:var(--feld);
+    box-shadow:var(--schatten);
+    cursor:pointer;
+    max-width:140px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .tab.aktiv{ background:var(--blau); color:#fff; border-color:#2765a7; }
+  .tab.aktiv.hatbingo{ background:var(--gruen); border-color:#1f7a43; }
+
+  /* ---------- Name & Zähler ---------- */
+  .info{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    justify-content:center;
+    flex-wrap:wrap;
+    max-width:620px;
+    margin:0 auto 10px;
+  }
+  .info input{
+    font-family:inherit;
+    font-weight:600;
+    font-size:16px;
+    color:var(--ink);
+    text-align:center;
+    border:2.5px solid var(--ink);
+    border-radius:12px;
+    padding:9px 12px;
+    width:min(58vw,260px);
+    background:var(--feld);
+    box-shadow:var(--schatten);
+  }
+  .zaehler{
+    font-weight:600;
+    font-size:15px;
+    background:var(--feld);
+    border:2.5px solid var(--ink);
+    border-radius:12px;
+    padding:9px 12px;
+    box-shadow:var(--schatten);
+    white-space:nowrap;
+  }
+  .zaehler b{ color:var(--rot); }
+
+  /* ---------- Bingo-Raster ---------- */
+  .raster{
+    display:grid;
+    grid-template-columns:repeat(5, 1fr);
+    gap:7px;
+    max-width:min(96vw, 560px);
+    margin:0 auto;
+  }
+  .feld{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    gap:3px;
+    aspect-ratio:1 / 1;
+    min-width:60px;              /* gut mit dem Finger treffbar */
+    padding:5px 3px 4px;
+    background:var(--feld);
+    border:2.5px solid var(--ink);
+    border-radius:14px;
+    box-shadow:var(--schatten);
+    cursor:pointer;
+    overflow:hidden;
+    user-select:none;
+    transition:transform .07s ease, background .12s ease;
+  }
+  .feld:active{ transform:scale(.95); }
+  .feld svg{
+    width:clamp(28px, 9vw, 52px);
+    height:clamp(28px, 9vw, 52px);
+    flex:0 0 auto;
+    margin-top:2px;
+    pointer-events:none;
+  }
+  .feld .txt{
+    font-size:clamp(7px, 2.05vw, 11px);
+    font-weight:500;
+    line-height:1.05;
+    text-align:center;
+    pointer-events:none;
+    overflow:hidden;
+  }
+
+  /* markierter Zustand */
+  .feld.mark{
+    background:var(--gruen);
+    border-color:#1f7a43;
+  }
+  .feld.mark .txt{ color:#fff; }
+  .feld.mark svg{ filter:drop-shadow(0 0 1px rgba(0,0,0,.25)); }
+  /* Häkchen-Overlay */
+  .feld.mark::after{
+    content:"";
+    position:absolute;
+    right:5px; top:4px;
+    width:20px; height:20px;
+    border-radius:50%;
+    background:#fff;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='none' stroke='%2335a35f' stroke-width='4' stroke-linecap='round' stroke-linejoin='round' d='M5 13l4 4 10-11'/></svg>");
+    background-size:15px 15px;
+    background-position:center;
+    background-repeat:no-repeat;
+    box-shadow:0 1px 2px rgba(0,0,0,.25);
+  }
+  /* Freifeld (Mitte) */
+  .feld.frei{
+    background:var(--gelb);
+    border-color:#c99f00;
+    cursor:default;
+  }
+  .feld.frei .txt{ color:var(--ink); font-weight:700; }
+  .feld.frei::after{ display:none; }
+
+  /* Felder einer Gewinn-Linie hervorheben */
+  .feld.win{
+    animation:pop .5s ease;
+    box-shadow:0 0 0 3px var(--gelb), var(--schatten);
+  }
+  @keyframes pop{
+    0%{ transform:scale(1); }
+    40%{ transform:scale(1.08); }
+    100%{ transform:scale(1); }
+  }
+
+  /* ---------- Gewinn-Overlay ---------- */
+  .overlay{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    background:rgba(36,48,58,.45);
+    padding:20px;
+  }
+  .overlay.an{ display:flex; }
+  .box{
+    position:relative;
+    background:var(--feld);
+    border:4px solid var(--ink);
+    border-radius:24px;
+    padding:26px 22px 22px;
+    text-align:center;
+    max-width:360px;
+    width:100%;
+    box-shadow:0 10px 0 rgba(36,48,58,.2);
+    animation:pop .45s ease;
+  }
+  .box h2{
+    margin:0 0 6px;
+    font-size:44px;
+    font-weight:700;
+    letter-spacing:1px;
+    background:linear-gradient(90deg,var(--rot),var(--gelb) 45%,var(--gruen));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .box p{ margin:0 0 16px; font-weight:500; font-size:16px; }
+  .box .btns{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+  /* Konfetti-Canvas liegt über allem */
+  #konfetti{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+    z-index:60;
+    display:none;
+  }
+  #konfetti.an{ display:block; }
+
+  footer{
+    max-width:620px;
+    margin:22px auto 0;
+    text-align:center;
+    font-size:12px;
+    opacity:.6;
+    font-weight:500;
+  }
+
+  @media (max-width:380px){
+    .feld{ border-radius:11px; }
+    button{ padding:10px 12px; font-size:14px; }
+  }
+</style>
+</head>
+<body>
+
+  <header>
+    <div class="titel">
+      <span class="tri"><span style="background:var(--blau)"></span><span style="background:var(--rot)"></span><span style="background:var(--gelb)"></span></span>
+      Tour-de-France Bingo
+    </div>
+    <p class="subtitel">Tippe an, was du im Rennen siehst! 🚴</p>
+  </header>
+
+  <div class="leiste">
+    <button id="btnNeu" class="primaer">🎲 Neues Blatt (zufällig)</button>
+    <button id="btnReset">↺ Markierungen löschen</button>
+    <button id="btnSpielerPlus">＋ Spieler</button>
+    <button id="btnSpielerMinus">－ Spieler</button>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="info">
+    <input id="nameInput" type="text" maxlength="16" placeholder="Dein Name" aria-label="Spielername">
+    <div class="zaehler">Gefunden: <b id="anzGefunden">0</b> / 24</div>
+  </div>
+
+  <main>
+    <div class="raster" id="raster" aria-label="Bingo-Raster"></div>
+  </main>
+
+  <footer>
+    Alle Bilder selbst gezeichnet · Ein Spaß-Spiel für unterwegs ·
+    Zustand bleibt in dieser Sitzung erhalten.
+  </footer>
+
+  <!-- Gewinn-Overlay -->
+  <div class="overlay" id="overlay">
+    <div class="box">
+      <h2>BINGO!</h2>
+      <p id="gewinnText">Super gemacht! 🎉</p>
+      <div class="btns">
+        <button id="btnWeiter" class="gruen">Weiterspielen</button>
+        <button id="btnNeu2" class="primaer">Neues Blatt</button>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="konfetti"></canvas>
+
+<script>
+/* ============================================================================
+   Tour-de-France Bingo  –  reine Single-File-Lösung
+   ----------------------------------------------------------------------------
+   Aufbau des Codes:
+     1) ICON-Bausteine (kleine SVG-Helfer)
+     2) FELD-POOL (Text + selbst gezeichnetes SVG)
+     3) STATE  (In-Memory; über sessionStorage sitzungsübergreifend gesichert)
+     4) Raster erzeugen / rendern
+     5) Tippen -> markieren + Gewinnprüfung (Reihen/Spalten/Diagonalen)
+     6) Konfetti-Animation
+     7) Bedien-Buttons & Spieler-Tabs
+   ========================================================================== */
+
+/* -------------------------------------------------------------------------
+   1) Kleine SVG-Bausteine, die mehrere Icons gemeinsam nutzen
+   ------------------------------------------------------------------------- */
+const INK = '#24303a', GELB='#ffd21a', GRUEN='#35a35f', ROT='#e23b45', BLAU='#3d8bdd';
+
+// Ein einfaches Fahrrad (wird von mehreren Renn-Icons verwendet)
+function bike(frame=BLAU){
+  return `
+    <circle cx="17" cy="46" r="11" fill="none" stroke="${INK}" stroke-width="3"/>
+    <circle cx="47" cy="46" r="11" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M17 46 L31 46 L41 30 M31 46 L24 30 L41 30 L47 46" fill="none" stroke="${frame}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M22 30 L26 30" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`;
+}
+// Ein Renn-Trikot (Farbe + optionaler Aufdruck)
+function jersey(fill, extra=''){
+  return `<path d="M21 17 L28 13 L36 13 L43 17 L50 23 L44 29 L44 51 L20 51 L20 29 L14 23 Z"
+    fill="${fill}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>${extra}`;
+}
+// Ein Straßenschild an einem Pfosten
+function sign(fill, inner, border=INK){
+  return `<rect x="30" y="30" width="4" height="30" fill="${INK}"/>
+    <rect x="10" y="8" width="44" height="30" rx="5" fill="${fill}" stroke="${border}" stroke-width="2.6"/>${inner}`;
+}
+// Ein einfacher Kopf/Fahrer-Oberkörper
+function rider(jerseyCol=ROT){
+  return `<circle cx="32" cy="16" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M22 44 Q32 24 42 44 Z" fill="${jerseyCol}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`;
+}
+
+/* -------------------------------------------------------------------------
+   2) FELD-POOL  – jedes Feld: { t: Anzeigetext, s: SVG-Innenmarkup (64x64) }
+   ------------------------------------------------------------------------- */
+const POOL = [
+  { t:"Sturz", s:`
+    <circle cx="20" cy="50" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <circle cx="44" cy="52" r="7" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M20 50 L30 44 L40 50" fill="none" stroke="${BLAU}" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="40" cy="24" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M32 40 L46 30 L50 40" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M10 18 l6 4 M14 14 l3 6 M22 12 l0 7" stroke="${ROT}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Radwechsel", s:`
+    <circle cx="26" cy="40" r="16" fill="none" stroke="${INK}" stroke-width="3.5"/>
+    <circle cx="26" cy="40" r="3" fill="${INK}"/>
+    <path d="M26 26 L26 54 M12 40 L40 40 M16 30 L36 50 M16 50 L36 30" stroke="${BLAU}" stroke-width="2"/>
+    <path d="M44 16 l8 4 l-3 6 l7 4 l-4 8 l-7 -3 l-4 6 l-8 -4 z" fill="${GELB}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>`},
+
+  { t:"Verkleideter Fan", s:`
+    <circle cx="32" cy="36" r="12" fill="#f3c6a0" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M18 24 L26 8 L32 24 Z" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <path d="M46 24 L38 8 L32 24 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2"/>
+    <circle cx="26" cy="8" r="3" fill="${GELB}"/><circle cx="38" cy="8" r="3" fill="${GELB}"/>
+    <circle cx="27" cy="34" r="2" fill="${INK}"/><circle cx="37" cy="34" r="2" fill="${INK}"/>
+    <path d="M26 42 Q32 47 38 42" fill="none" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>`},
+
+  { t:"Gel essen", s:`
+    <rect x="24" y="12" width="16" height="40" rx="7" fill="${GRUEN}" stroke="${INK}" stroke-width="2.6"/>
+    <rect x="26" y="8" width="12" height="7" rx="2" fill="${INK}"/>
+    <path d="M27 24 h10 M27 32 h10 M27 40 h6" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`},
+
+  { t:"Flasche vom Auto", s:`
+    <rect x="6" y="30" width="34" height="16" rx="4" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="12" y="24" width="16" height="8" rx="3" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="14" cy="48" r="5" fill="${INK}"/><circle cx="32" cy="48" r="5" fill="${INK}"/>
+    <rect x="46" y="26" width="10" height="22" rx="4" fill="${BLAU}" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="49" y="20" width="4" height="8" rx="2" fill="${INK}"/>`},
+
+  { t:"Hubschrauber-Bild", s:`
+    <ellipse cx="30" cy="38" rx="18" ry="10" fill="${BLAU}" stroke="${INK}" stroke-width="2.6"/>
+    <path d="M44 34 L58 30 L54 42 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="26" y="30" width="10" height="8" rx="2" fill="#bfe0ff" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M8 18 H52 M30 18 V26" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M20 50 h8 M34 50 h8" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Ausreißer vorne", s:`
+    <g transform="translate(6,2)">${bike(GELB)}</g>
+    ${rider(GELB).replace(/cx="32"/g,'cx="30"').replace(/cy="16"/g,'cy="14"')}
+    <path d="M50 20 h8 M50 28 h6 M50 36 h8" stroke="${ROT}" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="1 4"/>`},
+
+  { t:"Steiler Berg", s:`
+    <path d="M4 54 L28 12 L40 34 L50 20 L60 54 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M22 22 L28 12 L34 22 Z" fill="#fff" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M46 27 L50 20 L54 27 Z" fill="#fff" stroke="${INK}" stroke-width="1.4"/>`},
+
+  { t:"Kuh oder Schaf", s:`
+    <ellipse cx="30" cy="36" rx="20" ry="13" fill="#fff" stroke="${INK}" stroke-width="2.6"/>
+    <ellipse cx="24" cy="34" rx="5" ry="4" fill="${INK}"/><ellipse cx="38" cy="40" rx="4" ry="3" fill="${INK}"/>
+    <path d="M46 30 q10 -4 8 6 q-2 6 -8 2 Z" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="50" cy="26" r="2.4" fill="${INK}"/>
+    <path d="M44 22 q2 -8 8 -6 M54 24 q6 -6 4 2" stroke="${INK}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M18 48 v6 M28 48 v6 M40 48 v6 M50 46 v6" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Fahne schwenken", s:`
+    <rect x="16" y="6" width="3.5" height="52" rx="1.5" fill="${INK}"/>
+    <path d="M20 8 Q34 2 48 8 Q40 16 48 24 Q34 18 20 24 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>`},
+
+  { t:"Wohnmobile am Rand", s:`
+    <rect x="6" y="24" width="46" height="24" rx="5" fill="#fff" stroke="${INK}" stroke-width="2.6"/>
+    <rect x="10" y="28" width="12" height="10" rx="2" fill="${BLAU}"/>
+    <rect x="26" y="28" width="10" height="10" rx="2" fill="${BLAU}"/>
+    <path d="M6 40 h46" stroke="${GRUEN}" stroke-width="4"/>
+    <circle cx="18" cy="50" r="5" fill="${INK}"/><circle cx="42" cy="50" r="5" fill="${INK}"/>`},
+
+  { t:"Kamera-Motorrad", s:`
+    <circle cx="16" cy="46" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <circle cx="46" cy="46" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M16 46 L28 46 L38 34 L48 34 M28 46 L34 34" stroke="${INK}" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <circle cx="34" cy="20" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <rect x="40" y="12" width="16" height="11" rx="2.5" fill="${INK}"/>
+    <circle cx="48" cy="17" r="3.4" fill="${BLAU}"/>`},
+
+  { t:"Sonnenblumenfeld", s:`
+    <g stroke="${INK}" stroke-width="2">
+    <circle cx="20" cy="24" r="7" fill="${INK}"/>
+    ${Array.from({length:8},(_,i)=>{const a=i/8*6.283;return `<ellipse cx="${(20+11*Math.cos(a)).toFixed(1)}" cy="${(24+11*Math.sin(a)).toFixed(1)}" rx="4" ry="2.6" fill="${GELB}" transform="rotate(${(a*57.3).toFixed(0)} ${(20+11*Math.cos(a)).toFixed(1)} ${(24+11*Math.sin(a)).toFixed(1)})"/>`}).join('')}
+    <circle cx="44" cy="34" r="5" fill="${INK}"/>
+    ${Array.from({length:8},(_,i)=>{const a=i/8*6.283;return `<ellipse cx="${(44+8*Math.cos(a)).toFixed(1)}" cy="${(34+8*Math.sin(a)).toFixed(1)}" rx="3" ry="2" fill="${GELB}" transform="rotate(${(a*57.3).toFixed(0)} ${(44+8*Math.cos(a)).toFixed(1)} ${(34+8*Math.sin(a)).toFixed(1)})"/>`}).join('')}
+    </g>
+    <path d="M20 32 V56 M44 40 V56" stroke="${GRUEN}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Burg oder Schloss", s:`
+    <path d="M14 54 V26 h6 v-6 h6 v6 h6 v-6 h6 v6 h6 v-6 h6 v6 h6 V54 Z" fill="#c9b79c" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="27" y="38" width="10" height="16" fill="${INK}"/>
+    <rect x="18" y="32" width="6" height="6" fill="${BLAU}"/><rect x="40" y="32" width="6" height="6" fill="${BLAU}"/>`},
+
+  { t:"Teamwagen", s:`
+    <path d="M6 44 L10 30 L48 30 L56 40 L56 44 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <rect x="14" y="32" width="12" height="8" rx="1.5" fill="#cfe6ff"/><rect x="30" y="32" width="12" height="8" rx="1.5" fill="#cfe6ff"/>
+    <circle cx="18" cy="47" r="6" fill="${INK}"/><circle cx="46" cy="47" r="6" fill="${INK}"/>
+    <circle cx="22" cy="22" r="7" fill="none" stroke="${INK}" stroke-width="2"/><circle cx="40" cy="22" r="7" fill="none" stroke="${INK}" stroke-width="2"/>
+    <path d="M12 24 h40" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Fahrer isst Banane", s:`
+    <circle cx="24" cy="20" r="9" fill="#f3c6a0" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M12 52 Q24 30 36 46" fill="none" stroke="${ROT}" stroke-width="6" stroke-linecap="round"/>
+    <path d="M30 44 Q48 40 50 18 Q44 40 28 40 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`},
+
+  { t:"Fahrer trinkt", s:`
+    ${rider(BLAU)}
+    <rect x="34" y="26" width="9" height="20" rx="4" fill="${GELB}" stroke="${INK}" stroke-width="2.2" transform="rotate(28 38 34)"/>
+    <path d="M30 22 Q36 24 40 28" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`},
+
+  { t:"Punkte-Wertung", s:jersey(GRUEN,`<circle cx="32" cy="34" r="7" fill="#fff" stroke="${INK}" stroke-width="1.6"/><text x="32" y="38" font-size="9" font-family="Fredoka" text-anchor="middle" fill="${INK}" font-weight="700">P</text>`)},
+
+  { t:"Fan rennt mit", s:`
+    <circle cx="30" cy="14" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M30 21 L26 36 L18 46 M26 36 L38 40 M30 26 L44 22 M30 30 L18 30" fill="none" stroke="${ROT}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M18 46 L10 52 M38 40 L44 50" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>`},
+
+  { t:"Fahrer winkt", s:`
+    ${rider(GELB)}
+    <path d="M40 40 L52 18" stroke="#f3c6a0" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="53" cy="15" r="5" fill="#f3c6a0" stroke="${INK}" stroke-width="1.8"/>`},
+
+  { t:"Abklatschen", s:`
+    <path d="M14 52 V30 q0 -6 4 -6 q4 0 4 6 v-4 q0 -6 4 -6 q4 0 4 6 v-2 q0 -6 4 -6 q4 0 4 6 v14 q0 8 -6 12 Z" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M42 8 l3 7 M50 12 l-3 6 M52 22 l-6 1" stroke="${GELB}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Regenjacke an", s:jersey(GELB,`<path d="M32 13 V51 M24 22 l-6 4 M40 22 l6 4" stroke="${INK}" stroke-width="1.8" fill="none"/><path d="M8 8 l2 5 M18 6 l1 5 M50 8 l-2 5" stroke="${BLAU}" stroke-width="2.4" stroke-linecap="round"/>`)},
+
+  { t:"Zielsprint", s:`
+    <g transform="translate(2,4) scale(.9)">${bike(ROT)}</g>
+    <path d="M50 6 h10 v22 h-10 Z" fill="#fff" stroke="${INK}" stroke-width="1.6"/>
+    ${[0,1,2].map(r=>[0,1].map(c=>`<rect x="${50+c*5}" y="${6+r*7+ (c? 0:3.5)}" width="5" height="3.5" fill="${INK}"/>`).join('')).join('')}
+    <rect x="49" y="6" width="3" height="50" fill="${INK}"/>`},
+
+  { t:"Podium & Blumen", s:`
+    <rect x="24" y="20" width="16" height="34" fill="${GELB}" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="6" y="32" width="18" height="22" fill="#cfd6db" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="40" y="38" width="18" height="16" fill="#e0b877" stroke="${INK}" stroke-width="2.2"/>
+    <text x="32" y="40" font-size="12" text-anchor="middle" fill="${INK}" font-weight="700" font-family="Fredoka">1</text>
+    <circle cx="32" cy="12" r="6" fill="${ROT}"/><circle cx="26" cy="16" r="4" fill="${GRUEN}"/><circle cx="38" cy="16" r="4" fill="${BLAU}"/>`},
+
+  { t:"Etappensieg-Jubel", s:`
+    <circle cx="32" cy="16" r="8" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M32 24 L26 44 M32 24 L38 44 M32 28 L16 12 M32 28 L48 12" fill="none" stroke="${GELB}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M8 20 l5 2 M56 20 l-5 2 M12 8 l3 4 M52 8 l-3 4" stroke="${ROT}" stroke-width="2.6" stroke-linecap="round"/>`},
+
+  { t:"Genervter Fahrer", s:`
+    <circle cx="32" cy="30" r="18" fill="${GELB}" stroke="${INK}" stroke-width="2.6"/>
+    <path d="M22 24 l7 3 M42 24 l-7 3" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="26" cy="30" r="2.4" fill="${INK}"/><circle cx="38" cy="30" r="2.4" fill="${INK}"/>
+    <path d="M24 42 Q32 36 40 42" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`},
+
+  { t:"Deutschland-Fahne", s:`
+    <rect x="14" y="8" width="3.5" height="50" rx="1.5" fill="${INK}"/>
+    <g stroke="${INK}" stroke-width="1.6">
+    <rect x="18" y="10" width="38" height="10" fill="#111"/>
+    <rect x="18" y="20" width="38" height="10" fill="${ROT}"/>
+    <rect x="18" y="30" width="38" height="10" fill="${GELB}"/>
+    </g>`},
+
+  { t:"Fans an der Bande", s:`
+    <rect x="4" y="34" width="56" height="14" rx="2" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>
+    <text x="32" y="44" font-size="8" text-anchor="middle" fill="#fff" font-weight="700" font-family="Fredoka">TOUR</text>
+    <circle cx="14" cy="24" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <circle cx="32" cy="20" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <circle cx="50" cy="24" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M9 34 l3 -6 M55 34 l-3 -6" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Pyro / Rauch", s:`
+    <path d="M26 54 V30 h4 v24 Z" fill="${INK}"/>
+    <path d="M28 30 q-10 -6 -4 -16 q6 8 14 2 q-2 10 6 12 q-8 6 -16 2 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.6"/>
+    <g fill="#b9c2c9" opacity=".9">
+    <circle cx="40" cy="16" r="7"/><circle cx="50" cy="12" r="6"/><circle cx="48" cy="22" r="6"/><circle cx="38" cy="24" r="5"/></g>`},
+
+  { t:"Flasche weggeworfen", s:`
+    <rect x="30" y="24" width="11" height="24" rx="5" fill="${GRUEN}" stroke="${INK}" stroke-width="2.4" transform="rotate(35 35 36)"/>
+    <rect x="33" y="18" width="5" height="8" rx="2" fill="${INK}" transform="rotate(35 35 22)"/>
+    <path d="M8 14 q6 4 4 10 M14 10 q8 4 6 12 M22 8 q8 6 4 14" fill="none" stroke="${BLAU}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Bergtrikot", s:jersey('#fff',`${[[26,26],[38,26],[32,36],[26,46],[38,46]].map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.2" fill="${ROT}"/>`).join('')}`)},
+
+  { t:"Gelbes Trikot", s:jersey(GELB,`<path d="M20 30 h24" stroke="${INK}" stroke-width="1.6"/>`)},
+
+  { t:"Polizei-Motorrad", s:`
+    <circle cx="16" cy="46" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <circle cx="46" cy="46" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M16 46 L28 46 L40 34 L50 34 M28 46 L34 34" stroke="${BLAU}" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+    <rect x="24" y="12" width="16" height="8" rx="3" fill="${BLAU}"/>
+    <circle cx="28" cy="16" r="2.5" fill="#fff"/><circle cx="36" cy="16" r="2.5" fill="${ROT}"/>`},
+
+  { t:"Kreisverkehr", s:sign(BLAU,`<g fill="none" stroke="#fff" stroke-width="3">
+    <circle cx="32" cy="23" r="8"/></g>
+    <path d="M32 23 m0 -8 l3 -5 l-6 0 z" fill="#fff"/>
+    <path d="M24 23 m8 0 l5 3 l0 -6 z" fill="#fff" transform="rotate(120 32 23)"/>
+    <path d="M24 23 m8 0 l5 3 l0 -6 z" fill="#fff" transform="rotate(240 32 23)"/>`)},
+
+  { t:"Zwischensprint", s:sign(GRUEN,`<circle cx="18" cy="23" r="5" fill="#fff"/><path d="M28 18 h16 M28 23 h16 M28 28 h10" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>`)},
+
+  { t:"Bergwertung", s:sign('#fff',`<path d="M14 32 L26 16 L34 26 L40 20 L50 32 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>`)},
+
+  { t:"Bahnübergang", s:`
+    <rect x="30" y="26" width="4" height="34" fill="${INK}"/>
+    <g stroke="${ROT}" stroke-width="6" stroke-linecap="round">
+    <path d="M12 8 L52 40"/><path d="M52 8 L12 40"/></g>`},
+
+  { t:"Defekt am Hinterrad", s:`
+    ${bike(INK)}
+    <path d="M47 46 m-11 0 a11 11 0 0 0 22 0" fill="none" stroke="${ROT}" stroke-width="3" stroke-dasharray="3 3"/>
+    <path d="M40 12 l4 6 M50 10 l-2 7 M56 16 l-6 3" stroke="${ROT}" stroke-width="2.6" stroke-linecap="round"/>`},
+
+  { t:"Neutraler Wagen", s:`
+    <path d="M6 44 L10 30 L46 30 L54 40 L54 44 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <rect x="14" y="32" width="12" height="8" rx="1.5" fill="#cfe6ff"/><rect x="30" y="32" width="10" height="8" rx="1.5" fill="#cfe6ff"/>
+    <circle cx="18" cy="47" r="6" fill="${INK}"/><circle cx="44" cy="47" r="6" fill="${INK}"/>
+    <circle cx="24" cy="20" r="8" fill="none" stroke="#fff" stroke-width="2.4"/><circle cx="42" cy="20" r="8" fill="none" stroke="#fff" stroke-width="2.4"/>`},
+
+  { t:"Tunnel", s:`
+    <path d="M10 54 V32 a22 22 0 0 1 44 0 V54 Z" fill="${INK}"/>
+    <path d="M18 54 V34 a14 14 0 0 1 28 0 V54 Z" fill="#0a0f14"/>
+    <path d="M10 54 V32 a22 22 0 0 1 44 0 V54" fill="none" stroke="#9aa6ad" stroke-width="3"/>
+    <circle cx="24" cy="30" r="2" fill="${GELB}"/><circle cx="40" cy="30" r="2" fill="${GELB}"/>`},
+
+  { t:"Kind auf Schultern", s:`
+    <circle cx="32" cy="46" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M22 62 Q32 50 42 62" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="32" cy="20" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M24 40 Q32 28 40 40 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M22 26 l-7 -6 M42 26 l7 -6" stroke="#f3c6a0" stroke-width="4" stroke-linecap="round"/>`},
+
+  { t:"Hund am Rand", s:`
+    <ellipse cx="30" cy="38" rx="18" ry="10" fill="#c98a4b" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="48" cy="30" r="9" fill="#c98a4b" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M48 22 l-4 -8 l7 3 Z" fill="#a06a34" stroke="${INK}" stroke-width="1.6"/>
+    <circle cx="51" cy="29" r="1.8" fill="${INK}"/><circle cx="55" cy="33" r="1.8" fill="${INK}"/>
+    <path d="M14 42 v8 M24 44 v8 M36 44 v8 M14 38 q-8 -4 -4 -10" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Musiker am Rand", s:`
+    <ellipse cx="24" cy="42" rx="12" ry="14" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="24" cy="42" r="4" fill="${INK}"/>
+    <path d="M34 34 L46 12" stroke="#8a5a2a" stroke-width="4" stroke-linecap="round"/>
+    <path d="M46 12 q8 -2 6 6 q-2 6 -8 2 Z" fill="${GELB}" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M52 20 q6 -2 4 6" fill="none" stroke="${INK}" stroke-width="2"/>`},
+
+  { t:"Fans in Badehose", s:`
+    <circle cx="32" cy="14" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M26 21 L26 40 L38 40 L38 21 Z" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M24 40 h16 v8 q-8 4 -16 0 Z" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <path d="M26 48 L22 60 M38 48 L42 60" stroke="#f3c6a0" stroke-width="4" stroke-linecap="round"/>
+    <path d="M26 24 l-8 8 M38 24 l8 8" stroke="#f3c6a0" stroke-width="4" stroke-linecap="round"/>`},
+
+  { t:"Menschenmenge am Berg", s:`
+    <path d="M2 54 L26 18 L44 42 L54 28 L62 54 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <g fill="${GELB}" stroke="${INK}" stroke-width="1.4">
+    <circle cx="14" cy="44" r="4"/><circle cx="24" cy="48" r="4"/><circle cx="34" cy="44" r="4"/><circle cx="44" cy="48" r="4"/><circle cx="52" cy="46" r="4"/></g>`},
+
+  { t:"Namen auf der Straße", s:`
+    <path d="M8 54 L22 14 L42 14 L56 54 Z" fill="#5a636a" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M30 16 V52" stroke="${GELB}" stroke-width="2.4" stroke-dasharray="4 5"/>
+    <text x="30" y="40" font-size="12" text-anchor="middle" fill="#fff" font-weight="700" font-family="Fredoka" transform="rotate(-4 30 40)">GO!</text>`},
+
+  { t:"Teamfunk", s:`
+    <path d="M18 34 a14 14 0 0 1 28 0" fill="none" stroke="${INK}" stroke-width="3.4"/>
+    <rect x="12" y="32" width="10" height="16" rx="4" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="42" y="32" width="10" height="16" rx="4" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M46 46 q4 8 -4 10" fill="none" stroke="${INK}" stroke-width="2.6"/>
+    <circle cx="40" cy="58" r="4" fill="${INK}"/>`},
+
+  { t:"Attacke!", s:`
+    <g transform="translate(2,4) scale(.92)">${bike(ROT)}</g>
+    ${rider(ROT).replace(/cy="16"/g,'cy="13"')}
+    <path d="M50 14 l10 -4 M50 22 l12 0 l-4 -4 M50 22 l8 4" fill="none" stroke="${GELB}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`},
+
+  { t:"Reporter auf Motorrad", s:`
+    <circle cx="16" cy="46" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <circle cx="46" cy="46" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M16 46 L28 46 L38 34 L48 34 M28 46 L34 34" stroke="${GRUEN}" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+    <circle cx="34" cy="20" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M34 24 L46 14" stroke="#f3c6a0" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="48" cy="12" r="5" fill="${INK}"/><rect x="46" y="4" width="4" height="6" rx="2" fill="${INK}"/>`},
+
+  { t:"Fan auf dem Dach", s:`
+    <rect x="6" y="30" width="46" height="20" rx="5" fill="#fff" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="10" y="34" width="12" height="9" rx="2" fill="${BLAU}"/><rect x="26" y="34" width="10" height="9" rx="2" fill="${BLAU}"/>
+    <circle cx="16" cy="52" r="5" fill="${INK}"/><circle cx="42" cy="52" r="5" fill="${INK}"/>
+    <circle cx="30" cy="16" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M30 22 L30 30 M30 24 L20 16 M30 24 L42 14" fill="none" stroke="${ROT}" stroke-width="4" stroke-linecap="round"/>`},
+
+  { t:"Wasser über Kopf", s:`
+    <circle cx="30" cy="40" r="9" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="24" y="6" width="12" height="16" rx="5" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M24 22 q-4 6 0 10 M30 24 q0 6 0 8 M36 22 q4 6 0 10" fill="none" stroke="${BLAU}" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M20 32 q-3 4 0 8 M40 32 q3 4 0 8" fill="none" stroke="${BLAU}" stroke-width="2.2" stroke-linecap="round"/>`},
+
+  { t:"Riesiges Bodenbild", s:`
+    <ellipse cx="32" cy="40" rx="26" ry="14" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M32 40 m-14 0 a14 8 0 0 1 28 0" fill="${ROT}"/>
+    <g stroke="${INK}" stroke-width="1.8" fill="none">
+    <path d="M16 40 l-4 -6 M24 36 l-2 -7 M32 34 l0 -7 M40 36 l2 -7 M48 40 l4 -6"/></g>
+    <g fill="${INK}"><circle cx="12" cy="33" r="2"/><circle cx="22" cy="28" r="2"/><circle cx="32" cy="26" r="2"/><circle cx="42" cy="28" r="2"/><circle cx="52" cy="33" r="2"/></g>`},
+
+  { t:"Kopfsteinpflaster", s:`
+    <g fill="#9aa6ad" stroke="${INK}" stroke-width="1.6">
+    ${[0,1,2,3].map(r=>[0,1,2,3].map(c=>`<rect x="${8+c*13 + (r%2?6:0)}" y="${10+r*12}" width="11" height="10" rx="3"/>`).join('')).join('')}
+    </g>`},
+
+  { t:"Blick nach hinten", s:`
+    <g transform="translate(2,4) scale(.92)">${bike(GRUEN)}</g>
+    <circle cx="34" cy="16" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M34 16 q-8 -1 -12 4" fill="none" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="28" cy="16" r="1.8" fill="${INK}"/>
+    <path d="M40 22 Q32 26 26 44" fill="${GRUEN}" stroke="${INK}" stroke-width="2.2"/>`},
+];
+
+/* -------------------------------------------------------------------------
+   3) STATE
+   Wir halten den Zustand im JavaScript (In-Memory).  Damit er auch ein
+   Neuladen der Seite innerhalb derselben Sitzung übersteht, spiegeln wir ihn
+   – wo verfügbar – zusätzlich in sessionStorage (das ist NICHT localStorage
+   und in Sandbox-Umgebungen meist zuverlässiger).  Fällt sessionStorage aus,
+   läuft alles rein aus dem Speicher weiter.
+   ------------------------------------------------------------------------- */
+const SPEICHER_KEY = 'tdf-bingo-state-v1';
+
+// In-Memory-Zustand (Quelle der Wahrheit)
+let state = null;
+
+function speichern(){
+  try{ sessionStorage.setItem(SPEICHER_KEY, JSON.stringify(state)); }
+  catch(e){ /* sessionStorage nicht verfügbar -> egal, In-Memory reicht */ }
+}
+function laden(){
+  try{
+    const roh = sessionStorage.getItem(SPEICHER_KEY);
+    if(roh) return JSON.parse(roh);
+  }catch(e){}
+  return null;
+}
+
+// Erzeugt ein neues Blatt (Array aus 25 Feldern; Mitte = Freifeld)
+function neuesBlatt(){
+  // 24 zufällige, unterschiedliche Pool-Indizes ziehen
+  const indizes = [...POOL.keys()];
+  // Fisher-Yates-Mischen
+  for(let i=indizes.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [indizes[i], indizes[j]] = [indizes[j], indizes[i]];
+  }
+  const gezogen = indizes.slice(0,24);
+
+  const zellen = [];
+  let z = 0;
+  for(let pos=0; pos<25; pos++){
+    if(pos === 12){                      // Mitte = festes Freifeld
+      zellen.push({ frei:true, marked:true, text:"FREIFELD" });
+    }else{
+      const p = gezogen[z++];
+      zellen.push({ frei:false, marked:false, pool:p, text:POOL[p].t });
+    }
+  }
+  return { zellen, gewonnen:false };
+}
+
+// Erzeugt einen frischen Spieler
+function neuerSpieler(nr){
+  return { name:"Spieler " + nr, blatt: neuesBlatt() };
+}
+
+// Grundzustand herstellen (frisch)
+function frischerState(){
+  return { spieler:[ neuerSpieler(1) ], aktiv:0 };
+}
+
+/* -------------------------------------------------------------------------
+   4) Rendern
+   ------------------------------------------------------------------------- */
+const rasterEl   = document.getElementById('raster');
+const tabsEl     = document.getElementById('tabs');
+const nameInput  = document.getElementById('nameInput');
+const anzEl      = document.getElementById('anzGefunden');
+
+function aktiverSpieler(){ return state.spieler[state.aktiv]; }
+
+// Zeichnet Tabs (nur anzeigen, wenn mehr als 1 Spieler)
+function renderTabs(){
+  tabsEl.innerHTML = '';
+  if(state.spieler.length <= 1){ tabsEl.style.display='none'; return; }
+  tabsEl.style.display='flex';
+  state.spieler.forEach((sp, i)=>{
+    const b = document.createElement('button');
+    b.className = 'tab' + (i===state.aktiv ? ' aktiv':'') + (sp.blatt.gewonnen ? ' hatbingo':'');
+    b.textContent = (sp.blatt.gewonnen ? '🏆 ' : '') + sp.name;
+    b.onclick = ()=>{ state.aktiv = i; speichern(); renderAlles(); };
+    tabsEl.appendChild(b);
+  });
+}
+
+// Zeichnet das Raster des aktiven Spielers
+function renderRaster(){
+  const blatt = aktiverSpieler().blatt;
+  rasterEl.innerHTML = '';
+  blatt.zellen.forEach((z, idx)=>{
+    const feld = document.createElement('div');
+    feld.className = 'feld' + (z.frei ? ' frei':'') + (z.marked && !z.frei ? ' mark':'');
+    feld.setAttribute('role','button');
+    feld.setAttribute('tabindex','0');
+    const svgInner = z.frei ? freiIcon() : POOL[z.pool].s;
+    feld.innerHTML =
+      `<svg viewBox="0 0 64 64" aria-hidden="true">${svgInner}</svg>` +
+      `<div class="txt">${z.text}</div>`;
+    if(!z.frei){
+      feld.addEventListener('click', ()=> tippe(idx));
+      feld.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); tippe(idx);} });
+    }
+    rasterEl.appendChild(feld);
+  });
+  renderZaehler();
+}
+
+// Icon fürs Freifeld (gelbes Trikot mit Stern)
+function freiIcon(){
+  return jersey(GELB, `<path d="M32 26 l2.4 5 5.4 .5 -4 3.6 1.2 5.3 -5 -2.8 -5 2.8 1.2 -5.3 -4 -3.6 5.4 -.5 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.2"/>`);
+}
+
+function renderZaehler(){
+  const blatt = aktiverSpieler().blatt;
+  const n = blatt.zellen.filter(z=>!z.frei && z.marked).length;
+  anzEl.textContent = n;
+}
+
+function renderName(){
+  nameInput.value = aktiverSpieler().name;
+}
+
+function renderAlles(){
+  renderTabs();
+  renderName();
+  renderRaster();
+}
+
+/* -------------------------------------------------------------------------
+   5) Tippen + Gewinnprüfung
+   ------------------------------------------------------------------------- */
+function tippe(idx){
+  const blatt = aktiverSpieler().blatt;
+  const z = blatt.zellen[idx];
+  if(z.frei) return;                 // Freifeld bleibt immer markiert
+  z.marked = !z.marked;              // umschalten (markieren / rückgängig)
+  speichern();
+
+  // betroffenes Feld neu darstellen (Klasse toggeln reicht)
+  const feldEl = rasterEl.children[idx];
+  feldEl.classList.toggle('mark', z.marked);
+  renderZaehler();
+
+  // Nach jedem Tipp prüfen, ob eine komplette Linie markiert ist
+  const linie = pruefeGewinn(blatt);
+  if(linie && !blatt.gewonnen){
+    blatt.gewonnen = true;
+    speichern();
+    zeigeGewinn(linie);
+  }
+}
+
+/*
+   Prüft ALLE 12 Gewinnlinien:  5 Reihen, 5 Spalten, 2 Diagonalen.
+   Gibt die erste vollständige Linie (Array aus 5 Indizes) zurück
+   oder null, wenn keine Linie komplett markiert ist.
+   Das Freifeld (Mitte, Index 12) ist immer markiert und zählt mit.
+*/
+function pruefeGewinn(blatt){
+  const m = i => blatt.zellen[i].marked;   // ist Feld i markiert?
+  const linien = [];
+
+  // 5 Reihen
+  for(let r=0; r<5; r++) linien.push([0,1,2,3,4].map(c => r*5 + c));
+  // 5 Spalten
+  for(let c=0; c<5; c++) linien.push([0,1,2,3,4].map(r => r*5 + c));
+  // 2 Diagonalen
+  linien.push([0,6,12,18,24]);
+  linien.push([4,8,12,16,20]);
+
+  for(const l of linien){
+    if(l.every(m)) return l;
+  }
+  return null;
+}
+
+/* -------------------------------------------------------------------------
+   6) Gewinn anzeigen + Konfetti
+   ------------------------------------------------------------------------- */
+const overlay   = document.getElementById('overlay');
+const gewinnText= document.getElementById('gewinnText');
+
+function zeigeGewinn(linie){
+  // Gewinnlinie kurz hervorheben
+  linie.forEach(i=> rasterEl.children[i].classList.add('win'));
+
+  const sp = aktiverSpieler();
+  gewinnText.textContent = `${sp.name} hat eine Reihe voll! 🎉`;
+  overlay.classList.add('an');
+  starteKonfetti();
+}
+
+document.getElementById('btnWeiter').onclick = ()=>{
+  overlay.classList.remove('an');
+  stopKonfetti();
+  // Markierungen bleiben; Spieler darf weitermachen (z.B. Blackout anstreben)
+  // "gewonnen" zurücksetzen, damit eine spätere neue Linie wieder feiern kann
+  aktiverSpieler().blatt.gewonnen = false;
+  speichern();
+  [...rasterEl.children].forEach(f=>f.classList.remove('win'));
+  renderTabs();
+};
+document.getElementById('btnNeu2').onclick = ()=>{
+  overlay.classList.remove('an');
+  stopKonfetti();
+  neuesBlattFuerAktiven();
+};
+
+/* ---- Konfetti auf Canvas ---- */
+const canvas = document.getElementById('konfetti');
+const ctx = canvas.getContext('2d');
+let konfettiTeile = [];
+let konfettiLaeuft = false;
+let konfettiRaf = null;
+
+function canvasGroesse(){
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', canvasGroesse);
+
+function starteKonfetti(){
+  canvasGroesse();
+  canvas.classList.add('an');
+  const farben = [GELB, GRUEN, ROT, BLAU, '#ffffff'];
+  konfettiTeile = [];
+  for(let i=0; i<140; i++){
+    konfettiTeile.push({
+      x: Math.random()*canvas.width,
+      y: -20 - Math.random()*canvas.height*0.5,
+      w: 6 + Math.random()*8,
+      h: 8 + Math.random()*10,
+      farbe: farben[Math.floor(Math.random()*farben.length)],
+      vy: 2 + Math.random()*3.5,
+      vx: -1.5 + Math.random()*3,
+      dreh: Math.random()*Math.PI,
+      vdreh: -0.2 + Math.random()*0.4
+    });
+  }
+  konfettiLaeuft = true;
+  const start = performance.now();
+  function tick(now){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let sichtbar = 0;
+    for(const t of konfettiTeile){
+      t.x += t.vx; t.y += t.vy; t.dreh += t.vdreh;
+      if(t.y < canvas.height + 20) sichtbar++;
+      ctx.save();
+      ctx.translate(t.x, t.y);
+      ctx.rotate(t.dreh);
+      ctx.fillStyle = t.farbe;
+      ctx.fillRect(-t.w/2, -t.h/2, t.w, t.h);
+      ctx.restore();
+    }
+    // nach 4 Sekunden oder wenn alles unten ist, aufhören
+    if(konfettiLaeuft && sichtbar>0 && (now - start) < 4500){
+      konfettiRaf = requestAnimationFrame(tick);
+    }else{
+      stopKonfetti();
+    }
+  }
+  konfettiRaf = requestAnimationFrame(tick);
+}
+function stopKonfetti(){
+  konfettiLaeuft = false;
+  if(konfettiRaf) cancelAnimationFrame(konfettiRaf);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  canvas.classList.remove('an');
+}
+
+/* -------------------------------------------------------------------------
+   7) Buttons & Spielerverwaltung
+   ------------------------------------------------------------------------- */
+
+// Neues Blatt NUR für den aktiven Spieler
+function neuesBlattFuerAktiven(){
+  aktiverSpieler().blatt = neuesBlatt();
+  speichern();
+  [...rasterEl.children].forEach(f=>f.classList.remove('win'));
+  renderAlles();
+}
+
+// Nur Markierungen löschen (Blatt bleibt gleich)
+function resetMarkierungen(){
+  const blatt = aktiverSpieler().blatt;
+  blatt.zellen.forEach(z=>{ if(!z.frei) z.marked = false; });
+  blatt.gewonnen = false;
+  speichern();
+  renderAlles();
+}
+
+document.getElementById('btnNeu').onclick   = neuesBlattFuerAktiven;
+document.getElementById('btnReset').onclick = resetMarkierungen;
+
+// Name ändern
+nameInput.addEventListener('input', ()=>{
+  aktiverSpieler().name = nameInput.value || 'Spieler';
+  speichern();
+  renderTabs();
+});
+
+// Spieler hinzufügen (max 6)
+document.getElementById('btnSpielerPlus').onclick = ()=>{
+  if(state.spieler.length >= 6) return;
+  state.spieler.push(neuerSpieler(state.spieler.length+1));
+  state.aktiv = state.spieler.length - 1;
+  speichern();
+  renderAlles();
+};
+// Spieler entfernen (min 1)
+document.getElementById('btnSpielerMinus').onclick = ()=>{
+  if(state.spieler.length <= 1) return;
+  state.spieler.splice(state.aktiv, 1);
+  if(state.aktiv >= state.spieler.length) state.aktiv = state.spieler.length - 1;
+  speichern();
+  renderAlles();
+};
+
+/* -------------------------------------------------------------------------
+   START:  gespeicherten Zustand laden oder frisch beginnen
+   ------------------------------------------------------------------------- */
+function grundValidieren(s){
+  // grobe Prüfung, ob geladener Zustand zum aktuellen Pool passt
+  if(!s || !Array.isArray(s.spieler) || s.spieler.length<1) return false;
+  return s.spieler.every(sp =>
+    sp.blatt && Array.isArray(sp.blatt.zellen) && sp.blatt.zellen.length===25 &&
+    sp.blatt.zellen.every(z => z.frei || (z.pool>=0 && z.pool<POOL.length))
+  );
+}
+
+const geladen = laden();
+state = grundValidieren(geladen) ? geladen : frischerState();
+renderAlles();
+</script>
+</body>
+</html>
