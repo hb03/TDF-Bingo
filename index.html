@@ -6,6 +6,15 @@
 <meta name="theme-color" content="#ffd21a">
 <title>Tour-de-France Bingo</title>
 
+<!-- PWA: installierbar + offline -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="./icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="TdF Bingo">
+<meta name="mobile-web-app-capable" content="yes">
+
 <!-- Einzige externe Ressource: Google Font "Fredoka" -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1156,6 +1165,16 @@ function grundValidieren(s){
 const geladen = laden();
 state = grundValidieren(geladen) ? geladen : frischerState();
 renderAlles();
+
+/* -------------------------------------------------------------------------
+   PWA:  Service Worker registrieren (nur über https / localhost aktiv).
+   Unter file:// wird das übersprungen – die App läuft trotzdem normal.
+   ------------------------------------------------------------------------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{ /* z.B. file:// -> ignorieren */ });
+  });
+}
 </script>
 </body>
 </html>
