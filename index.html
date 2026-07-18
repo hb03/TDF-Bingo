@@ -104,6 +104,7 @@
   button:active{ transform:translateY(2px); box-shadow:0 1px 0 rgba(36,48,58,.18); }
   button.primaer{ background:var(--gelb); }
   button.gruen{ background:var(--gruen); color:#fff; border-color:#1f7a43; }
+  button.gefahr{ background:var(--rot); color:#fff; border-color:#a5262e; }
 
   /* ---------- Spieler-Tabs ---------- */
   .tabs{
@@ -287,6 +288,7 @@
     color:transparent;
   }
   .box p{ margin:0 0 16px; font-weight:500; font-size:16px; }
+  .box .dialogTitel{ font-size:26px; font-weight:700; margin:0 0 10px; color:var(--ink); }
   .box .btns{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
 
   /* Konfetti-Canvas liegt über allem */
@@ -346,6 +348,7 @@
     <button id="btnReset">↺ Markierungen löschen</button>
     <button id="btnSpielerPlus">＋ Blatt</button>
     <button id="btnSpielerMinus">－ Blatt</button>
+    <button id="btnResetAll" class="gefahr">🗑️ Alles zurücksetzen</button>
   </div>
 
   <div class="tabs" id="tabs"></div>
@@ -353,6 +356,7 @@
   <div class="info">
     <input id="nameInput" type="text" maxlength="16" placeholder="Blatt-Name" aria-label="Name des Blatts">
     <div class="zaehler">Gefunden: <b id="anzGefunden">0</b> / 24</div>
+    <div class="zaehler">Fertige Blätter: <b id="anzFertig">0</b> / <span id="anzBlaetter">1</span></div>
   </div>
 
   <main>
@@ -373,6 +377,18 @@
       <div class="btns">
         <button id="btnWeiter" class="gruen">Weiterspielen</button>
         <button id="btnNeu2" class="primaer">Neues Blatt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bestätigungs-Dialog für "Alles zurücksetzen" -->
+  <div class="overlay" id="confirmOverlay">
+    <div class="box">
+      <p class="dialogTitel">Alles zurücksetzen?</p>
+      <p>Damit werden <b>alle Blätter</b>, Namen und Markierungen gelöscht und es startet <b>ein einziges frisches Blatt</b>. Das kann nicht rückgängig gemacht werden.</p>
+      <div class="btns">
+        <button id="btnResetJa" class="gefahr">Ja, alles löschen</button>
+        <button id="btnResetNein" class="primaer">Abbrechen</button>
       </div>
     </div>
   </div>
@@ -1010,7 +1026,8 @@ function neuesBlatt(){
     }
   }
   // erstelltAm = Zeitpunkt der Erzeugung (macht ein heimliches Neu-Würfeln sichtbar)
-  return { zellen, gewonnen:false, erstelltAm: Date.now() };
+  // gewonnen = löst die Feier aus (einmalig);  fertig = hatte schon ein Bingo (bleibt bestehen, zählt für die Statistik)
+  return { zellen, gewonnen:false, fertig:false, erstelltAm: Date.now() };
 }
 
 // Erzeugt ein frisches Blatt mit Namen
@@ -1030,6 +1047,8 @@ const rasterEl   = document.getElementById('raster');
 const tabsEl     = document.getElementById('tabs');
 const nameInput  = document.getElementById('nameInput');
 const anzEl      = document.getElementById('anzGefunden');
+const anzFertigEl   = document.getElementById('anzFertig');
+const anzBlaetterEl = document.getElementById('anzBlaetter');
 const stempelEl  = document.getElementById('stempel');
 
 function aktiverSpieler(){ return state.spieler[state.aktiv]; }
@@ -1041,8 +1060,8 @@ function renderTabs(){
   tabsEl.style.display='flex';
   state.spieler.forEach((sp, i)=>{
     const b = document.createElement('button');
-    b.className = 'tab' + (i===state.aktiv ? ' aktiv':'') + (sp.blatt.gewonnen ? ' hatbingo':'');
-    b.textContent = (sp.blatt.gewonnen ? '🏆 ' : '') + sp.name;
+    b.className = 'tab' + (i===state.aktiv ? ' aktiv':'') + (sp.blatt.fertig ? ' hatbingo':'');
+    b.textContent = (sp.blatt.fertig ? '🏆 ' : '') + sp.name;
     b.onclick = ()=>{ state.aktiv = i; speichern(); renderAlles(); };
     tabsEl.appendChild(b);
   });
@@ -1085,6 +1104,13 @@ function renderName(){
   nameInput.value = aktiverSpieler().name;
 }
 
+// Zählt, wie viele Blätter schon ein Bingo hatten (über alle Blätter hinweg)
+function renderFertig(){
+  const fertig = state.spieler.filter(sp => sp.blatt.fertig).length;
+  anzFertigEl.textContent   = fertig;
+  anzBlaetterEl.textContent = state.spieler.length;
+}
+
 // Zeigt an, wann das aktuelle Blatt erzeugt wurde
 function renderStempel(){
   const ts = aktiverSpieler().blatt.erstelltAm;
@@ -1101,6 +1127,7 @@ function renderAlles(){
   renderName();
   renderRaster();
   renderStempel();
+  renderFertig();
 }
 
 /* -------------------------------------------------------------------------
@@ -1121,8 +1148,10 @@ function tippe(idx){
   // Nach jedem Tipp prüfen, ob eine komplette Linie markiert ist
   const linie = pruefeGewinn(blatt);
   if(linie && !blatt.gewonnen){
-    blatt.gewonnen = true;
+    blatt.gewonnen = true;      // löst die einmalige Feier aus
+    blatt.fertig   = true;      // bleibt bestehen -> zählt als "fertiges Blatt"
     speichern();
+    renderFertig();             // Zähler aktualisieren
     zeigeGewinn(linie);
   }
 }
@@ -1262,12 +1291,33 @@ function resetMarkierungen(){
   const blatt = aktiverSpieler().blatt;
   blatt.zellen.forEach(z=>{ if(!z.frei) z.marked = false; });
   blatt.gewonnen = false;
+  blatt.fertig   = false;      // ohne Markierungen ist das Blatt nicht mehr "fertig"
   speichern();
+  [...rasterEl.children].forEach(f=>f.classList.remove('win'));
+  renderAlles();
+}
+
+// Komplett zurücksetzen: alle Blätter weg, wieder ein einziges frisches Blatt
+function vollReset(){
+  state = frischerState();
+  speichern();
+  [...rasterEl.children].forEach(f=>f.classList.remove('win'));
   renderAlles();
 }
 
 document.getElementById('btnNeu').onclick   = neuesBlattFuerAktiven;
 document.getElementById('btnReset').onclick = resetMarkierungen;
+
+// "Alles zurücksetzen" -> Sicherheitsabfrage anzeigen
+const confirmOverlay = document.getElementById('confirmOverlay');
+document.getElementById('btnResetAll').onclick = ()=> confirmOverlay.classList.add('an');
+document.getElementById('btnResetNein').onclick = ()=> confirmOverlay.classList.remove('an');
+document.getElementById('btnResetJa').onclick = ()=>{
+  confirmOverlay.classList.remove('an');
+  vollReset();
+};
+// Klick auf den dunklen Hintergrund bricht ebenfalls ab
+confirmOverlay.addEventListener('click', (e)=>{ if(e.target === confirmOverlay) confirmOverlay.classList.remove('an'); });
 
 // Blatt-Name ändern
 nameInput.addEventListener('input', ()=>{
