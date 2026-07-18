@@ -301,6 +301,21 @@
   }
   #konfetti.an{ display:block; }
 
+  /* Zeitstempel: wann wurde dieses Blatt erstellt */
+  .stempel{
+    max-width:min(96vw,560px);
+    margin:12px auto 0;
+    text-align:center;
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink);
+    background:var(--feld);
+    border:2px dashed var(--ink);
+    border-radius:12px;
+    padding:8px 12px;
+  }
+  .stempel span{ opacity:.7; font-weight:500; }
+
   footer{
     max-width:620px;
     margin:22px auto 0;
@@ -329,19 +344,20 @@
   <div class="leiste">
     <button id="btnNeu" class="primaer">🎲 Neues Blatt (zufällig)</button>
     <button id="btnReset">↺ Markierungen löschen</button>
-    <button id="btnSpielerPlus">＋ Spieler</button>
-    <button id="btnSpielerMinus">－ Spieler</button>
+    <button id="btnSpielerPlus">＋ Blatt</button>
+    <button id="btnSpielerMinus">－ Blatt</button>
   </div>
 
   <div class="tabs" id="tabs"></div>
 
   <div class="info">
-    <input id="nameInput" type="text" maxlength="16" placeholder="Dein Name" aria-label="Spielername">
+    <input id="nameInput" type="text" maxlength="16" placeholder="Blatt-Name" aria-label="Name des Blatts">
     <div class="zaehler">Gefunden: <b id="anzGefunden">0</b> / 24</div>
   </div>
 
   <main>
     <div class="raster" id="raster" aria-label="Bingo-Raster"></div>
+    <p class="stempel" id="stempel"></p>
   </main>
 
   <footer>
@@ -880,12 +896,13 @@ function neuesBlatt(){
       zellen.push({ frei:false, marked:false, pool:p, text:POOL[p].t });
     }
   }
-  return { zellen, gewonnen:false };
+  // erstelltAm = Zeitpunkt der Erzeugung (macht ein heimliches Neu-Würfeln sichtbar)
+  return { zellen, gewonnen:false, erstelltAm: Date.now() };
 }
 
-// Erzeugt einen frischen Spieler
+// Erzeugt ein frisches Blatt mit Namen
 function neuerSpieler(nr){
-  return { name:"Spieler " + nr, blatt: neuesBlatt() };
+  return { name:"Blatt " + nr, blatt: neuesBlatt() };
 }
 
 // Grundzustand herstellen (frisch)
@@ -900,6 +917,7 @@ const rasterEl   = document.getElementById('raster');
 const tabsEl     = document.getElementById('tabs');
 const nameInput  = document.getElementById('nameInput');
 const anzEl      = document.getElementById('anzGefunden');
+const stempelEl  = document.getElementById('stempel');
 
 function aktiverSpieler(){ return state.spieler[state.aktiv]; }
 
@@ -954,10 +972,22 @@ function renderName(){
   nameInput.value = aktiverSpieler().name;
 }
 
+// Zeigt an, wann das aktuelle Blatt erzeugt wurde
+function renderStempel(){
+  const ts = aktiverSpieler().blatt.erstelltAm;
+  if(!ts){ stempelEl.innerHTML = '<span>Blatt erstellt: unbekannt</span>'; return; }
+  const d = new Date(ts).toLocaleString('de-DE', {
+    day:'2-digit', month:'2-digit', year:'numeric',
+    hour:'2-digit', minute:'2-digit', second:'2-digit'
+  });
+  stempelEl.innerHTML = `🕒 <span>Blatt erstellt am</span> ${d} Uhr`;
+}
+
 function renderAlles(){
   renderTabs();
   renderName();
   renderRaster();
+  renderStempel();
 }
 
 /* -------------------------------------------------------------------------
@@ -1126,14 +1156,14 @@ function resetMarkierungen(){
 document.getElementById('btnNeu').onclick   = neuesBlattFuerAktiven;
 document.getElementById('btnReset').onclick = resetMarkierungen;
 
-// Name ändern
+// Blatt-Name ändern
 nameInput.addEventListener('input', ()=>{
-  aktiverSpieler().name = nameInput.value || 'Spieler';
+  aktiverSpieler().name = nameInput.value || 'Blatt';
   speichern();
   renderTabs();
 });
 
-// Spieler hinzufügen (max 6)
+// Blatt hinzufügen (max 6)
 document.getElementById('btnSpielerPlus').onclick = ()=>{
   if(state.spieler.length >= 6) return;
   state.spieler.push(neuerSpieler(state.spieler.length+1));
@@ -1141,7 +1171,7 @@ document.getElementById('btnSpielerPlus').onclick = ()=>{
   speichern();
   renderAlles();
 };
-// Spieler entfernen (min 1)
+// Blatt entfernen (min 1)
 document.getElementById('btnSpielerMinus').onclick = ()=>{
   if(state.spieler.length <= 1) return;
   state.spieler.splice(state.aktiv, 1);
