@@ -168,6 +168,43 @@
   }
   .zaehler b{ color:var(--rot); }
 
+  /* ---------- Blatt-Karten (Ansicht) ---------- */
+  .karte{ max-width:min(96vw, 560px); margin:0 auto; }
+  /* Gestapelte Ansicht: jedes Blatt bekommt einen sichtbaren Karten-Rahmen */
+  .board.stapel .karte{
+    background:var(--feld);
+    border:2.5px solid var(--ink);
+    border-radius:20px;
+    box-shadow:var(--schatten);
+    padding:12px 12px 14px;
+    margin-bottom:20px;
+  }
+  .board.stapel .karte.aktiv{ border-color:var(--blau); box-shadow:0 0 0 3px rgba(61,139,221,.3), var(--schatten); }
+  .karte-kopf{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin:0 auto 10px;
+  }
+  .k-name{
+    font-family:inherit;
+    font-weight:600;
+    font-size:16px;
+    color:var(--ink);
+    text-align:center;
+    border:2.5px solid var(--ink);
+    border-radius:12px;
+    padding:8px 10px;
+    width:min(46vw,180px);
+    background:var(--feld);
+    box-shadow:var(--schatten);
+  }
+  .k-actions{ display:flex; gap:6px; }
+  button.mini{ min-height:44px; padding:8px 11px; font-size:17px; border-radius:12px; }
+  .board.stapel .k-stempel{ margin-top:10px; }
+
   /* ---------- Bingo-Raster ---------- */
   .raster{
     display:grid;
@@ -348,21 +385,17 @@
     <button id="btnReset">↺ Markierungen löschen</button>
     <button id="btnSpielerPlus">＋ Blatt</button>
     <button id="btnSpielerMinus">－ Blatt</button>
+    <button id="btnAnsicht">🧾 Ansicht: Untereinander</button>
     <button id="btnResetAll" class="gefahr">🗑️ Alles zurücksetzen</button>
   </div>
 
   <div class="tabs" id="tabs"></div>
 
   <div class="info">
-    <input id="nameInput" type="text" maxlength="16" placeholder="Blatt-Name" aria-label="Name des Blatts">
-    <div class="zaehler">Gefunden: <b id="anzGefunden">0</b> / 24</div>
     <div class="zaehler">Fertige Blätter: <b id="anzFertig">0</b> / <span id="anzBlaetter">1</span></div>
   </div>
 
-  <main>
-    <div class="raster" id="raster" aria-label="Bingo-Raster"></div>
-    <p class="stempel" id="stempel"></p>
-  </main>
+  <main id="board" class="board einzeln"></main>
 
   <footer>
     Ein Spaß-Spiel für vor dem Fernseher · Viel Freude beim Etappen-Gucken! 📺🚴
@@ -1037,26 +1070,43 @@ function neuerSpieler(nr){
 
 // Grundzustand herstellen (frisch)
 function frischerState(){
-  return { spieler:[ neuerSpieler(1) ], aktiv:0 };
+  return { spieler:[ neuerSpieler(1) ], aktiv:0, ansicht:'tabs' };
 }
 
 /* -------------------------------------------------------------------------
    4) Rendern
    ------------------------------------------------------------------------- */
-const rasterEl   = document.getElementById('raster');
-const tabsEl     = document.getElementById('tabs');
-const nameInput  = document.getElementById('nameInput');
-const anzEl      = document.getElementById('anzGefunden');
+const tabsEl        = document.getElementById('tabs');
+const boardEl       = document.getElementById('board');
 const anzFertigEl   = document.getElementById('anzFertig');
 const anzBlaetterEl = document.getElementById('anzBlaetter');
-const stempelEl  = document.getElementById('stempel');
+const btnAnsicht    = document.getElementById('btnAnsicht');
 
 function aktiverSpieler(){ return state.spieler[state.aktiv]; }
+// Findet das Raster-Element einer bestimmten Blatt-Karte
+function karteGrid(i){ return boardEl.querySelector(`.karte[data-i="${i}"] .k-raster`); }
+function zellenMarkiert(blatt){ return blatt.zellen.filter(z=>!z.frei && z.marked).length; }
 
-// Zeichnet Tabs (nur anzeigen, wenn mehr als 1 Spieler)
+// Text für den Zeitstempel eines Blatts
+function stempelText(blatt){
+  const ts = blatt.erstelltAm;
+  if(!ts) return '<span>Blatt erstellt: unbekannt</span>';
+  const d = new Date(ts).toLocaleString('de-DE', {
+    day:'2-digit', month:'2-digit', year:'numeric',
+    hour:'2-digit', minute:'2-digit', second:'2-digit'
+  });
+  return `🕒 <span>Blatt erstellt am</span> ${d} Uhr`;
+}
+
+// Icon fürs Freifeld (gelbes Trikot mit Stern)
+function freiIcon(){
+  return jersey(GELB, `<path d="M32 26 l2.4 5 5.4 .5 -4 3.6 1.2 5.3 -5 -2.8 -5 2.8 1.2 -5.3 -4 -3.6 5.4 -.5 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.2"/>`);
+}
+
+// Zeichnet Tabs – nur in der Einzel-Ansicht und nur bei mehr als 1 Blatt
 function renderTabs(){
   tabsEl.innerHTML = '';
-  if(state.spieler.length <= 1){ tabsEl.style.display='none'; return; }
+  if(state.ansicht === 'stapel' || state.spieler.length <= 1){ tabsEl.style.display='none'; return; }
   tabsEl.style.display='flex';
   state.spieler.forEach((sp, i)=>{
     const b = document.createElement('button');
@@ -1067,10 +1117,49 @@ function renderTabs(){
   });
 }
 
-// Zeichnet das Raster des aktiven Spielers
-function renderRaster(){
-  const blatt = aktiverSpieler().blatt;
-  rasterEl.innerHTML = '';
+// Baut eine komplette Blatt-Karte (Kopf + Raster + Zeitstempel)
+function renderKarte(i){
+  const sp = state.spieler[i];
+  const blatt = sp.blatt;
+
+  const sec = document.createElement('section');
+  sec.className = 'karte' + (i===state.aktiv ? ' aktiv':'');
+  sec.dataset.i = i;
+
+  // --- Kopf: Name, Zähler, Mini-Buttons ---
+  const kopf = document.createElement('div');
+  kopf.className = 'karte-kopf';
+
+  const name = document.createElement('input');
+  name.type = 'text'; name.maxLength = 16; name.value = sp.name;
+  name.className = 'k-name'; name.placeholder = 'Blatt-Name';
+  name.setAttribute('aria-label', 'Name des Blatts');
+  name.addEventListener('input', ()=>{
+    sp.name = name.value || 'Blatt'; state.aktiv = i; speichern(); renderTabs();
+  });
+  name.addEventListener('focus', ()=>{ state.aktiv = i; markiereAktiv(); });
+
+  const zaehler = document.createElement('div');
+  zaehler.className = 'zaehler';
+  zaehler.innerHTML = `Gefunden: <b class="k-anz">${zellenMarkiert(blatt)}</b> / 24`;
+
+  const actions = document.createElement('div');
+  actions.className = 'k-actions';
+  const bNeu = document.createElement('button');
+  bNeu.className = 'mini'; bNeu.textContent = '🎲';
+  bNeu.title = 'Neues Blatt (nur dieses)'; bNeu.setAttribute('aria-label','Neues Blatt');
+  bNeu.onclick = ()=>{ neuesBlattFuer(i); };
+  const bDel = document.createElement('button');
+  bDel.className = 'mini'; bDel.textContent = '↺';
+  bDel.title = 'Markierungen löschen (nur dieses)'; bDel.setAttribute('aria-label','Markierungen löschen');
+  bDel.onclick = ()=>{ resetMarkierungenFuer(i); };
+  actions.append(bNeu, bDel);
+
+  kopf.append(name, zaehler, actions);
+
+  // --- Raster ---
+  const grid = document.createElement('div');
+  grid.className = 'raster k-raster';
   blatt.zellen.forEach((z, idx)=>{
     const feld = document.createElement('div');
     feld.className = 'feld' + (z.frei ? ' frei':'') + (z.marked && !z.frei ? ' mark':'');
@@ -1081,69 +1170,77 @@ function renderRaster(){
       `<svg viewBox="0 0 64 64" aria-hidden="true">${svgInner}</svg>` +
       `<div class="txt">${z.text}</div>`;
     if(!z.frei){
-      feld.addEventListener('click', ()=> tippe(idx));
-      feld.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); tippe(idx);} });
+      feld.addEventListener('click', ()=> tippe(i, idx));
+      feld.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); tippe(i, idx);} });
     }
-    rasterEl.appendChild(feld);
+    grid.appendChild(feld);
   });
-  renderZaehler();
+
+  // --- Zeitstempel ---
+  const stempel = document.createElement('p');
+  stempel.className = 'stempel k-stempel';
+  stempel.innerHTML = stempelText(blatt);
+
+  sec.append(kopf, grid, stempel);
+  return sec;
 }
 
-// Icon fürs Freifeld (gelbes Trikot mit Stern)
-function freiIcon(){
-  return jersey(GELB, `<path d="M32 26 l2.4 5 5.4 .5 -4 3.6 1.2 5.3 -5 -2.8 -5 2.8 1.2 -5.3 -4 -3.6 5.4 -.5 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.2"/>`);
+// Setzt die "aktiv"-Markierung der Karten (ohne Neuaufbau)
+function markiereAktiv(){
+  boardEl.querySelectorAll('.karte').forEach(k=>{
+    k.classList.toggle('aktiv', Number(k.dataset.i) === state.aktiv);
+  });
+  renderTabs();
 }
 
-function renderZaehler(){
-  const blatt = aktiverSpieler().blatt;
-  const n = blatt.zellen.filter(z=>!z.frei && z.marked).length;
-  anzEl.textContent = n;
-}
-
-function renderName(){
-  nameInput.value = aktiverSpieler().name;
+// Baut das Board: Einzel-Ansicht = nur aktives Blatt, Stapel = alle Blätter
+function renderBoard(){
+  boardEl.className = 'board ' + (state.ansicht === 'stapel' ? 'stapel' : 'einzeln');
+  boardEl.innerHTML = '';
+  const indizes = state.ansicht === 'stapel'
+    ? state.spieler.map((_, i)=> i)
+    : [state.aktiv];
+  indizes.forEach(i => boardEl.appendChild(renderKarte(i)));
 }
 
 // Zählt, wie viele Blätter schon ein Bingo hatten (über alle Blätter hinweg)
 function renderFertig(){
-  const fertig = state.spieler.filter(sp => sp.blatt.fertig).length;
-  anzFertigEl.textContent   = fertig;
+  anzFertigEl.textContent   = state.spieler.filter(sp => sp.blatt.fertig).length;
   anzBlaetterEl.textContent = state.spieler.length;
 }
 
-// Zeigt an, wann das aktuelle Blatt erzeugt wurde
-function renderStempel(){
-  const ts = aktiverSpieler().blatt.erstelltAm;
-  if(!ts){ stempelEl.innerHTML = '<span>Blatt erstellt: unbekannt</span>'; return; }
-  const d = new Date(ts).toLocaleString('de-DE', {
-    day:'2-digit', month:'2-digit', year:'numeric',
-    hour:'2-digit', minute:'2-digit', second:'2-digit'
-  });
-  stempelEl.innerHTML = `🕒 <span>Blatt erstellt am</span> ${d} Uhr`;
+// Beschriftung des Ansicht-Umschalters
+function renderAnsichtButton(){
+  btnAnsicht.innerHTML = state.ansicht === 'stapel'
+    ? '🗂️ Ansicht: Tabs'
+    : '🧾 Ansicht: Untereinander';
 }
 
 function renderAlles(){
+  renderAnsichtButton();
   renderTabs();
-  renderName();
-  renderRaster();
-  renderStempel();
+  renderBoard();
   renderFertig();
 }
 
 /* -------------------------------------------------------------------------
    5) Tippen + Gewinnprüfung
    ------------------------------------------------------------------------- */
-function tippe(idx){
-  const blatt = aktiverSpieler().blatt;
+function tippe(i, idx){
+  state.aktiv = i;                   // dieses Blatt wird das "aktive"
+  const blatt = state.spieler[i].blatt;
   const z = blatt.zellen[idx];
   if(z.frei) return;                 // Freifeld bleibt immer markiert
   z.marked = !z.marked;              // umschalten (markieren / rückgängig)
   speichern();
 
-  // betroffenes Feld neu darstellen (Klasse toggeln reicht)
-  const feldEl = rasterEl.children[idx];
-  feldEl.classList.toggle('mark', z.marked);
-  renderZaehler();
+  // betroffenes Feld dieser Karte neu darstellen (Klasse toggeln reicht)
+  const grid = karteGrid(i);
+  if(grid) grid.children[idx].classList.toggle('mark', z.marked);
+  // Zähler dieser Karte aktualisieren
+  const anzB = boardEl.querySelector(`.karte[data-i="${i}"] .k-anz`);
+  if(anzB) anzB.textContent = zellenMarkiert(blatt);
+  markiereAktiv();
 
   // Nach jedem Tipp prüfen, ob eine komplette Linie markiert ist
   const linie = pruefeGewinn(blatt);
@@ -1152,7 +1249,8 @@ function tippe(idx){
     blatt.fertig   = true;      // bleibt bestehen -> zählt als "fertiges Blatt"
     speichern();
     renderFertig();             // Zähler aktualisieren
-    zeigeGewinn(linie);
+    renderTabs();               // Pokal-Symbol am Tab
+    zeigeGewinn(i, linie);
   }
 }
 
@@ -1186,12 +1284,12 @@ function pruefeGewinn(blatt){
 const overlay   = document.getElementById('overlay');
 const gewinnText= document.getElementById('gewinnText');
 
-function zeigeGewinn(linie){
-  // Gewinnlinie kurz hervorheben
-  linie.forEach(i=> rasterEl.children[i].classList.add('win'));
+function zeigeGewinn(i, linie){
+  // Gewinnlinie in der betroffenen Karte kurz hervorheben
+  const grid = karteGrid(i);
+  if(grid) linie.forEach(k=> grid.children[k].classList.add('win'));
 
-  const sp = aktiverSpieler();
-  gewinnText.textContent = `${sp.name} hat eine Reihe voll! 🎉`;
+  gewinnText.textContent = `${state.spieler[i].name} hat eine Reihe voll! 🎉`;
   overlay.classList.add('an');
   starteKonfetti();
 }
@@ -1199,17 +1297,17 @@ function zeigeGewinn(linie){
 document.getElementById('btnWeiter').onclick = ()=>{
   overlay.classList.remove('an');
   stopKonfetti();
-  // Markierungen bleiben; Spieler darf weitermachen (z.B. Blackout anstreben)
+  // Markierungen bleiben; man darf weitermachen (z.B. Blackout anstreben)
   // "gewonnen" zurücksetzen, damit eine spätere neue Linie wieder feiern kann
   aktiverSpieler().blatt.gewonnen = false;
   speichern();
-  [...rasterEl.children].forEach(f=>f.classList.remove('win'));
-  renderTabs();
+  const grid = karteGrid(state.aktiv);
+  if(grid) [...grid.children].forEach(f=>f.classList.remove('win'));
 };
 document.getElementById('btnNeu2').onclick = ()=>{
   overlay.classList.remove('an');
   stopKonfetti();
-  neuesBlattFuerAktiven();
+  neuesBlattFuer(state.aktiv);
 };
 
 /* ---- Konfetti auf Canvas ---- */
@@ -1278,35 +1376,44 @@ function stopKonfetti(){
    7) Buttons & Spielerverwaltung
    ------------------------------------------------------------------------- */
 
-// Neues Blatt NUR für den aktiven Spieler
-function neuesBlattFuerAktiven(){
-  aktiverSpieler().blatt = neuesBlatt();
+// Neues Blatt für ein bestimmtes Blatt
+function neuesBlattFuer(i){
+  state.aktiv = i;
+  state.spieler[i].blatt = neuesBlatt();
   speichern();
-  [...rasterEl.children].forEach(f=>f.classList.remove('win'));
   renderAlles();
 }
 
-// Nur Markierungen löschen (Blatt bleibt gleich)
-function resetMarkierungen(){
-  const blatt = aktiverSpieler().blatt;
+// Nur Markierungen eines bestimmten Blatts löschen (Motive bleiben gleich)
+function resetMarkierungenFuer(i){
+  state.aktiv = i;
+  const blatt = state.spieler[i].blatt;
   blatt.zellen.forEach(z=>{ if(!z.frei) z.marked = false; });
   blatt.gewonnen = false;
   blatt.fertig   = false;      // ohne Markierungen ist das Blatt nicht mehr "fertig"
   speichern();
-  [...rasterEl.children].forEach(f=>f.classList.remove('win'));
   renderAlles();
 }
 
 // Komplett zurücksetzen: alle Blätter weg, wieder ein einziges frisches Blatt
 function vollReset(){
+  const ansicht = state.ansicht;      // gewählte Ansicht beibehalten
   state = frischerState();
+  state.ansicht = ansicht;
   speichern();
-  [...rasterEl.children].forEach(f=>f.classList.remove('win'));
   renderAlles();
 }
 
-document.getElementById('btnNeu').onclick   = neuesBlattFuerAktiven;
-document.getElementById('btnReset').onclick = resetMarkierungen;
+// Top-Buttons wirken auf das aktive Blatt
+document.getElementById('btnNeu').onclick   = ()=> neuesBlattFuer(state.aktiv);
+document.getElementById('btnReset').onclick = ()=> resetMarkierungenFuer(state.aktiv);
+
+// Ansicht umschalten: Tabs <-> Untereinander
+btnAnsicht.onclick = ()=>{
+  state.ansicht = (state.ansicht === 'stapel') ? 'tabs' : 'stapel';
+  speichern();
+  renderAlles();
+};
 
 // "Alles zurücksetzen" -> Sicherheitsabfrage anzeigen
 const confirmOverlay = document.getElementById('confirmOverlay');
@@ -1318,13 +1425,6 @@ document.getElementById('btnResetJa').onclick = ()=>{
 };
 // Klick auf den dunklen Hintergrund bricht ebenfalls ab
 confirmOverlay.addEventListener('click', (e)=>{ if(e.target === confirmOverlay) confirmOverlay.classList.remove('an'); });
-
-// Blatt-Name ändern
-nameInput.addEventListener('input', ()=>{
-  aktiverSpieler().name = nameInput.value || 'Blatt';
-  speichern();
-  renderTabs();
-});
 
 // Blatt hinzufügen (max 6)
 document.getElementById('btnSpielerPlus').onclick = ()=>{
@@ -1357,6 +1457,8 @@ function grundValidieren(s){
 
 const geladen = laden();
 state = grundValidieren(geladen) ? geladen : frischerState();
+// Ansicht absichern (alte gespeicherte Zustände kennen das Feld evtl. nicht)
+if(state.ansicht !== 'stapel' && state.ansicht !== 'tabs') state.ansicht = 'tabs';
 renderAlles();
 
 /* -------------------------------------------------------------------------
