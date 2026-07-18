@@ -714,6 +714,15 @@ const POOL = [
     <path d="M28 25 L18 14" stroke="${INK}" stroke-width="2.2" fill="none"/>
     <path d="M37 26 L46 34" stroke="#b7bec4" stroke-width="5" stroke-linecap="round"/>
     <path d="M37 26 L46 34" stroke="${INK}" stroke-width="2.2" fill="none"/>`},
+
+  { t:"Fahrbahnteiler", s:`
+    <path d="M6 56 L22 12 L42 12 L58 56 Z" fill="#5a636a" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M17 56 L26 32 M47 56 L38 32" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M26 52 L28 26 L36 26 L38 52 Z" fill="#c7ccd0" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    ${[0,1,2,3].map(i=>`<path d="M27 ${48-i*7} h10" stroke="${ROT}" stroke-width="2" opacity=".5"/>`).join('')}
+    <rect x="30" y="12" width="4" height="18" fill="${INK}"/>
+    <circle cx="32" cy="12" r="9" fill="${BLAU}" stroke="#fff" stroke-width="2"/>
+    <path d="M32 6 L32 16 M32 16 L28 12 M32 16 L36 12" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`},
 ];
 
 /* -------------------------------------------------------------------------
