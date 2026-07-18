@@ -7,7 +7,7 @@
        * Google-Fonts    -> stale-while-revalidate (nach 1. Laden offline da)
    - Bei Versionswechsel CACHE hochzählen, dann werden alte Caches entfernt.
    ========================================================================== */
-const CACHE = 'tdf-bingo-v1';
+const CACHE = 'tdf-bingo-v2';
 
 // Relative Pfade, damit es sowohl unter / als auch unter /tdf-bingo/ funktioniert
 const APP_SHELL = [
@@ -59,12 +59,30 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Eigene Dateien: cache-first, sonst Netz, offline-Fallback = index.html
+  // HTML / Seitenaufruf: NETWORK-FIRST
+  // -> online immer der neueste Stand, offline Rückfall auf den Cache.
+  // So propagieren neue Felder/Änderungen automatisch, ohne SW-Neuinstallation.
+  const istHTML = req.mode === 'navigate'
+    || url.pathname.endsWith('/')
+    || url.pathname.endsWith('.html');
+
+  if (istHTML) {
+    e.respondWith(
+      fetch(req).then((res) => {
+        if (res && res.status === 200) {
+          const kopie = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, kopie));
+        }
+        return res;
+      }).catch(() =>
+        caches.match(req).then((hit) => hit || caches.match('./index.html'))
+      )
+    );
+    return;
+  }
+
+  // Übrige eigene Dateien (Icons, Manifest): cache-first, sonst Netz
   e.respondWith(
-    caches.match(req).then((hit) =>
-      hit || fetch(req).catch(() => {
-        if (req.mode === 'navigate') return caches.match('./index.html');
-      })
-    )
+    caches.match(req).then((hit) => hit || fetch(req))
   );
 });
