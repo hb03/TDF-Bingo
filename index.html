@@ -58,7 +58,14 @@
     margin:4px 0 2px;
   }
   .titel .tri{ display:flex; gap:3px; }
-  .titel .tri span{ width:12px; height:22px; border-radius:3px; display:block; }
+  /* Vier kleine "Trikots" als Akzent: Gelb, Bergtrikot (weiß mit roten Punkten), Grün, Weiß */
+  .titel .tri span{ width:12px; height:22px; border-radius:3px; display:block; border:1.5px solid var(--ink); }
+  .titel .tri .punkte{
+    background:#fff;
+    background-image:radial-gradient(var(--rot) 1.5px, transparent 1.8px);
+    background-size:5px 5px;
+    background-position:1px 1px;
+  }
   .subtitel{ font-size:14px; font-weight:500; opacity:.75; margin:0 0 10px; }
 
   /* ---------- Bedien-Leiste ---------- */
@@ -304,7 +311,7 @@
 
   <header>
     <div class="titel">
-      <span class="tri"><span style="background:var(--blau)"></span><span style="background:var(--rot)"></span><span style="background:var(--gelb)"></span></span>
+      <span class="tri" aria-hidden="true"><span style="background:var(--gelb)"></span><span class="punkte"></span><span style="background:var(--gruen)"></span><span style="background:#fff"></span></span>
       Tour-de-France Bingo
     </div>
     <p class="subtitel">Tippe an, was du im Rennen siehst! 🚴</p>
@@ -745,6 +752,14 @@ const POOL = [
     <rect x="26" y="13" width="14" height="11" rx="2" fill="#fff" stroke="${INK}" stroke-width="2"/>
     <g fill="${ROT}"><rect x="31.5" y="15" width="3" height="7" rx="1"/><rect x="29.5" y="17" width="7" height="3" rx="1"/></g>
     <g fill="${ROT}"><rect x="34.5" y="33" width="3" height="7" rx="1"/><rect x="32.5" y="35" width="7" height="3" rx="1"/></g>`},
+
+  { t:"Frankreich-Fahne", s:`
+    <rect x="14" y="8" width="3.5" height="50" rx="1.5" fill="${INK}"/>
+    <g stroke="${INK}" stroke-width="1.6">
+    <rect x="18" y="10" width="13" height="30" fill="${BLAU}"/>
+    <rect x="31" y="10" width="13" height="30" fill="#fff"/>
+    <rect x="44" y="10" width="13" height="30" fill="${ROT}"/>
+    </g>`},
 ];
 
 /* -------------------------------------------------------------------------
