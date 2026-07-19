@@ -7,7 +7,7 @@
        * Google-Fonts    -> stale-while-revalidate (nach 1. Laden offline da)
    - Bei Versionswechsel CACHE hochzählen, dann werden alte Caches entfernt.
    ========================================================================== */
-const CACHE = 'tdf-bingo-v2';
+const CACHE = 'tdf-bingo-v3';
 
 // Relative Pfade, damit es sowohl unter / als auch unter /tdf-bingo/ funktioniert
 const APP_SHELL = [
@@ -42,6 +42,11 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(req.url);
   const istFont = /fonts\.(googleapis|gstatic)\.com$/.test(url.hostname);
+  const sameOrigin = url.origin === self.location.origin;
+
+  // Fremd-Hosts (z.B. Firebase Realtime DB fürs Live-Spiel) NICHT abfangen –
+  // direkt vom Browser behandeln lassen (Streaming/WebSocket/REST).
+  if (!sameOrigin && !istFont) return;
 
   if (istFont) {
     // Google-Fonts: erst Cache zeigen, im Hintergrund aktualisieren

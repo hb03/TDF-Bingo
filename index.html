@@ -205,6 +205,52 @@
   button.mini{ min-height:44px; padding:8px 11px; font-size:17px; border-radius:12px; }
   .board.stapel .k-stempel{ margin-top:10px; }
 
+  /* ---------- Live-Spiel ---------- */
+  .live{ max-width:620px; margin:0 auto 10px; text-align:center; }
+  .live-toggle{ background:var(--blau); color:#fff; border-color:#2765a7; }
+  .live-toggle.verbunden{ background:var(--gruen); border-color:#1f7a43; }
+  .live-body{
+    margin-top:8px;
+    background:var(--feld);
+    border:2.5px solid var(--ink);
+    border-radius:16px;
+    box-shadow:var(--schatten);
+    padding:12px;
+  }
+  .live-row{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; align-items:center; }
+  .live-row input{
+    font-family:inherit; font-weight:600; font-size:15px; color:var(--ink);
+    text-align:center; border:2.5px solid var(--ink); border-radius:12px;
+    padding:9px 12px; background:var(--feld); box-shadow:var(--schatten);
+    width:min(42vw,160px);
+  }
+  .live-status{ font-size:14px; font-weight:600; margin-top:10px; min-height:1em; }
+  .live-status .code{ background:var(--gelb); border:2px solid var(--ink); border-radius:8px; padding:1px 8px; letter-spacing:2px; }
+  .live-players{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:10px; }
+  .live-players .sp{ font-size:13px; font-weight:600; background:#eef2f4; border:2px solid var(--ink); border-radius:10px; padding:5px 9px; }
+  .live-players .sp.ich{ background:var(--gelb); }
+  .live-players .sp b{ color:var(--rot); }
+  .live-hinweis{ font-size:13px; font-weight:500; opacity:.85; line-height:1.35; }
+  .live-hinweis code{ background:#eef2f4; border-radius:5px; padding:1px 5px; font-size:12px; }
+
+  /* Toast-Meldungen unten */
+  .toasts{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    display:flex; flex-direction:column; gap:8px; align-items:center;
+    z-index:70; pointer-events:none; width:max-content; max-width:94vw;
+  }
+  .toast{
+    background:var(--ink); color:#fff; font-weight:600; font-size:14px;
+    padding:11px 16px; border-radius:14px; box-shadow:0 4px 12px rgba(0,0,0,.25);
+    animation:toastIn .25s ease, toastOut .4s ease 3.6s forwards;
+    max-width:94vw;
+  }
+  .toast.bingo{ background:var(--gruen); }
+  .toast .wer{ color:var(--gelb); }
+  .toast.bingo .wer{ color:#fff; }
+  @keyframes toastIn{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes toastOut{ to{ opacity:0; transform:translateY(-8px); } }
+
   /* ---------- Bingo-Raster ---------- */
   .raster{
     display:grid;
@@ -395,6 +441,21 @@
     <div class="zaehler">Fertige Blätter: <b id="anzFertig">0</b> / <span id="anzBlaetter">1</span></div>
   </div>
 
+  <!-- Live-Spiel: Raum beitreten und Meldungen der anderen sehen -->
+  <div class="live" id="livePanel">
+    <button id="btnLiveToggle" class="live-toggle" aria-expanded="false">📡 Live-Spiel</button>
+    <div class="live-body" id="liveBody" hidden>
+      <div class="live-row" id="liveJoinRow">
+        <input id="liveName" type="text" maxlength="16" placeholder="Dein Name" aria-label="Dein Name">
+        <input id="liveCode" type="text" maxlength="8" placeholder="Raumcode (leer = neu)" aria-label="Raumcode">
+        <button id="btnLiveJoin" class="gruen">Beitreten</button>
+        <button id="btnLiveLeave" class="gefahr" hidden>Verlassen</button>
+      </div>
+      <div class="live-status" id="liveStatus"></div>
+      <div class="live-players" id="livePlayers"></div>
+    </div>
+  </div>
+
   <main id="board" class="board einzeln"></main>
 
   <footer>
@@ -428,6 +489,9 @@
 
   <canvas id="konfetti"></canvas>
 
+  <!-- Live-Meldungen (Toasts) -->
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
 <script>
 /* ============================================================================
    Tour-de-France Bingo  –  reine Single-File-Lösung
@@ -440,7 +504,18 @@
      5) Tippen -> markieren + Gewinnprüfung (Reihen/Spalten/Diagonalen)
      6) Konfetti-Animation
      7) Bedien-Buttons & Spieler-Tabs
+     8) Live-Spiel (optional, über Firebase Realtime Database per REST)
    ========================================================================== */
+
+/* =========================================================================
+   LIVE-SPIEL – Konfiguration
+   -------------------------------------------------------------------------
+   Trage hier die URL deiner Firebase Realtime Database ein, dann wird das
+   Live-Spiel aktiv. Ohne URL läuft die App ganz normal, nur ohne "Live".
+   Beispiel: "https://deinprojekt-default-rtdb.europe-west1.firebasedatabase.app"
+   (OHNE Schrägstrich am Ende).  Anleitung: siehe LIVE-SETUP.md
+   ========================================================================= */
+const FIREBASE_DB_URL = "";
 
 /* -------------------------------------------------------------------------
    1) Kleine SVG-Bausteine, die mehrere Icons gemeinsam nutzen
@@ -1239,8 +1314,15 @@ function tippe(i, idx){
   if(grid) grid.children[idx].classList.toggle('mark', z.marked);
   // Zähler dieser Karte aktualisieren
   const anzB = boardEl.querySelector(`.karte[data-i="${i}"] .k-anz`);
-  if(anzB) anzB.textContent = zellenMarkiert(blatt);
+  const anzahl = zellenMarkiert(blatt);
+  if(anzB) anzB.textContent = anzahl;
   markiereAktiv();
+
+  // Live-Spiel: neues Markieren als Meldung senden, Abwählen nur den Stand aktualisieren
+  if(LIVE.connected){
+    if(z.marked) liveFundMelden(z.text, anzahl);
+    else         liveCountAktualisieren(anzahl);
+  }
 
   // Nach jedem Tipp prüfen, ob eine komplette Linie markiert ist
   const linie = pruefeGewinn(blatt);
@@ -1250,6 +1332,7 @@ function tippe(i, idx){
     speichern();
     renderFertig();             // Zähler aktualisieren
     renderTabs();               // Pokal-Symbol am Tab
+    if(LIVE.connected) liveBingoMelden();   // Bingo in den Raum melden
     zeigeGewinn(i, linie);
   }
 }
@@ -1442,6 +1525,217 @@ document.getElementById('btnSpielerMinus').onclick = ()=>{
   speichern();
   renderAlles();
 };
+
+/* -------------------------------------------------------------------------
+   8) LIVE-SPIEL  (optional, Firebase Realtime Database per REST)
+   -------------------------------------------------------------------------
+   Ohne konfigurierte URL (FIREBASE_DB_URL) bleibt alles deaktiviert.
+   Prinzip:
+     - Jeder Spieler behält sein EIGENES Blatt.
+     - Beim Markieren eines Feldes wird eine kurze Meldung in den Raum
+       geschickt: {name, motiv, type:'found'}.  Alle im Raum sehen einen
+       Toast: 'Luisa hat „Sturz" gefunden'.  Bingo wird ebenso gemeldet.
+     - Empfang läuft über EventSource (Server-Sent-Events der RTDB-REST-API),
+       Senden über fetch (POST/PUT/DELETE).  Kein Firebase-SDK nötig.
+   ------------------------------------------------------------------------- */
+const LIVE = {
+  id: 'p_' + Math.random().toString(36).slice(2, 10),  // eindeutige Client-ID
+  url: (FIREBASE_DB_URL || '').replace(/\/+$/, ''),      // ohne Schrägstrich am Ende
+  room: null,
+  name: '',
+  es: null,
+  connected: false,
+  baselineDone: false,   // erster Snapshot verarbeitet?
+  seen: new Set(),       // bereits getoastete Event-IDs
+  data: {}               // lokale Spiegelung des Raums
+};
+
+const liveEls = {
+  panel:   document.getElementById('livePanel'),
+  toggle:  document.getElementById('btnLiveToggle'),
+  body:    document.getElementById('liveBody'),
+  joinRow: document.getElementById('liveJoinRow'),
+  name:    document.getElementById('liveName'),
+  code:    document.getElementById('liveCode'),
+  join:    document.getElementById('btnLiveJoin'),
+  leave:   document.getElementById('btnLiveLeave'),
+  status:  document.getElementById('liveStatus'),
+  players: document.getElementById('livePlayers'),
+  toasts:  document.getElementById('toasts')
+};
+
+function liveKonfiguriert(){ return !!LIVE.url; }
+
+// Toast-Meldung unten einblenden (verschwindet von selbst)
+function toast(html, art=''){
+  const t = document.createElement('div');
+  t.className = 'toast' + (art ? ' ' + art : '');
+  t.innerHTML = html;
+  liveEls.toasts.appendChild(t);
+  // nach der Ausblend-Animation entfernen
+  setTimeout(()=>{ t.remove(); }, 4200);
+}
+
+function liveStatus(html){ liveEls.status.innerHTML = html; }
+
+// Panel auf/zu
+liveEls.toggle.onclick = ()=>{
+  const auf = liveEls.body.hasAttribute('hidden');
+  if(auf){ liveEls.body.removeAttribute('hidden'); } else { liveEls.body.setAttribute('hidden',''); }
+  liveEls.toggle.setAttribute('aria-expanded', String(auf));
+  if(auf && !liveKonfiguriert()){
+    liveStatus(`<div class="live-hinweis">Live-Spiel ist noch nicht eingerichtet.<br>
+      Trage in <code>index.html</code> deine Firebase-Datenbank-URL bei
+      <code>FIREBASE_DB_URL</code> ein.<br>Anleitung: <code>LIVE-SETUP.md</code></div>`);
+    liveEls.joinRow.style.display = 'none';
+  }
+};
+
+// Pfad-Helfer: setzt/löscht einen Wert im lokalen Spiegel unter "/a/b/c"
+function livePfadSetzen(obj, pfad, wert){
+  const teile = pfad.split('/').filter(Boolean);
+  if(teile.length === 0){ return; }
+  let o = obj;
+  for(let k=0; k<teile.length-1; k++){
+    if(typeof o[teile[k]] !== 'object' || o[teile[k]] === null) o[teile[k]] = {};
+    o = o[teile[k]];
+  }
+  const last = teile[teile.length-1];
+  if(wert === null) delete o[last]; else o[last] = wert;
+}
+
+// Wendet ein put/patch an und toastet neue Events
+function liveAnwenden(pfad, wert){
+  if(pfad === '/' || pfad === ''){ LIVE.data = (wert && typeof wert==='object') ? wert : {}; }
+  else { livePfadSetzen(LIVE.data, pfad, wert); }
+
+  // neue Events erkennen
+  const evs = LIVE.data.events || {};
+  Object.keys(evs).forEach(id=>{
+    if(!LIVE.seen.has(id)){
+      LIVE.seen.add(id);
+      if(LIVE.baselineDone) liveToastEvent(evs[id]);   // Alt-Events beim Beitritt NICHT toasten
+    }
+  });
+  if(!LIVE.baselineDone && (pfad === '/' || pfad === '')) LIVE.baselineDone = true;
+
+  liveRenderPlayers();
+}
+
+function liveToastEvent(ev){
+  if(!ev || ev.by === LIVE.id) return;                 // eigene Meldungen ignorieren
+  const wer = `<span class="wer">${escapeHtml(ev.name || 'Jemand')}</span>`;
+  if(ev.type === 'bingo'){
+    toast(`🎉 ${wer} hat BINGO!`, 'bingo');
+  }else{
+    toast(`${wer} hat „${escapeHtml(ev.motiv || '?')}" gefunden`);
+  }
+}
+
+// kleine HTML-Absicherung für Namen/Motive
+function escapeHtml(s){
+  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function liveRenderPlayers(){
+  const players = LIVE.data.players || {};
+  const liste = Object.entries(players)
+    .map(([id, p]) => ({ id, name: (p && p.name) || '?', count: (p && p.count) || 0 }))
+    .sort((a,b)=> b.count - a.count);
+  liveEls.players.innerHTML = liste.map(p =>
+    `<span class="sp${p.id===LIVE.id?' ich':''}">${escapeHtml(p.name)} <b>${p.count}</b></span>`
+  ).join('');
+}
+
+// Präsenz (Name + gefundene Felder) in den Raum schreiben
+function livePresenz(count){
+  if(!LIVE.connected) return;
+  fetch(`${LIVE.url}/rooms/${LIVE.room}/players/${LIVE.id}.json`, {
+    method:'PUT',
+    body: JSON.stringify({ name: LIVE.name, count: count|0, ts: {'.sv':'timestamp'} })
+  }).catch(()=>{});
+}
+
+// Ein Ereignis in den Raum melden (found / bingo)
+function liveMelden(ev){
+  if(!LIVE.connected) return;
+  fetch(`${LIVE.url}/rooms/${LIVE.room}/events.json`, {
+    method:'POST',
+    body: JSON.stringify(Object.assign({ by: LIVE.id, name: LIVE.name, ts: {'.sv':'timestamp'} }, ev))
+  }).catch(()=>{});
+}
+
+// Öffentliche Helfer, die vom Spiel aufgerufen werden:
+function liveFundMelden(motiv, count){ liveMelden({ type:'found', motiv }); livePresenz(count); }
+function liveBingoMelden(){ liveMelden({ type:'bingo' }); }
+function liveCountAktualisieren(count){ livePresenz(count); }
+
+// Raum beitreten
+function liveJoin(){
+  if(!liveKonfiguriert()) return;
+  const name = (liveEls.name.value || '').trim();
+  if(!name){ liveStatus('Bitte zuerst einen Namen eingeben.'); liveEls.name.focus(); return; }
+  let code = (liveEls.code.value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(!code){ // leer -> neuen Raum erzeugen
+    code = Array.from({length:4}, ()=> 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
+    liveEls.code.value = code;
+  }
+  LIVE.name = name; LIVE.room = code;
+  LIVE.baselineDone = false; LIVE.seen = new Set(); LIVE.data = {};
+
+  // Stream öffnen (Server-Sent-Events der RTDB)
+  try{
+    LIVE.es = new EventSource(`${LIVE.url}/rooms/${code}.json`);
+  }catch(e){
+    liveStatus('Verbindung nicht möglich – URL prüfen.');
+    return;
+  }
+  LIVE.es.addEventListener('put', (e)=>{
+    try{ const m = JSON.parse(e.data); liveAnwenden(m.path, m.data); }catch(_){}
+  });
+  LIVE.es.addEventListener('patch', (e)=>{
+    try{
+      const m = JSON.parse(e.data);
+      Object.keys(m.data||{}).forEach(k=>{
+        const p = (m.path === '/' ? '' : m.path) + '/' + k;
+        liveAnwenden(p, m.data[k]);
+      });
+    }catch(_){}
+  });
+  LIVE.es.onopen = ()=>{
+    LIVE.connected = true;
+    livePresenz(zellenMarkiert(aktiverSpieler().blatt));   // eigenen Stand eintragen
+    liveStatus(`Verbunden · Raum <span class="code">${code}</span> · teile diesen Code!`);
+    liveEls.toggle.classList.add('verbunden');
+    liveEls.join.hidden = true; liveEls.leave.hidden = false;
+    liveEls.name.disabled = true; liveEls.code.disabled = true;
+  };
+  LIVE.es.onerror = ()=>{
+    if(!LIVE.connected) liveStatus('Verbindung fehlgeschlagen – URL/Regeln prüfen.');
+    else liveStatus(`Verbindung unterbrochen … neuer Versuch · Raum <span class="code">${LIVE.room}</span>`);
+  };
+}
+
+// Raum verlassen
+function liveLeave(){
+  if(LIVE.es){ LIVE.es.close(); LIVE.es = null; }
+  if(LIVE.connected){
+    fetch(`${LIVE.url}/rooms/${LIVE.room}/players/${LIVE.id}.json`, { method:'DELETE' }).catch(()=>{});
+  }
+  LIVE.connected = false; LIVE.room = null;
+  liveEls.toggle.classList.remove('verbunden');
+  liveEls.join.hidden = false; liveEls.leave.hidden = true;
+  liveEls.name.disabled = false; liveEls.code.disabled = false;
+  liveEls.players.innerHTML = '';
+  liveStatus('Raum verlassen.');
+}
+
+liveEls.join.onclick  = liveJoin;
+liveEls.leave.onclick = liveLeave;
+// Beim Schließen des Tabs sauber abmelden
+window.addEventListener('pagehide', ()=>{ if(LIVE.connected){ try{ navigator.sendBeacon; }catch(_){} liveLeave(); } });
+
+// Panel nur zeigen, wenn überhaupt sinnvoll (immer sichtbar; Hinweis falls nicht konfiguriert)
 
 /* -------------------------------------------------------------------------
    START:  gespeicherten Zustand laden oder frisch beginnen
