@@ -75,7 +75,16 @@
     background-size:5px 5px;
     background-position:1px 1px;
   }
-  .subtitel{ font-size:14px; font-weight:500; opacity:.75; margin:0 0 10px; }
+  .subtitel{ font-size:14px; font-weight:500; opacity:.75; margin:0 0 8px; }
+  .spiel-link{
+    display:inline-flex; align-items:center; gap:6px;
+    text-decoration:none; font-size:13px; font-weight:600;
+    color:var(--ink); background:#fff;
+    border:1.5px solid var(--ink); border-radius:999px;
+    padding:5px 12px; margin:0 0 10px;
+    box-shadow:0 2px 0 var(--ink);
+  }
+  .spiel-link:active{ transform:translateY(1px); box-shadow:0 1px 0 var(--ink); }
 
   /* ---------- Bedien-Leiste ---------- */
   .leiste{
@@ -424,6 +433,7 @@
       Tour-de-France Bingo
     </div>
     <p class="subtitel">Tippe an, was du im Rennen siehst! 🚴</p>
+    <a class="spiel-link" href="./bombe.html">💣 Bombenspiel spielen →</a>
   </header>
 
   <div class="leiste">

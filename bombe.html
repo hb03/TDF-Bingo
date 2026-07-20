@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1a1024">
 <title>Bombenspiel 💣</title>
+
+<!-- PWA: gleiche App-Shell wie das Bingo, damit offline nutzbar -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="./icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bombenspiel">
 <style>
   :root{
     --bg:      #140b1e;
@@ -166,6 +174,7 @@
 
     <div class="footer-btns">
       <button id="startBtn" class="btn start" type="button">▶︎ Spiel starten</button>
+      <a class="btn ghost" href="./index.html" style="text-decoration:none">🚴 Zurück zum Bingo</a>
       <p class="hint">Timer läuft versteckt · Bumm nach 30–60&nbsp;Sek.</p>
     </div>
   </div>
@@ -518,6 +527,13 @@
     curIdx = (curIdx + 1) % players.length;
     newRound(false);
   });
+
+  // ---------- PWA / Offline ----------
+  if ("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
+  }
 
 })();
 </script>
