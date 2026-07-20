@@ -194,6 +194,12 @@
   .radio span{ line-height:1.3; }
   .radio em{ color:var(--muted); font-style:normal; font-size:.85rem; }
   .radio:has(input:checked){ background:rgba(255,207,58,.10); border-color:var(--accent2); border-radius:12px; }
+  .toggle{
+    display:flex; align-items:center; gap:12px; cursor:pointer;
+    padding:12px 4px; font-weight:500;
+  }
+  .toggle + .toggle{ border-top:1px solid var(--line); }
+  .toggle input{ width:22px; height:22px; accent-color:var(--accent2); flex:0 0 auto; }
   .set-summary{ text-align:center; color:var(--muted); font-size:.85rem; margin:8px 0 0; }
 
   /* ---------- Explosion: mehrere Gewinner ---------- */
@@ -271,6 +277,24 @@
             <span>Wer die Bombe am kürzesten gehalten hat</span></label>
         </div>
       </div>
+
+      <div class="set-block">
+        <label class="set-label">Startspieler</label>
+        <div class="radios">
+          <label class="radio"><input type="radio" name="start" value="first">
+            <span>Erster in der Liste <em>(Standard)</em></span></label>
+          <label class="radio"><input type="radio" name="start" value="random">
+            <span>Zufälliger Spieler</span></label>
+        </div>
+      </div>
+
+      <div class="set-block">
+        <label class="set-label">Ton &amp; Effekte</label>
+        <label class="toggle"><input id="setSound" type="checkbox">
+          <span>🔊 Tick-Tack &amp; Explosions-Sound</span></label>
+        <label class="toggle"><input id="setVibrate" type="checkbox">
+          <span>📳 Vibration beim Bumm</span></label>
+      </div>
     </div>
 
     <div class="footer-btns">
@@ -333,6 +357,9 @@
   let durMin = 10;             // Bombe läuft mindestens (Sek.)
   let durMax = 60;             // Bombe läuft höchstens (Sek.)
   let scoreMode = "explode";   // explode | survivors | longest | shortest
+  let startMode = "first";     // first | random – wer beginnt die 1. Runde
+  let soundOn = true;          // Tick-Tack & Explosions-Sound
+  let vibrateOn = true;        // Vibration beim Bumm
 
   const CLICK_LOCK_MS = 500;   // Timer-Pause + Klick-Sperre nach jedem Weiterschalten
   const BOOM_LOCK_MS  = 3000;  // Bildschirm-Sperre nach der Explosion
@@ -372,7 +399,7 @@
 
   // Kurzer "Tick"-Klick der Bombe
   function playTick(high){
-    if (!actx) return;
+    if (!soundOn || !actx) return;
     const t = actx.currentTime;
     const osc = actx.createOscillator();
     const g = actx.createGain();
@@ -387,6 +414,7 @@
 
   function startTicking(){
     stopTicking();
+    if (!soundOn) return;        // Ton aus → kein Ticken
     tickOn = true;
     let hi = false;
     const loop = () => {
@@ -404,7 +432,7 @@
 
   // Explosions-Sound: Rausch-Knall + tiefer Boom
   function playExplosion(){
-    if (!actx) return;
+    if (!soundOn || !actx) return;
     const t = actx.currentTime;
 
     // Rauschen
@@ -478,7 +506,8 @@
   $("#addBtn").addEventListener("click", () => { audioInit(); addPlayer(""); });
 
   // ---------- Einstellungen (eigene Seite) ----------
-  const DEFAULTS = { durMin: 10, durMax: 60, scoreMode: "explode" };
+  const DEFAULTS = { durMin: 10, durMax: 60, scoreMode: "explode",
+                     startMode: "first", soundOn: true, vibrateOn: true };
   const SCORE_TEXT = {
     explode:   "Punkt: wer explodieren lässt",
     survivors: "Punkt: alle außer dem Getroffenen",
@@ -490,9 +519,13 @@
   function loadSettings(){
     let s = null;
     try { s = JSON.parse(localStorage.getItem("bombe.settings") || "null"); } catch (e) {}
-    durMin = (s && s.durMin) || DEFAULTS.durMin;
-    durMax = (s && s.durMax) || DEFAULTS.durMax;
-    scoreMode = (s && s.scoreMode) || DEFAULTS.scoreMode;
+    s = s || {};
+    durMin    = s.durMin    || DEFAULTS.durMin;
+    durMax    = s.durMax    || DEFAULTS.durMax;
+    scoreMode = s.scoreMode || DEFAULTS.scoreMode;
+    startMode = s.startMode || DEFAULTS.startMode;
+    soundOn   = s.sound   !== undefined ? !!s.sound   : DEFAULTS.soundOn;
+    vibrateOn = s.vibrate !== undefined ? !!s.vibrate : DEFAULTS.vibrateOn;
     updateSetSummary();
   }
 
@@ -502,6 +535,10 @@
     $("#maxSec").value = durMax;
     const r = document.querySelector('input[name="score"][value="' + scoreMode + '"]');
     if (r) r.checked = true;
+    const st = document.querySelector('input[name="start"][value="' + startMode + '"]');
+    if (st) st.checked = true;
+    $("#setSound").checked = soundOn;
+    $("#setVibrate").checked = vibrateOn;
   }
 
   // Werte von der Einstellungs-Seite übernehmen, prüfen und merken
@@ -514,9 +551,14 @@
     durMin = mn; durMax = mx;
     const sel = document.querySelector('input[name="score"]:checked');
     scoreMode = sel ? sel.value : DEFAULTS.scoreMode;
+    const st = document.querySelector('input[name="start"]:checked');
+    startMode = st ? st.value : DEFAULTS.startMode;
+    soundOn = $("#setSound").checked;
+    vibrateOn = $("#setVibrate").checked;
     try {
       localStorage.setItem("bombe.settings",
-        JSON.stringify({ durMin, durMax, scoreMode }));
+        JSON.stringify({ durMin, durMax, scoreMode, startMode,
+                         sound: soundOn, vibrate: vibrateOn }));
     } catch (e) {}
     updateSetSummary();
   }
@@ -524,7 +566,10 @@
   // Kurz-Zusammenfassung auf dem Setup-Screen
   function updateSetSummary(){
     const el = $("#setSummary");
-    if (el) el.textContent = "Bombe " + durMin + "–" + durMax + " s · " + SCORE_TEXT[scoreMode];
+    if (!el) return;
+    let t = "Bombe " + durMin + "–" + durMax + " s · " + SCORE_TEXT[scoreMode];
+    if (!soundOn) t += " · 🔇";
+    el.textContent = t;
   }
 
   loadSettings();
@@ -539,6 +584,7 @@
   });
   $("#resetSettings").addEventListener("click", () => {
     durMin = DEFAULTS.durMin; durMax = DEFAULTS.durMax; scoreMode = DEFAULTS.scoreMode;
+    startMode = DEFAULTS.startMode; soundOn = DEFAULTS.soundOn; vibrateOn = DEFAULTS.vibrateOn;
     fillSettingsForm();
   });
 
@@ -565,7 +611,10 @@
   //  Spiel
   // =======================================================
   function startGame(){
-    curIdx = 0;
+    // Startspieler laut Einstellung
+    curIdx = startMode === "random"
+      ? Math.floor(Math.random() * players.length)
+      : 0;
     renderTopbar();
     setScreen("game");
     newRound(true);
@@ -675,8 +724,8 @@
     void flashEl.offsetWidth;
     flashEl.classList.add("go");
 
-    // Vibration (falls unterstützt)
-    if (navigator.vibrate) navigator.vibrate([80, 60, 200]);
+    // Vibration (falls aktiviert & unterstützt)
+    if (vibrateOn && navigator.vibrate) navigator.vibrate([80, 60, 200]);
 
     const holder = players[curIdx];           // bei wem ist sie explodiert
     const winners = pickWinners();            // wer bekommt den Punkt (Modus)
