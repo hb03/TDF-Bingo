@@ -7,12 +7,13 @@
        * Google-Fonts    -> stale-while-revalidate (nach 1. Laden offline da)
    - Bei Versionswechsel CACHE hochzählen, dann werden alte Caches entfernt.
    ========================================================================== */
-const CACHE = 'tdf-bingo-v3';
+const CACHE = 'tdf-bingo-v4';
 
 // Relative Pfade, damit es sowohl unter / als auch unter /tdf-bingo/ funktioniert
 const APP_SHELL = [
   './',
   './index.html',
+  './bombe.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
