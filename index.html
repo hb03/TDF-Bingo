@@ -357,6 +357,35 @@
     padding:20px;
   }
   .overlay.an{ display:flex; }
+
+  /* ---------- Einstellungen: Motiv-Auswahl ---------- */
+  .box.setbox{ max-width:560px; max-height:88vh; display:flex; flex-direction:column; text-align:left; }
+  .set-intro{ font-size:14px; margin:4px 0 12px; line-height:1.4; }
+  .set-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; flex-wrap:wrap; }
+  .set-count{ font-size:14px; }
+  .set-tools button{
+    font-family:inherit; cursor:pointer; border:2px solid var(--ink); background:var(--feld);
+    color:var(--ink); border-radius:10px; padding:6px 12px; font-weight:600; font-size:13px; margin-left:6px;
+  }
+  .set-tools button:active{ transform:translateY(1px); }
+  #motivFilter{
+    width:100%; font-family:inherit; font-size:15px; padding:10px 12px; margin-bottom:8px;
+    border:2px solid var(--ink); border-radius:12px; background:var(--feld); color:var(--ink);
+  }
+  .set-warn{ background:#fff3cd; border:2px solid var(--ink); border-radius:10px; padding:8px 10px; font-size:13px; margin:0 0 8px; }
+  .motiv-grid{
+    overflow-y:auto; -webkit-overflow-scrolling:touch; flex:1; min-height:120px;
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:8px; padding:2px;
+    border-top:2px solid rgba(36,48,58,.12); border-bottom:2px solid rgba(36,48,58,.12); padding-top:10px;
+  }
+  .motiv{
+    display:flex; align-items:center; gap:8px; cursor:pointer;
+    border:2px solid rgba(36,48,58,.18); border-radius:12px; padding:6px 8px; background:var(--feld);
+  }
+  .motiv.aus{ opacity:.42; background:repeating-linear-gradient(45deg, #f3f3f3, #f3f3f3 6px, #eaeaea 6px, #eaeaea 12px); }
+  .motiv svg{ width:34px; height:34px; flex:0 0 auto; }
+  .motiv .mt{ font-size:12.5px; line-height:1.15; font-weight:600; }
+  .motiv input{ width:18px; height:18px; flex:0 0 auto; accent-color:var(--gruen); margin-left:auto; }
   .box{
     position:relative;
     background:var(--feld);
@@ -442,6 +471,7 @@
     <button id="btnSpielerPlus">＋ Blatt</button>
     <button id="btnSpielerMinus">－ Blatt</button>
     <button id="btnAnsicht">🧾 Ansicht: Untereinander</button>
+    <button id="btnEinstellungen">⚙️ Einstellungen</button>
     <button id="btnCache" title="Service-Worker abmelden, alle Caches löschen und frisch neu laden">🧹 Cache leeren & neu laden</button>
     <button id="btnResetAll" class="gefahr">🗑️ Alles zurücksetzen</button>
   </div>
@@ -494,6 +524,32 @@
       <div class="btns">
         <button id="btnResetJa" class="gefahr">Ja, alles löschen</button>
         <button id="btnResetNein" class="primaer">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Einstellungen: Motiv-Auswahl -->
+  <div class="overlay" id="setOverlay">
+    <div class="box setbox">
+      <p class="dialogTitel">⚙️ Bingo-Einstellungen</p>
+      <p class="set-intro">Wähle, welche Motive auf <b>neuen</b> Blättern vorkommen dürfen.
+        Bereits erstellte Blätter bleiben unverändert. Mindestens 24 Motive müssen aktiv sein.</p>
+
+      <div class="set-toolbar">
+        <span class="set-count"><b id="motivAktiv">–</b> / <span id="motivGesamt">–</span> aktiv</span>
+        <span class="set-tools">
+          <button id="motivAlle" type="button">Alle</button>
+          <button id="motivKeine" type="button">Keine</button>
+        </span>
+      </div>
+      <input id="motivFilter" type="search" placeholder="🔍 Motiv suchen …" autocomplete="off">
+      <p id="motivWarn" class="set-warn" hidden>⚠️ Zu wenige aktiv – es werden vorübergehend wieder alle Motive genutzt.</p>
+
+      <div id="motivGrid" class="motiv-grid"></div>
+
+      <div class="btns">
+        <button id="setSpeichern" class="gruen">✓ Speichern</button>
+        <button id="setSchliessen" class="primaer">Schließen</button>
       </div>
     </div>
   </div>
@@ -1111,22 +1167,52 @@ const SPEICHER_KEY = 'tdf-bingo-state-v1';
 // In-Memory-Zustand (Quelle der Wahrheit)
 let state = null;
 
+// Persistenz: bevorzugt localStorage (überlebt App-/Browser-Neustart und wird
+// von der Android-WebView dauerhaft im App-Speicher abgelegt). sessionStorage
+// nur als zusätzliches Fallback.
 function speichern(){
-  try{ sessionStorage.setItem(SPEICHER_KEY, JSON.stringify(state)); }
-  catch(e){ /* sessionStorage nicht verfügbar -> egal, In-Memory reicht */ }
+  const json = JSON.stringify(state);
+  try{ localStorage.setItem(SPEICHER_KEY, json); }catch(e){}
+  try{ sessionStorage.setItem(SPEICHER_KEY, json); }catch(e){}
 }
 function laden(){
-  try{
-    const roh = sessionStorage.getItem(SPEICHER_KEY);
-    if(roh) return JSON.parse(roh);
-  }catch(e){}
+  try{ const r = localStorage.getItem(SPEICHER_KEY);   if(r) return JSON.parse(r); }catch(e){}
+  try{ const r = sessionStorage.getItem(SPEICHER_KEY); if(r) return JSON.parse(r); }catch(e){}
   return null;
+}
+
+/* -------------------------------------------------------------------------
+   Bingo-Einstellungen (eigene Seite): welche Motive dürfen auf neuen
+   Blättern vorkommen. Dauerhaft in localStorage.
+   ------------------------------------------------------------------------- */
+const BINGO_SET_KEY = 'tdf-bingo-settings';
+let bingoSettings = { excluded: [] };   // Liste ausgeschlossener POOL-Indizes
+
+function ladeBingoSettings(){
+  try{
+    const s = JSON.parse(localStorage.getItem(BINGO_SET_KEY) || 'null');
+    if(s && Array.isArray(s.excluded)){
+      // nur gültige Indizes übernehmen
+      bingoSettings.excluded = s.excluded.filter(i => Number.isInteger(i) && i>=0 && i<POOL.length);
+    }
+  }catch(e){}
+}
+function speichereBingoSettings(){
+  try{ localStorage.setItem(BINGO_SET_KEY, JSON.stringify(bingoSettings)); }catch(e){}
+}
+// POOL-Indizes, die genutzt werden dürfen
+function aktiveMotive(){
+  const ex = new Set(bingoSettings.excluded);
+  return [...POOL.keys()].filter(i => !ex.has(i));
 }
 
 // Erzeugt ein neues Blatt (Array aus 25 Feldern; Mitte = Freifeld)
 function neuesBlatt(){
-  // 24 zufällige, unterschiedliche Pool-Indizes ziehen
-  const indizes = [...POOL.keys()];
+  // 24 zufällige, unterschiedliche Motive aus den AKTIVEN ziehen.
+  // Sind zu wenige aktiv (<24), fällt es auf alle Motive zurück, damit das
+  // Spiel nie kaputtgeht.
+  let indizes = aktiveMotive();
+  if(indizes.length < 24) indizes = [...POOL.keys()];
   // Fisher-Yates-Mischen
   for(let i=indizes.length-1; i>0; i--){
     const j = Math.floor(Math.random()*(i+1));
@@ -1520,6 +1606,83 @@ document.getElementById('btnResetJa').onclick = ()=>{
 // Klick auf den dunklen Hintergrund bricht ebenfalls ab
 confirmOverlay.addEventListener('click', (e)=>{ if(e.target === confirmOverlay) confirmOverlay.classList.remove('an'); });
 
+/* -------------------------------------------------------------------------
+   Einstellungen: Motiv-Auswahl
+   ------------------------------------------------------------------------- */
+const setOverlay = document.getElementById('setOverlay');
+const motivGridEl = document.getElementById('motivGrid');
+let setEntwurf = new Set();   // aktuell in der offenen Seite ausgeschlossene Indizes
+
+// Motiv-Kacheln (einmalig) aufbauen
+function baueMotivGrid(){
+  motivGridEl.innerHTML = '';
+  POOL.forEach((m, i)=>{
+    const el = document.createElement('label');
+    el.className = 'motiv';
+    el.dataset.i = i;
+    el.dataset.name = m.t.toLowerCase();
+    el.innerHTML =
+      `<svg viewBox="0 0 64 64" aria-hidden="true">${m.s}</svg>` +
+      `<span class="mt">${m.t}</span>` +
+      `<input type="checkbox">`;
+    const cb = el.querySelector('input');
+    cb.addEventListener('change', ()=>{
+      if(cb.checked) setEntwurf.delete(i); else setEntwurf.add(i);
+      el.classList.toggle('aus', !cb.checked);
+      aktualisiereMotivZaehler();
+    });
+    motivGridEl.appendChild(el);
+  });
+  document.getElementById('motivGesamt').textContent = POOL.length;
+}
+
+// Kacheln an den aktuellen Entwurf anpassen (Häkchen + Optik)
+function spiegleMotivEntwurf(){
+  [...motivGridEl.children].forEach(el=>{
+    const i = +el.dataset.i;
+    const an = !setEntwurf.has(i);
+    el.querySelector('input').checked = an;
+    el.classList.toggle('aus', !an);
+  });
+  aktualisiereMotivZaehler();
+}
+
+function aktualisiereMotivZaehler(){
+  const aktiv = POOL.length - setEntwurf.size;
+  document.getElementById('motivAktiv').textContent = aktiv;
+  document.getElementById('motivWarn').hidden = aktiv >= 24;
+}
+
+function motivFilter(txt){
+  const q = txt.trim().toLowerCase();
+  [...motivGridEl.children].forEach(el=>{
+    el.style.display = (!q || el.dataset.name.includes(q)) ? '' : 'none';
+  });
+}
+
+function oeffneEinstellungen(){
+  if(!motivGridEl.children.length) baueMotivGrid();
+  setEntwurf = new Set(bingoSettings.excluded);
+  document.getElementById('motivFilter').value = '';
+  motivFilter('');
+  spiegleMotivEntwurf();
+  setOverlay.classList.add('an');
+}
+function schliesseEinstellungen(){ setOverlay.classList.remove('an'); }
+
+document.getElementById('btnEinstellungen').onclick = oeffneEinstellungen;
+document.getElementById('setSchliessen').onclick = schliesseEinstellungen;
+document.getElementById('motivAlle').onclick  = ()=>{ setEntwurf.clear(); spiegleMotivEntwurf(); };
+document.getElementById('motivKeine').onclick = ()=>{ setEntwurf = new Set(POOL.keys()); spiegleMotivEntwurf(); };
+document.getElementById('motivFilter').addEventListener('input', e=> motivFilter(e.target.value));
+document.getElementById('setSpeichern').onclick = ()=>{
+  bingoSettings.excluded = [...setEntwurf];
+  speichereBingoSettings();
+  schliesseEinstellungen();
+  toast('Einstellungen gespeichert – gilt für neue Blätter', 'bingo');
+};
+setOverlay.addEventListener('click', (e)=>{ if(e.target === setOverlay) schliesseEinstellungen(); });
+
 // Blatt hinzufügen (max 6)
 document.getElementById('btnSpielerPlus').onclick = ()=>{
   if(state.spieler.length >= 6) return;
@@ -1760,6 +1923,7 @@ function grundValidieren(s){
   );
 }
 
+ladeBingoSettings();                 // Motiv-Auswahl vor dem ersten Blatt laden
 const geladen = laden();
 state = grundValidieren(geladen) ? geladen : frischerState();
 // Ansicht absichern (alte gespeicherte Zustände kennen das Feld evtl. nicht)

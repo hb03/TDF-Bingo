@@ -108,6 +108,7 @@
   .chip.cur{ opacity:1; transform:scale(1.04); border-color:currentColor; }
   .chip .dot{ width:14px; height:14px; border-radius:50%; }
   .chip .pts{ background:rgba(255,255,255,.12); border-radius:999px; padding:1px 8px; font-size:.85rem; }
+  .chip .chold{ color:var(--muted); font-size:.8rem; font-variant-numeric:tabular-nums; }
 
   .stage{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:0; }
   .turnlabel{ color:var(--muted); text-transform:uppercase; letter-spacing:3px; font-size:.8rem; margin-bottom:14px; }
@@ -142,7 +143,10 @@
   #boom{
     position:fixed; inset:0; display:none; flex-direction:column;
     align-items:center; justify-content:center; text-align:center; padding:24px;
-    background:radial-gradient(circle at 50% 45%, rgba(255,180,40,.28), rgba(20,11,30,.94) 60%);
+    /* deckender Hintergrund: solide Basisfarbe + oranger Glutschein */
+    background:
+      radial-gradient(circle at 50% 42%, rgba(255,170,50,.22), transparent 46%),
+      var(--bg);
     cursor:pointer; z-index:10;
   }
   #boom.show{ display:flex; }
@@ -661,10 +665,18 @@
     rafId = requestAnimationFrame(tickLoop);
   }
 
-  // Sekundenanzeige: wie lange hält der aktuelle Spieler die Bombe schon?
+  // Sekundenanzeige: aktueller Zug (groß) + Gesamt-Haltezeit je Spieler (Chips)
   function updateSecs(){
-    const s = (Date.now() - turnStart) / 1000;
+    const now = Date.now();
+    const s = (now - turnStart) / 1000;
     secsEl.innerHTML = "<b>" + s.toFixed(1).replace(".", ",") + "</b> s";
+    const chips = topbarEl.children;
+    for (let i = 0; i < players.length; i++){
+      const el = chips[i] && chips[i].querySelector(".chold");
+      if (!el) continue;
+      const ms = players[i].roundMs + (i === curIdx && running ? now - turnStart : 0);
+      el.textContent = (ms / 1000).toFixed(1).replace(".", ",") + "s";
+    }
   }
 
   // Bombe wackelt zu zufälligen Zeitpunkten – bewusst NICHT an die
@@ -789,6 +801,7 @@
       chip.style.color = p.color;
       chip.innerHTML = `<span class="dot" style="background:${p.color}"></span>
                         <span style="color:var(--ink)">${escapeHtml(p.name)}</span>
+                        <span class="chold" title="Gesamt-Haltezeit diese Runde">0,0s</span>
                         <span class="pts">${p.points}</span>`;
       topbarEl.appendChild(chip);
     });
@@ -828,7 +841,12 @@
   function tryAdvance(){
     if (!running) return;
     const now = Date.now();
-    if (now < clickLockUntil) return;          // innerhalb der Sperre → ignorieren
+    if (now < clickLockUntil){
+      // Noch gesperrt: schnelles Weitertippen hält die Sperre aufrecht,
+      // damit man nicht durch Mehrfach-Tippen doch früher weiterschaltet.
+      clickLockUntil = now + CLICK_LOCK_MS;
+      return;
+    }
     clickLockUntil = now + CLICK_LOCK_MS;
     explodeAt += CLICK_LOCK_MS;                 // Timer 0,5s anhalten (Pause)
     nextPlayer();
