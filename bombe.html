@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a1024">
+<title>Bombenspiel 💣</title>
+<style>
+  :root{
+    --bg:      #140b1e;
+    --bg2:     #241436;
+    --panel:   #1e1230;
+    --ink:     #f4ecff;
+    --muted:   #b9a9d6;
+    --accent:  #ff5a3c;
+    --accent2: #ffcf3a;
+    --ok:      #46d38a;
+    --line:    rgba(255,255,255,.14);
+    --radius:  20px;
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; margin:0; }
+  body{
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(120% 80% at 50% -10%, #3a1c52 0%, transparent 55%),
+      linear-gradient(180deg, var(--bg2), var(--bg));
+    min-height:100dvh;
+    overflow:hidden;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+
+  /* ---------- Screens ---------- */
+  .screen{
+    position:fixed; inset:0;
+    display:none;
+    flex-direction:column;
+    padding:22px;
+    padding-top: max(22px, env(safe-area-inset-top));
+    padding-bottom: max(22px, env(safe-area-inset-bottom));
+  }
+  .screen.active{ display:flex; }
+
+  /* ---------- Setup ---------- */
+  .wrap{ width:100%; max-width:520px; margin:0 auto; display:flex; flex-direction:column; min-height:0; flex:1; }
+  h1{ font-size:2rem; margin:.2em 0 .1em; text-align:center; letter-spacing:.5px; }
+  .sub{ text-align:center; color:var(--muted); margin:0 0 18px; font-size:.98rem; line-height:1.45; }
+
+  .players{ overflow-y:auto; -webkit-overflow-scrolling:touch; padding:2px; margin-bottom:12px; }
+  .prow{
+    display:flex; align-items:center; gap:10px; margin-bottom:10px;
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:8px 10px;
+  }
+  .swatch{ width:26px; height:26px; border-radius:50%; flex:0 0 auto; box-shadow:0 0 0 2px rgba(0,0,0,.25) inset; }
+  .prow input{
+    flex:1; min-width:0; background:transparent; border:none; outline:none;
+    color:var(--ink); font-size:1.1rem; padding:8px 4px;
+  }
+  .prow input::placeholder{ color:var(--muted); }
+  .del{
+    flex:0 0 auto; width:34px; height:34px; border-radius:10px; border:none; cursor:pointer;
+    background:rgba(255,90,60,.16); color:var(--accent); font-size:1.2rem; line-height:1;
+  }
+  .del:active{ transform:scale(.92); }
+
+  button{ font-family:inherit; }
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; border:none; cursor:pointer; border-radius:16px;
+    padding:16px; font-size:1.15rem; font-weight:700; color:#241436;
+    background:linear-gradient(180deg, var(--accent2), #ffb638);
+    box-shadow:0 8px 22px rgba(255,140,40,.35);
+  }
+  .btn:active{ transform:translateY(1px); }
+  .btn.ghost{
+    background:transparent; color:var(--ink);
+    border:1px dashed var(--line); box-shadow:none; font-weight:600; padding:13px;
+  }
+  .btn.start{ background:linear-gradient(180deg,#ff7a4d,var(--accent)); color:#fff;
+              box-shadow:0 10px 26px rgba(255,80,50,.45); }
+  .footer-btns{ display:flex; flex-direction:column; gap:10px; margin-top:auto; padding-top:10px; }
+  .hint{ text-align:center; color:var(--muted); font-size:.82rem; margin:10px 0 0; }
+
+  /* ---------- Game ---------- */
+  #game{ cursor:pointer; }
+  .topbar{
+    display:flex; gap:8px; overflow-x:auto; padding:2px 2px 8px;
+    flex:0 0 auto; -webkit-overflow-scrolling:touch;
+  }
+  .chip{
+    flex:0 0 auto; display:flex; align-items:center; gap:7px;
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:999px; padding:6px 12px 6px 8px; font-weight:600; font-size:.95rem;
+    opacity:.55; transition:opacity .15s, transform .15s;
+  }
+  .chip.cur{ opacity:1; transform:scale(1.04); border-color:currentColor; }
+  .chip .dot{ width:14px; height:14px; border-radius:50%; }
+  .chip .pts{ background:rgba(255,255,255,.12); border-radius:999px; padding:1px 8px; font-size:.85rem; }
+
+  .stage{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:0; }
+  .turnlabel{ color:var(--muted); text-transform:uppercase; letter-spacing:3px; font-size:.8rem; margin-bottom:14px; }
+  .bomb{ font-size:clamp(6rem,34vw,13rem); line-height:1; filter:drop-shadow(0 10px 20px rgba(0,0,0,.5)); }
+  .curname{
+    font-size:clamp(2.4rem,13vw,4.6rem); font-weight:800; margin-top:6px;
+    line-height:1.05; word-break:break-word; max-width:100%;
+  }
+  .tap-hint{ margin-top:26px; color:var(--muted); font-size:.95rem; animation:pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse{ 50%{ opacity:.35; } }
+
+  .bomb.shake{ animation:shake .28s infinite; }
+  @keyframes shake{
+    0%,100%{ transform:translate(0,0) rotate(0); }
+    25%{ transform:translate(-3px,1px) rotate(-3deg); }
+    75%{ transform:translate(3px,-1px) rotate(3deg); }
+  }
+
+  /* ---------- Explosion overlay ---------- */
+  #boom{
+    position:fixed; inset:0; display:none; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; padding:24px;
+    background:radial-gradient(circle at 50% 45%, rgba(255,180,40,.28), rgba(20,11,30,.94) 60%);
+    cursor:pointer; z-index:10;
+  }
+  #boom.show{ display:flex; }
+  .boom-emoji{ font-size:clamp(5rem,26vw,10rem); animation:pop .5s ease-out; }
+  @keyframes pop{ 0%{ transform:scale(.2); opacity:0; } 60%{ transform:scale(1.25); } 100%{ transform:scale(1); opacity:1; } }
+  .boom-title{ font-size:2rem; font-weight:800; margin:4px 0; }
+  .boom-loser{ font-size:clamp(2rem,11vw,3.6rem); font-weight:800; line-height:1.1; }
+  .boom-sub{ color:var(--muted); margin-top:6px; }
+  .board{ margin:22px 0 8px; width:100%; max-width:360px; }
+  .board .r{ display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--panel);
+             border:1px solid var(--line); border-radius:12px; margin-bottom:8px; }
+  .board .r .dot{ width:16px; height:16px; border-radius:50%; }
+  .board .r .nm{ flex:1; text-align:left; font-weight:600; }
+  .board .r .pt{ font-weight:800; font-size:1.2rem; }
+  .board .r.lead{ box-shadow:0 0 0 2px var(--accent2) inset; }
+  .boom-hint{ margin-top:14px; color:var(--muted); animation:pulse 1.6s ease-in-out infinite; }
+
+  .flash{ position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:20; }
+  .flash.go{ animation:flash .5s ease-out; }
+  @keyframes flash{ 0%{ opacity:.85; } 100%{ opacity:0; } }
+
+  .corner{
+    position:fixed; top:max(10px,env(safe-area-inset-top)); right:12px; z-index:11;
+    background:rgba(0,0,0,.3); border:1px solid var(--line); color:var(--ink);
+    border-radius:10px; padding:7px 11px; font-size:.85rem; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ SETUP ============ -->
+<section id="setup" class="screen active">
+  <div class="wrap">
+    <h1>💣 Bombenspiel</h1>
+    <p class="sub">Namen eingeben, dann geht's los.<br>
+       Tippen schaltet zum nächsten Spieler weiter – wer beim <b>Bumm</b> dran ist, bekommt einen Punkt.</p>
+
+    <div id="players" class="players"></div>
+
+    <button id="addBtn" class="btn ghost" type="button">＋ Spieler hinzufügen</button>
+
+    <div class="footer-btns">
+      <button id="startBtn" class="btn start" type="button">▶︎ Spiel starten</button>
+      <p class="hint">Timer läuft versteckt · Bumm nach 30–60&nbsp;Sek.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GAME ============ -->
+<section id="game" class="screen">
+  <button id="quitBtn" class="corner" type="button">✕ Beenden</button>
+  <div id="topbar" class="topbar"></div>
+  <div class="stage">
+    <div class="turnlabel">Dran ist</div>
+    <div id="bomb" class="bomb">💣</div>
+    <div id="curname" class="curname">–</div>
+    <div class="tap-hint">👆 Tippen = nächster Spieler</div>
+  </div>
+</section>
+
+<!-- ============ EXPLOSION ============ -->
+<div id="boom">
+  <div class="boom-emoji">💥</div>
+  <div class="boom-title">BUMM!</div>
+  <div id="loserName" class="boom-loser">–</div>
+  <div class="boom-sub">bekommt einen Punkt 💥</div>
+  <div id="board" class="board"></div>
+  <div class="boom-hint">👆 Tippen für die nächste Runde</div>
+</div>
+
+<div id="flash" class="flash"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- Farbpalette für Spieler ----------
+  const COLORS = [
+    "#ff5a3c", "#3d8bdd", "#46d38a", "#ffcf3a",
+    "#c86bff", "#ff7ab6", "#38d6d6", "#ff9b3d",
+    "#8ed14b", "#6f7bff"
+  ];
+
+  // ---------- State ----------
+  let players = [];            // { name, color, points }
+  let curIdx = 0;
+  let running = false;         // Timer läuft (Runde aktiv)
+  let explodeAt = 0;           // Zeitpunkt der Explosion (Date.now-Basis)
+  let rafId = null;
+
+  // ---------- DOM ----------
+  const $ = s => document.querySelector(s);
+  const setupEl   = $("#setup");
+  const gameEl    = $("#game");
+  const playersEl = $("#players");
+  const topbarEl  = $("#topbar");
+  const bombEl    = $("#bomb");
+  const curnameEl = $("#curname");
+  const boomEl    = $("#boom");
+  const loserEl   = $("#loserName");
+  const boardEl   = $("#board");
+  const flashEl   = $("#flash");
+
+  // =======================================================
+  //  Audio (Web Audio API – keine externen Dateien)
+  // =======================================================
+  let actx = null;
+  let tickTimer = null;
+  let tickOn = false;
+
+  function audioInit(){
+    if (!actx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      actx = new AC();
+    }
+    if (actx.state === "suspended") actx.resume();
+  }
+
+  // Kurzer "Tick"-Klick der Bombe
+  function playTick(high){
+    if (!actx) return;
+    const t = actx.currentTime;
+    const osc = actx.createOscillator();
+    const g = actx.createGain();
+    osc.type = "square";
+    osc.frequency.value = high ? 1400 : 900;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.16, t + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    osc.connect(g).connect(actx.destination);
+    osc.start(t); osc.stop(t + 0.06);
+  }
+
+  function startTicking(){
+    stopTicking();
+    tickOn = true;
+    let hi = false;
+    const loop = () => {
+      if (!tickOn) return;
+      playTick(hi);
+      hi = !hi;                       // Tick – Tack Wechsel
+      tickTimer = setTimeout(loop, 500);
+    };
+    loop();
+  }
+  function stopTicking(){
+    tickOn = false;
+    if (tickTimer){ clearTimeout(tickTimer); tickTimer = null; }
+  }
+
+  // Explosions-Sound: Rausch-Knall + tiefer Boom
+  function playExplosion(){
+    if (!actx) return;
+    const t = actx.currentTime;
+
+    // Rauschen
+    const dur = 1.1;
+    const buf = actx.createBuffer(1, actx.sampleRate * dur, actx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++){
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2);
+    }
+    const noise = actx.createBufferSource();
+    noise.buffer = buf;
+    const lp = actx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(1800, t);
+    lp.frequency.exponentialRampToValueAtTime(120, t + dur);
+    const ng = actx.createGain();
+    ng.gain.setValueAtTime(0.9, t);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    noise.connect(lp).connect(ng).connect(actx.destination);
+    noise.start(t); noise.stop(t + dur);
+
+    // Tiefer "Boom" (Sinus-Sweep)
+    const osc = actx.createOscillator();
+    const og = actx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(160, t);
+    osc.frequency.exponentialRampToValueAtTime(35, t + 0.5);
+    og.gain.setValueAtTime(0.9, t);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+    osc.connect(og).connect(actx.destination);
+    osc.start(t); osc.stop(t + 0.65);
+  }
+
+  // =======================================================
+  //  Setup-Screen
+  // =======================================================
+  function makePlayerRow(name){
+    const idx = playersEl.children.length;
+    const color = COLORS[idx % COLORS.length];
+    const row = document.createElement("div");
+    row.className = "prow";
+    row.innerHTML = `
+      <span class="swatch" style="background:${color}"></span>
+      <input type="text" maxlength="16" placeholder="Spieler ${idx + 1}" value="${name || ""}">
+      <button class="del" type="button" title="Entfernen">✕</button>`;
+    row.querySelector(".del").addEventListener("click", () => {
+      row.remove();
+      recolor();
+    });
+    playersEl.appendChild(row);
+    return row;
+  }
+
+  // Farben & Platzhalter nach Änderungen neu vergeben
+  function recolor(){
+    [...playersEl.children].forEach((row, i) => {
+      row.querySelector(".swatch").style.background = COLORS[i % COLORS.length];
+      const inp = row.querySelector("input");
+      inp.placeholder = "Spieler " + (i + 1);
+    });
+  }
+
+  function addPlayer(name){
+    const row = makePlayerRow(name);
+    row.querySelector("input").focus();
+  }
+
+  // Startzustand: zwei leere Reihen
+  addPlayer(""); addPlayer("");
+
+  $("#addBtn").addEventListener("click", () => { audioInit(); addPlayer(""); });
+
+  $("#startBtn").addEventListener("click", () => {
+    audioInit();
+    const rows = [...playersEl.children];
+    players = rows.map((row, i) => {
+      const val = row.querySelector("input").value.trim();
+      return { name: val || ("Spieler " + (i + 1)), color: COLORS[i % COLORS.length], points: 0 };
+    });
+    if (players.length < 2){
+      alert("Bitte mindestens 2 Spieler eingeben.");
+      return;
+    }
+    startGame();
+  });
+
+  $("#quitBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    endGame();
+  });
+
+  // =======================================================
+  //  Spiel
+  // =======================================================
+  function startGame(){
+    curIdx = 0;
+    renderTopbar();
+    setScreen("game");
+    newRound(true);
+  }
+
+  function endGame(){
+    running = false;
+    stopTicking();
+    if (rafId) cancelAnimationFrame(rafId);
+    boomEl.classList.remove("show");
+    setScreen("setup");
+  }
+
+  function setScreen(which){
+    setupEl.classList.toggle("active", which === "setup");
+    gameEl.classList.toggle("active", which === "game");
+  }
+
+  // Neue Runde: versteckten Timer (30–60s) setzen, Ticken starten
+  function newRound(keepCurrent){
+    boomEl.classList.remove("show");
+    if (!keepCurrent){
+      // Verlierer beginnt die nächste Runde
+      // (curIdx bleibt auf dem Spieler, der den Punkt bekommen hat)
+    }
+    running = true;
+    const secs = 30 + Math.random() * 30;      // 30–60 Sekunden
+    explodeAt = Date.now() + secs * 1000;
+    updateCurrent();
+    bombEl.classList.remove("shake");
+    startTicking();
+    tickLoop();
+  }
+
+  // Hauptschleife – prüft versteckten Timer
+  function tickLoop(){
+    if (!running) return;
+    const remaining = explodeAt - Date.now();
+
+    // Letzte 4 Sekunden: Bombe wackelt & tickt schneller (Dramatik, ohne Zahl)
+    if (remaining < 4000){
+      bombEl.classList.add("shake");
+    }
+
+    if (remaining <= 0){
+      explode();
+      return;
+    }
+    rafId = requestAnimationFrame(tickLoop);
+  }
+
+  function updateCurrent(){
+    const p = players[curIdx];
+    curnameEl.textContent = p.name;
+    curnameEl.style.color = p.color;
+    [...topbarEl.children].forEach((c, i) => c.classList.toggle("cur", i === curIdx));
+  }
+
+  function nextPlayer(){
+    curIdx = (curIdx + 1) % players.length;
+    updateCurrent();
+    playTick(true);            // kleines Feedback beim Weiterschalten
+  }
+
+  function explode(){
+    running = false;
+    stopTicking();
+    bombEl.classList.remove("shake");
+    playExplosion();
+
+    // Blitz
+    flashEl.classList.remove("go");
+    void flashEl.offsetWidth;
+    flashEl.classList.add("go");
+
+    // Vibration (falls unterstützt)
+    if (navigator.vibrate) navigator.vibrate([80, 60, 200]);
+
+    // Punkt für aktuellen Spieler
+    const loser = players[curIdx];
+    loser.points += 1;
+
+    loserEl.textContent = loser.name;
+    loserEl.style.color = loser.color;
+    renderBoard();
+    boomEl.classList.add("show");
+  }
+
+  // =======================================================
+  //  Rendering
+  // =======================================================
+  function renderTopbar(){
+    topbarEl.innerHTML = "";
+    players.forEach((p, i) => {
+      const chip = document.createElement("div");
+      chip.className = "chip" + (i === curIdx ? " cur" : "");
+      chip.style.color = p.color;
+      chip.innerHTML = `<span class="dot" style="background:${p.color}"></span>
+                        <span style="color:var(--ink)">${escapeHtml(p.name)}</span>
+                        <span class="pts">${p.points}</span>`;
+      topbarEl.appendChild(chip);
+    });
+  }
+
+  function refreshTopbarPoints(){
+    [...topbarEl.children].forEach((chip, i) => {
+      chip.querySelector(".pts").textContent = players[i].points;
+    });
+  }
+
+  function renderBoard(){
+    refreshTopbarPoints();
+    const max = Math.max(...players.map(p => p.points));
+    const sorted = [...players].sort((a, b) => b.points - a.points);
+    boardEl.innerHTML = "";
+    sorted.forEach(p => {
+      const r = document.createElement("div");
+      r.className = "r" + (p.points === max && max > 0 ? " lead" : "");
+      r.innerHTML = `<span class="dot" style="background:${p.color}"></span>
+                     <span class="nm">${escapeHtml(p.name)}</span>
+                     <span class="pt">${p.points}</span>`;
+      boardEl.appendChild(r);
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c =>
+      ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+
+  // =======================================================
+  //  Eingaben (Tippen)
+  // =======================================================
+  // Tippen auf das Spielfeld = nächster Spieler
+  gameEl.addEventListener("click", (e) => {
+    if (e.target.closest(".corner")) return;   // Beenden-Button ignorieren
+    if (running) nextPlayer();
+  });
+
+  // Tippen auf Explosions-Overlay = nächste Runde starten
+  boomEl.addEventListener("click", () => {
+    audioInit();
+    // Rotation läuft weiter: nächster Spieler beginnt die neue Runde
+    curIdx = (curIdx + 1) % players.length;
+    newRound(false);
+  });
+
+})();
+</script>
+</body>
+</html>
