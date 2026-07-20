@@ -116,7 +116,19 @@
     font-size:clamp(2.4rem,13vw,4.6rem); font-weight:800; margin-top:6px;
     line-height:1.05; word-break:break-word; max-width:100%;
   }
-  .tap-hint{ margin-top:26px; color:var(--muted); font-size:.95rem; animation:pulse 1.6s ease-in-out infinite; }
+  .turn-secs{
+    margin-top:14px; font-variant-numeric:tabular-nums;
+    font-weight:700; font-size:1.4rem; color:var(--muted);
+  }
+  .turn-secs b{ color:var(--ink); }
+  .next-btn{
+    margin-top:22px; border:none; cursor:pointer; border-radius:16px;
+    padding:16px 34px; font-size:1.2rem; font-weight:800; color:#241436;
+    background:linear-gradient(180deg, var(--accent2), #ffb638);
+    box-shadow:0 8px 22px rgba(255,140,40,.35);
+  }
+  .next-btn:active{ transform:translateY(1px); }
+  .tap-hint{ margin-top:16px; color:var(--muted); font-size:.85rem; animation:pulse 1.6s ease-in-out infinite; }
   @keyframes pulse{ 50%{ opacity:.35; } }
 
   .bomb.shake{ animation:shake .28s infinite; }
@@ -175,7 +187,7 @@
     <div class="footer-btns">
       <button id="startBtn" class="btn start" type="button">▶︎ Spiel starten</button>
       <a class="btn ghost" href="./index.html" style="text-decoration:none">🚴 Zurück zum Bingo</a>
-      <p class="hint">Timer läuft versteckt · Bumm nach 30–60&nbsp;Sek.</p>
+      <p class="hint">Timer läuft versteckt · Bumm nach 10–60&nbsp;Sek.</p>
     </div>
   </div>
 </section>
@@ -188,7 +200,9 @@
     <div class="turnlabel">Dran ist</div>
     <div id="bomb" class="bomb">💣</div>
     <div id="curname" class="curname">–</div>
-    <div class="tap-hint">👆 Tippen = nächster Spieler</div>
+    <div id="turnSecs" class="turn-secs"><b>0,0</b> s</div>
+    <button id="nextBtn" class="next-btn" type="button">Weiter →</button>
+    <div class="tap-hint">Knopf drücken oder Bildschirm antippen = nächster Spieler</div>
   </div>
 </section>
 
@@ -197,7 +211,7 @@
   <div class="boom-emoji">💥</div>
   <div class="boom-title">BUMM!</div>
   <div id="loserName" class="boom-loser">–</div>
-  <div class="boom-sub">bekommt einen Punkt 💥</div>
+  <div id="boomSub" class="boom-sub">bekommt einen Punkt 💥</div>
   <div id="board" class="board"></div>
   <div class="boom-hint">👆 Tippen für die nächste Runde</div>
 </div>
@@ -221,6 +235,8 @@
   let running = false;         // Timer läuft (Runde aktiv)
   let explodeAt = 0;           // Zeitpunkt der Explosion (Date.now-Basis)
   let rafId = null;
+  let wobbleTimer = null;      // Timer für zufällige Wackel-Phasen
+  let turnStart = 0;           // Startzeit des aktuellen Spielers (für Sekundenanzeige)
 
   // ---------- DOM ----------
   const $ = s => document.querySelector(s);
@@ -230,8 +246,11 @@
   const topbarEl  = $("#topbar");
   const bombEl    = $("#bomb");
   const curnameEl = $("#curname");
+  const secsEl    = $("#turnSecs");
+  const nextBtn   = $("#nextBtn");
   const boomEl    = $("#boom");
   const loserEl   = $("#loserName");
+  const boomSubEl = $("#boomSub");
   const boardEl   = $("#board");
   const flashEl   = $("#flash");
 
@@ -389,6 +408,7 @@
   function endGame(){
     running = false;
     stopTicking();
+    clearWobble();
     if (rafId) cancelAnimationFrame(rafId);
     boomEl.classList.remove("show");
     setScreen("setup");
@@ -399,7 +419,7 @@
     gameEl.classList.toggle("active", which === "game");
   }
 
-  // Neue Runde: versteckten Timer (30–60s) setzen, Ticken starten
+  // Neue Runde: versteckten Timer (10–60s) setzen, Ticken starten
   function newRound(keepCurrent){
     boomEl.classList.remove("show");
     if (!keepCurrent){
@@ -407,29 +427,54 @@
       // (curIdx bleibt auf dem Spieler, der den Punkt bekommen hat)
     }
     running = true;
-    const secs = 30 + Math.random() * 30;      // 30–60 Sekunden
+    const secs = 10 + Math.random() * 50;      // 10–60 Sekunden
     explodeAt = Date.now() + secs * 1000;
     updateCurrent();
-    bombEl.classList.remove("shake");
     startTicking();
+    scheduleWobble();                          // zufälliges Wackeln, unabhängig vom Timer
     tickLoop();
   }
 
-  // Hauptschleife – prüft versteckten Timer
+  // Hauptschleife – prüft NUR den versteckten Timer (kein Wackeln hier,
+  // damit das Wackeln nichts über die Restzeit verrät)
   function tickLoop(){
     if (!running) return;
-    const remaining = explodeAt - Date.now();
-
-    // Letzte 4 Sekunden: Bombe wackelt & tickt schneller (Dramatik, ohne Zahl)
-    if (remaining < 4000){
-      bombEl.classList.add("shake");
-    }
-
-    if (remaining <= 0){
+    updateSecs();
+    if (Date.now() >= explodeAt){
       explode();
       return;
     }
     rafId = requestAnimationFrame(tickLoop);
+  }
+
+  // Sekundenanzeige: wie lange hält der aktuelle Spieler die Bombe schon?
+  function updateSecs(){
+    const s = (Date.now() - turnStart) / 1000;
+    secsEl.innerHTML = "<b>" + s.toFixed(1).replace(".", ",") + "</b> s";
+  }
+
+  // Bombe wackelt zu zufälligen Zeitpunkten – bewusst NICHT an die
+  // Explosionszeit gekoppelt, damit man nicht vorhersehen kann, wann es knallt.
+  function scheduleWobble(){
+    clearWobble();
+    const burst = () => {
+      if (!running) return;
+      bombEl.classList.add("shake");
+      const onDur = 300 + Math.random() * 900;         // 0,3–1,2s wackeln
+      wobbleTimer = setTimeout(() => {
+        if (!running) return;
+        bombEl.classList.remove("shake");
+        const offDur = 700 + Math.random() * 4500;     // 0,7–5,2s Pause
+        wobbleTimer = setTimeout(burst, offDur);
+      }, onDur);
+    };
+    // erste Wackelphase nach zufälliger Wartezeit
+    wobbleTimer = setTimeout(burst, 800 + Math.random() * 4000);
+  }
+
+  function clearWobble(){
+    if (wobbleTimer){ clearTimeout(wobbleTimer); wobbleTimer = null; }
+    bombEl.classList.remove("shake");
   }
 
   function updateCurrent(){
@@ -437,6 +482,8 @@
     curnameEl.textContent = p.name;
     curnameEl.style.color = p.color;
     [...topbarEl.children].forEach((c, i) => c.classList.toggle("cur", i === curIdx));
+    turnStart = Date.now();     // Sekundenzähler für neuen Spieler zurücksetzen
+    updateSecs();
   }
 
   function nextPlayer(){
@@ -448,7 +495,7 @@
   function explode(){
     running = false;
     stopTicking();
-    bombEl.classList.remove("shake");
+    clearWobble();
     playExplosion();
 
     // Blitz
@@ -463,8 +510,10 @@
     const loser = players[curIdx];
     loser.points += 1;
 
+    const held = ((Date.now() - turnStart) / 1000).toFixed(1).replace(".", ",");
     loserEl.textContent = loser.name;
     loserEl.style.color = loser.color;
+    boomSubEl.textContent = "bekommt einen Punkt · hielt die Bombe " + held + " s 💥";
     renderBoard();
     boomEl.classList.add("show");
   }
@@ -514,7 +563,13 @@
   // =======================================================
   //  Eingaben (Tippen)
   // =======================================================
-  // Tippen auf das Spielfeld = nächster Spieler
+  // Weiter-Knopf = nächster Spieler
+  nextBtn.addEventListener("click", (e) => {
+    e.stopPropagation();                       // kein doppeltes Weiterschalten
+    if (running) nextPlayer();
+  });
+
+  // Tippen auf das Spielfeld = ebenfalls nächster Spieler
   gameEl.addEventListener("click", (e) => {
     if (e.target.closest(".corner")) return;   // Beenden-Button ignorieren
     if (running) nextPlayer();
