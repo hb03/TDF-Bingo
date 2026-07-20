@@ -170,29 +170,41 @@
     border-radius:10px; padding:7px 11px; font-size:.85rem; cursor:pointer;
   }
 
-  /* ---------- Einstellungen (Setup) ---------- */
-  .settings{
+  /* ---------- Einstellungs-Seite ---------- */
+  .set-page{ overflow-y:auto; -webkit-overflow-scrolling:touch; padding:2px; }
+  .set-block{
     background:var(--panel); border:1px solid var(--line);
-    border-radius:14px; padding:6px 14px; margin-bottom:12px;
+    border-radius:14px; padding:14px; margin-bottom:14px;
   }
-  .settings summary{
-    cursor:pointer; font-weight:700; padding:8px 0; list-style:none;
-  }
-  .settings summary::-webkit-details-marker{ display:none; }
-  .settings summary::after{ content:"▾"; float:right; color:var(--muted); }
-  .settings[open] summary::after{ content:"▴"; }
-  .set-row{ padding:10px 0; border-top:1px solid var(--line); }
-  .set-row > label{ display:block; font-size:.9rem; color:var(--muted); margin-bottom:8px; }
+  .set-label{ display:block; font-weight:700; margin-bottom:12px; }
+  .set-hint-sm{ color:var(--muted); font-size:.82rem; font-weight:400; }
   .dur-inputs{ display:flex; align-items:center; gap:8px; }
   .dur-inputs input{
-    width:72px; background:var(--bg); border:1px solid var(--line); color:var(--ink);
-    border-radius:10px; padding:8px 10px; font-size:1rem; text-align:center;
+    width:80px; background:var(--bg); border:1px solid var(--line); color:var(--ink);
+    border-radius:10px; padding:10px; font-size:1.1rem; text-align:center;
   }
-  .dur-inputs span{ color:var(--muted); font-size:.9rem; }
-  .set-row select{
-    width:100%; background:var(--bg); border:1px solid var(--line); color:var(--ink);
-    border-radius:10px; padding:11px 10px; font-size:1rem;
+  .dur-inputs span{ color:var(--muted); font-size:.95rem; }
+  .radios{ display:flex; flex-direction:column; gap:2px; }
+  .radio{
+    display:flex; align-items:center; gap:12px; cursor:pointer;
+    padding:12px 10px; border-radius:12px; border:1px solid transparent;
   }
+  .radio + .radio{ border-top:1px solid var(--line); border-radius:0; }
+  .radio input{ width:20px; height:20px; accent-color:var(--accent2); flex:0 0 auto; }
+  .radio span{ line-height:1.3; }
+  .radio em{ color:var(--muted); font-style:normal; font-size:.85rem; }
+  .radio:has(input:checked){ background:rgba(255,207,58,.10); border-color:var(--accent2); border-radius:12px; }
+  .set-summary{ text-align:center; color:var(--muted); font-size:.85rem; margin:8px 0 0; }
+
+  /* ---------- Explosion: mehrere Gewinner ---------- */
+  .boom-holder{ font-size:1.15rem; color:var(--muted); margin-top:2px; }
+  .boom-holder b{ color:var(--ink); }
+  .boom-winners{
+    font-size:clamp(1.8rem,10vw,3.2rem); font-weight:800; line-height:1.12;
+    margin-top:8px; word-break:break-word; max-width:100%;
+  }
+  .boom-winlabel{ color:var(--muted); font-size:.9rem; text-transform:uppercase; letter-spacing:2px; margin-top:14px; }
+  .boom-hint.locked{ animation:none; opacity:.5; }
 
   /* ---------- Explosion: mehrere Gewinner ---------- */
   .boom-holder{ font-size:1.15rem; color:var(--muted); margin-top:2px; }
@@ -218,33 +230,52 @@
 
     <button id="addBtn" class="btn ghost" type="button">＋ Spieler hinzufügen</button>
 
-    <details class="settings">
-      <summary>⚙️ Einstellungen</summary>
-      <div class="set-row">
-        <label>Bombe läuft (Sekunden, zufällig zwischen)</label>
+    <div class="footer-btns">
+      <button id="startBtn" class="btn start" type="button">▶︎ Spiel starten</button>
+      <button id="openSettings" class="btn ghost" type="button">⚙️ Einstellungen</button>
+      <a class="btn ghost" href="./index.html" style="text-decoration:none">🚴 Zurück zum Bingo</a>
+      <button id="cacheBtn" class="btn ghost" type="button">🧹 Cache leeren &amp; neu laden</button>
+      <p id="setSummary" class="set-summary">Timer läuft versteckt.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EINSTELLUNGEN ============ -->
+<section id="settingsScreen" class="screen">
+  <div class="wrap">
+    <h1>⚙️ Einstellungen</h1>
+
+    <div class="set-page">
+      <div class="set-block">
+        <label class="set-label">Bombe läuft
+          <span class="set-hint-sm">(zufällige Dauer, versteckt – zwischen …)</span>
+        </label>
         <div class="dur-inputs">
           <input id="minSec" type="number" min="1" max="600" inputmode="numeric" value="10">
           <span>bis</span>
           <input id="maxSec" type="number" min="1" max="600" inputmode="numeric" value="60">
-          <span>Sek.</span>
+          <span>Sekunden</span>
         </div>
       </div>
-      <div class="set-row">
-        <label>Punkt bekommt …</label>
-        <select id="scoreMode">
-          <option value="explode">Wer die Bombe explodieren lässt (Standard)</option>
-          <option value="survivors">Alle außer dem, bei dem sie explodiert</option>
-          <option value="longest">Wer die Bombe am längsten gehalten hat</option>
-          <option value="shortest">Wer die Bombe am kürzesten gehalten hat</option>
-        </select>
+
+      <div class="set-block">
+        <label class="set-label">Punkt bekommt …</label>
+        <div class="radios">
+          <label class="radio"><input type="radio" name="score" value="explode">
+            <span>Wer die Bombe explodieren lässt <em>(Standard)</em></span></label>
+          <label class="radio"><input type="radio" name="score" value="survivors">
+            <span>Alle außer dem, bei dem sie explodiert</span></label>
+          <label class="radio"><input type="radio" name="score" value="longest">
+            <span>Wer die Bombe am längsten gehalten hat</span></label>
+          <label class="radio"><input type="radio" name="score" value="shortest">
+            <span>Wer die Bombe am kürzesten gehalten hat</span></label>
+        </div>
       </div>
-    </details>
+    </div>
 
     <div class="footer-btns">
-      <button id="startBtn" class="btn start" type="button">▶︎ Spiel starten</button>
-      <a class="btn ghost" href="./index.html" style="text-decoration:none">🚴 Zurück zum Bingo</a>
-      <button id="cacheBtn" class="btn ghost" type="button">🧹 Cache leeren &amp; neu laden</button>
-      <p class="hint">Timer läuft versteckt · Standard: Bumm nach 10–60&nbsp;Sek.</p>
+      <button id="saveSettings" class="btn start" type="button">✓ Speichern</button>
+      <button id="resetSettings" class="btn ghost" type="button">↺ Standard wiederherstellen</button>
     </div>
   </div>
 </section>
@@ -446,37 +477,73 @@
 
   $("#addBtn").addEventListener("click", () => { audioInit(); addPlayer(""); });
 
-  // Einstellungen aus dem Setup lesen & merken
-  function readSettings(){
+  // ---------- Einstellungen (eigene Seite) ----------
+  const DEFAULTS = { durMin: 10, durMax: 60, scoreMode: "explode" };
+  const SCORE_TEXT = {
+    explode:   "Punkt: wer explodieren lässt",
+    survivors: "Punkt: alle außer dem Getroffenen",
+    longest:   "Punkt: längste Haltezeit",
+    shortest:  "Punkt: kürzeste Haltezeit"
+  };
+
+  // Gemerkte Einstellungen in die Variablen laden
+  function loadSettings(){
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem("bombe.settings") || "null"); } catch (e) {}
+    durMin = (s && s.durMin) || DEFAULTS.durMin;
+    durMax = (s && s.durMax) || DEFAULTS.durMax;
+    scoreMode = (s && s.scoreMode) || DEFAULTS.scoreMode;
+    updateSetSummary();
+  }
+
+  // Einstellungs-Seite mit den aktuellen Werten füllen
+  function fillSettingsForm(){
+    $("#minSec").value = durMin;
+    $("#maxSec").value = durMax;
+    const r = document.querySelector('input[name="score"][value="' + scoreMode + '"]');
+    if (r) r.checked = true;
+  }
+
+  // Werte von der Einstellungs-Seite übernehmen, prüfen und merken
+  function saveSettingsFromForm(){
     let mn = parseInt($("#minSec").value, 10);
     let mx = parseInt($("#maxSec").value, 10);
-    if (!Number.isFinite(mn) || mn < 1) mn = 10;
-    if (!Number.isFinite(mx) || mx < 1) mx = 60;
+    if (!Number.isFinite(mn) || mn < 1) mn = DEFAULTS.durMin;
+    if (!Number.isFinite(mx) || mx < 1) mx = DEFAULTS.durMax;
     if (mx < mn){ const t = mn; mn = mx; mx = t; }   // vertauscht? tauschen
     durMin = mn; durMax = mx;
-    $("#minSec").value = mn; $("#maxSec").value = mx;
-    scoreMode = $("#scoreMode").value;
+    const sel = document.querySelector('input[name="score"]:checked');
+    scoreMode = sel ? sel.value : DEFAULTS.scoreMode;
     try {
       localStorage.setItem("bombe.settings",
         JSON.stringify({ durMin, durMax, scoreMode }));
     } catch (e) {}
+    updateSetSummary();
   }
 
-  // Gemerkte Einstellungen laden
-  (function loadSettings(){
-    try {
-      const s = JSON.parse(localStorage.getItem("bombe.settings") || "null");
-      if (s){
-        if (s.durMin) $("#minSec").value = s.durMin;
-        if (s.durMax) $("#maxSec").value = s.durMax;
-        if (s.scoreMode) $("#scoreMode").value = s.scoreMode;
-      }
-    } catch (e) {}
-  })();
+  // Kurz-Zusammenfassung auf dem Setup-Screen
+  function updateSetSummary(){
+    const el = $("#setSummary");
+    if (el) el.textContent = "Bombe " + durMin + "–" + durMax + " s · " + SCORE_TEXT[scoreMode];
+  }
+
+  loadSettings();
+
+  $("#openSettings").addEventListener("click", () => {
+    fillSettingsForm();
+    setScreen("settingsScreen");
+  });
+  $("#saveSettings").addEventListener("click", () => {
+    saveSettingsFromForm();
+    setScreen("setup");
+  });
+  $("#resetSettings").addEventListener("click", () => {
+    durMin = DEFAULTS.durMin; durMax = DEFAULTS.durMax; scoreMode = DEFAULTS.scoreMode;
+    fillSettingsForm();
+  });
 
   $("#startBtn").addEventListener("click", () => {
     audioInit();
-    readSettings();
     const rows = [...playersEl.children];
     players = rows.map((row, i) => {
       const val = row.querySelector("input").value.trim();
@@ -514,8 +581,8 @@
   }
 
   function setScreen(which){
-    setupEl.classList.toggle("active", which === "setup");
-    gameEl.classList.toggle("active", which === "game");
+    ["setup", "game", "settingsScreen"].forEach(id =>
+      document.getElementById(id).classList.toggle("active", id === which));
   }
 
   // Neue Runde: versteckten Timer setzen, Haltezeiten & Sperren zurücksetzen
