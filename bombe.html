@@ -175,7 +175,7 @@
     <div class="footer-btns">
       <button id="startBtn" class="btn start" type="button">▶︎ Spiel starten</button>
       <a class="btn ghost" href="./index.html" style="text-decoration:none">🚴 Zurück zum Bingo</a>
-      <p class="hint">Timer läuft versteckt · Bumm nach 30–60&nbsp;Sek.</p>
+      <p class="hint">Timer läuft versteckt · Bumm nach 10–60&nbsp;Sek.</p>
     </div>
   </div>
 </section>
@@ -221,6 +221,7 @@
   let running = false;         // Timer läuft (Runde aktiv)
   let explodeAt = 0;           // Zeitpunkt der Explosion (Date.now-Basis)
   let rafId = null;
+  let wobbleTimer = null;      // Timer für zufällige Wackel-Phasen
 
   // ---------- DOM ----------
   const $ = s => document.querySelector(s);
@@ -389,6 +390,7 @@
   function endGame(){
     running = false;
     stopTicking();
+    clearWobble();
     if (rafId) cancelAnimationFrame(rafId);
     boomEl.classList.remove("show");
     setScreen("setup");
@@ -399,7 +401,7 @@
     gameEl.classList.toggle("active", which === "game");
   }
 
-  // Neue Runde: versteckten Timer (30–60s) setzen, Ticken starten
+  // Neue Runde: versteckten Timer (10–60s) setzen, Ticken starten
   function newRound(keepCurrent){
     boomEl.classList.remove("show");
     if (!keepCurrent){
@@ -407,29 +409,47 @@
       // (curIdx bleibt auf dem Spieler, der den Punkt bekommen hat)
     }
     running = true;
-    const secs = 30 + Math.random() * 30;      // 30–60 Sekunden
+    const secs = 10 + Math.random() * 50;      // 10–60 Sekunden
     explodeAt = Date.now() + secs * 1000;
     updateCurrent();
-    bombEl.classList.remove("shake");
     startTicking();
+    scheduleWobble();                          // zufälliges Wackeln, unabhängig vom Timer
     tickLoop();
   }
 
-  // Hauptschleife – prüft versteckten Timer
+  // Hauptschleife – prüft NUR den versteckten Timer (kein Wackeln hier,
+  // damit das Wackeln nichts über die Restzeit verrät)
   function tickLoop(){
     if (!running) return;
-    const remaining = explodeAt - Date.now();
-
-    // Letzte 4 Sekunden: Bombe wackelt & tickt schneller (Dramatik, ohne Zahl)
-    if (remaining < 4000){
-      bombEl.classList.add("shake");
-    }
-
-    if (remaining <= 0){
+    if (Date.now() >= explodeAt){
       explode();
       return;
     }
     rafId = requestAnimationFrame(tickLoop);
+  }
+
+  // Bombe wackelt zu zufälligen Zeitpunkten – bewusst NICHT an die
+  // Explosionszeit gekoppelt, damit man nicht vorhersehen kann, wann es knallt.
+  function scheduleWobble(){
+    clearWobble();
+    const burst = () => {
+      if (!running) return;
+      bombEl.classList.add("shake");
+      const onDur = 300 + Math.random() * 900;         // 0,3–1,2s wackeln
+      wobbleTimer = setTimeout(() => {
+        if (!running) return;
+        bombEl.classList.remove("shake");
+        const offDur = 700 + Math.random() * 4500;     // 0,7–5,2s Pause
+        wobbleTimer = setTimeout(burst, offDur);
+      }, onDur);
+    };
+    // erste Wackelphase nach zufälliger Wartezeit
+    wobbleTimer = setTimeout(burst, 800 + Math.random() * 4000);
+  }
+
+  function clearWobble(){
+    if (wobbleTimer){ clearTimeout(wobbleTimer); wobbleTimer = null; }
+    bombEl.classList.remove("shake");
   }
 
   function updateCurrent(){
@@ -448,7 +468,7 @@
   function explode(){
     running = false;
     stopTicking();
-    bombEl.classList.remove("shake");
+    clearWobble();
     playExplosion();
 
     // Blitz
