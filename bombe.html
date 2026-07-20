@@ -210,19 +210,10 @@
   .boom-holder{ font-size:1.15rem; color:var(--muted); margin-top:2px; }
   .boom-holder b{ color:var(--ink); }
   .boom-winners{
-    font-size:clamp(1.8rem,10vw,3.2rem); font-weight:800; line-height:1.12;
+    font-size:clamp(1.8rem,10vw,3.2rem); font-weight:800; line-height:1.2;
     margin-top:8px; word-break:break-word; max-width:100%;
   }
-  .boom-winlabel{ color:var(--muted); font-size:.9rem; text-transform:uppercase; letter-spacing:2px; margin-top:14px; }
-  .boom-hint.locked{ animation:none; opacity:.5; }
-
-  /* ---------- Explosion: mehrere Gewinner ---------- */
-  .boom-holder{ font-size:1.15rem; color:var(--muted); margin-top:2px; }
-  .boom-holder b{ color:var(--ink); }
-  .boom-winners{
-    font-size:clamp(1.8rem,10vw,3.2rem); font-weight:800; line-height:1.12;
-    margin-top:8px; word-break:break-word; max-width:100%;
-  }
+  .boom-winners .win-time{ font-size:.42em; color:var(--muted); font-weight:600; white-space:nowrap; }
   .boom-winlabel{ color:var(--muted); font-size:.9rem; text-transform:uppercase; letter-spacing:2px; margin-top:14px; }
   .boom-hint.locked{ animation:none; opacity:.5; }
 </style>
@@ -755,9 +746,12 @@
       : scoreMode === "shortest" ? "Kürzeste Haltezeit → Punkt"
       : "Punkt für";
 
-    // Gewinner-Namen (farbig)
-    boomWinnersEl.innerHTML = winners.map(p =>
-      `<span style="color:${p.color}">${escapeHtml(p.name)}</span>`).join(" · ");
+    // Gewinner-Namen (farbig) inkl. eigener Haltezeit
+    boomWinnersEl.innerHTML = winners.map(p => {
+      const secs = (p.roundMs / 1000).toFixed(1).replace(".", ",");
+      return `<span style="color:${p.color}">${escapeHtml(p.name)}</span>` +
+             `<span class="win-time"> · hielt ${secs} s</span>`;
+    }).join("<br>");
 
     renderBoard();
 
