@@ -1,0 +1,79 @@
+name: Android APK bauen
+
+# Baut aus dem WebView-Wrapper (Ordner android/) eine installierbare APK.
+# Das Android-SDK ist auf den GitHub-Runnern vorinstalliert – daher laeuft der
+# Build hier, auch wenn er in der Entwicklungsumgebung nicht moeglich ist.
+
+on:
+  push:
+    branches:
+      - "claude/tour-de-france-bingo-app-jendbs"
+      - "claude/bombe-spiel-spielerwechsel-77askv"
+    paths:
+      - "android/**"
+      - "index.html"
+      - "bombe.html"
+      - "manifest.webmanifest"
+      - "sw.js"
+      - "icons/**"
+      - ".github/workflows/android-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Web-Dateien in die App-Assets spiegeln
+        run: |
+          set -e
+          dest=android/app/src/main/assets/www
+          mkdir -p "$dest/icons"
+          cp index.html bombe.html manifest.webmanifest sw.js "$dest"/
+          cp icons/*.png "$dest/icons/"
+
+      - name: JDK 17 einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Gradle einrichten (mit Cache)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: APK bauen (Debug + Release)
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug assembleRelease
+
+      - name: APKs umbenennen
+        run: |
+          set -e
+          mkdir -p out
+          cp android/app/build/outputs/apk/debug/app-debug.apk out/bingo-bombe-debug.apk
+          cp android/app/build/outputs/apk/release/app-release.apk out/bingo-bombe.apk
+
+      - name: APK als Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: bingo-bombe-apk
+          path: out/*.apk
+          if-no-files-found: error
+
+      - name: Release mit APK veroeffentlichen
+        if: github.ref == 'refs/heads/claude/tour-de-france-bingo-app-jendbs'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: "Android-App (neueste APK)"
+          body: |
+            Installierbare APK von Bingo & Bombenspiel.
+            Auf dem Handy herunterladen und oeffnen – Installation aus
+            unbekannten Quellen muss ggf. einmalig erlaubt werden.
+          files: |
+            out/bingo-bombe.apk
+            out/bingo-bombe-debug.apk

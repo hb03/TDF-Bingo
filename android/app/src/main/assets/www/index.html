@@ -1,0 +1,1779 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#ffd21a">
+<title>Tour-de-France Bingo</title>
+
+<!-- PWA: installierbar + offline -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="./icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="TdF Bingo">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- Einzige externe Ressource: Google Font "Fredoka" -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* ---------- Farb-Variablen (Tour-de-France-Palette) ---------- */
+  :root{
+    --gelb:  #ffd21a;
+    --gruen: #35a35f;
+    --rot:   #e23b45;
+    --blau:  #3d8bdd;
+    --ink:   #24303a;   /* dunkles Tintenblau für Text & Konturen */
+    --papier:#fbf7 ;    /* Hintergrund hell */
+    --papier:#fdfaf2;
+    --feld:  #ffffff;
+    --schatten: 0 3px 0 rgba(36,48,58,.18);
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html,body{ margin:0; padding:0; }
+
+  body{
+    font-family:'Fredoka', system-ui, sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 12% 8%,  rgba(61,139,221,.14), transparent 40%),
+      radial-gradient(circle at 88% 4%,  rgba(53,163,95,.14),  transparent 40%),
+      radial-gradient(circle at 50% 100%, rgba(255,210,26,.20), transparent 55%),
+      var(--papier);
+    min-height:100dvh;
+    padding:10px 10px 30px;
+    -webkit-text-size-adjust:100%;
+  }
+
+  /* ---------- Kopfbereich ---------- */
+  header{
+    max-width:620px;
+    margin:0 auto 10px;
+    text-align:center;
+  }
+  .titel{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-weight:700;
+    font-size:clamp(22px, 6vw, 34px);
+    line-height:1;
+    margin:4px 0 2px;
+  }
+  .titel .tri{ display:flex; gap:3px; }
+  /* Vier kleine "Trikots" als Akzent: Gelb, Bergtrikot (weiß mit roten Punkten), Grün, Weiß */
+  .titel .tri span{ width:12px; height:22px; border-radius:3px; display:block; border:1.5px solid var(--ink); }
+  .titel .tri .punkte{
+    background:#fff;
+    background-image:radial-gradient(var(--rot) 1.5px, transparent 1.8px);
+    background-size:5px 5px;
+    background-position:1px 1px;
+  }
+  .subtitel{ font-size:14px; font-weight:500; opacity:.75; margin:0 0 8px; }
+  .spiel-link{
+    display:inline-flex; align-items:center; gap:6px;
+    text-decoration:none; font-size:13px; font-weight:600;
+    color:var(--ink); background:#fff;
+    border:1.5px solid var(--ink); border-radius:999px;
+    padding:5px 12px; margin:0 0 10px;
+    box-shadow:0 2px 0 var(--ink);
+  }
+  .spiel-link:active{ transform:translateY(1px); box-shadow:0 1px 0 var(--ink); }
+
+  /* ---------- Bedien-Leiste ---------- */
+  .leiste{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:center;
+    max-width:620px;
+    margin:0 auto 8px;
+  }
+  button{
+    font-family:inherit;
+    font-weight:600;
+    font-size:15px;
+    color:var(--ink);
+    background:var(--feld);
+    border:2.5px solid var(--ink);
+    border-radius:14px;
+    padding:11px 15px;
+    min-height:48px;
+    cursor:pointer;
+    box-shadow:var(--schatten);
+    transition:transform .06s ease, box-shadow .06s ease, background .15s ease;
+    touch-action:manipulation;
+  }
+  button:active{ transform:translateY(2px); box-shadow:0 1px 0 rgba(36,48,58,.18); }
+  button.primaer{ background:var(--gelb); }
+  button.gruen{ background:var(--gruen); color:#fff; border-color:#1f7a43; }
+  button.gefahr{ background:var(--rot); color:#fff; border-color:#a5262e; }
+
+  /* ---------- Spieler-Tabs ---------- */
+  .tabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    justify-content:center;
+    max-width:620px;
+    margin:2px auto 10px;
+  }
+  .tab{
+    font-weight:600;
+    font-size:14px;
+    padding:8px 12px;
+    min-height:42px;
+    border:2.5px solid var(--ink);
+    border-radius:12px;
+    background:var(--feld);
+    box-shadow:var(--schatten);
+    cursor:pointer;
+    max-width:140px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .tab.aktiv{ background:var(--blau); color:#fff; border-color:#2765a7; }
+  .tab.aktiv.hatbingo{ background:var(--gruen); border-color:#1f7a43; }
+
+  /* ---------- Name & Zähler ---------- */
+  .info{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    justify-content:center;
+    flex-wrap:wrap;
+    max-width:620px;
+    margin:0 auto 10px;
+  }
+  .info input{
+    font-family:inherit;
+    font-weight:600;
+    font-size:16px;
+    color:var(--ink);
+    text-align:center;
+    border:2.5px solid var(--ink);
+    border-radius:12px;
+    padding:9px 12px;
+    width:min(58vw,260px);
+    background:var(--feld);
+    box-shadow:var(--schatten);
+  }
+  .zaehler{
+    font-weight:600;
+    font-size:15px;
+    background:var(--feld);
+    border:2.5px solid var(--ink);
+    border-radius:12px;
+    padding:9px 12px;
+    box-shadow:var(--schatten);
+    white-space:nowrap;
+  }
+  .zaehler b{ color:var(--rot); }
+
+  /* ---------- Blatt-Karten (Ansicht) ---------- */
+  .karte{ max-width:min(96vw, 560px); margin:0 auto; }
+  /* Gestapelte Ansicht: jedes Blatt bekommt einen sichtbaren Karten-Rahmen */
+  .board.stapel .karte{
+    background:var(--feld);
+    border:2.5px solid var(--ink);
+    border-radius:20px;
+    box-shadow:var(--schatten);
+    padding:12px 12px 14px;
+    margin-bottom:20px;
+  }
+  .board.stapel .karte.aktiv{ border-color:var(--blau); box-shadow:0 0 0 3px rgba(61,139,221,.3), var(--schatten); }
+  .karte-kopf{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin:0 auto 10px;
+  }
+  .k-name{
+    font-family:inherit;
+    font-weight:600;
+    font-size:16px;
+    color:var(--ink);
+    text-align:center;
+    border:2.5px solid var(--ink);
+    border-radius:12px;
+    padding:8px 10px;
+    width:min(46vw,180px);
+    background:var(--feld);
+    box-shadow:var(--schatten);
+  }
+  .k-actions{ display:flex; gap:6px; }
+  button.mini{ min-height:44px; padding:8px 11px; font-size:17px; border-radius:12px; }
+  .board.stapel .k-stempel{ margin-top:10px; }
+
+  /* ---------- Live-Spiel ---------- */
+  .live{ max-width:620px; margin:0 auto 10px; text-align:center; }
+  .live-toggle{ background:var(--blau); color:#fff; border-color:#2765a7; }
+  .live-toggle.verbunden{ background:var(--gruen); border-color:#1f7a43; }
+  .live-body{
+    margin-top:8px;
+    background:var(--feld);
+    border:2.5px solid var(--ink);
+    border-radius:16px;
+    box-shadow:var(--schatten);
+    padding:12px;
+  }
+  .live-row{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; align-items:center; }
+  .live-row input{
+    font-family:inherit; font-weight:600; font-size:15px; color:var(--ink);
+    text-align:center; border:2.5px solid var(--ink); border-radius:12px;
+    padding:9px 12px; background:var(--feld); box-shadow:var(--schatten);
+    width:min(42vw,160px);
+  }
+  .live-status{ font-size:14px; font-weight:600; margin-top:10px; min-height:1em; }
+  .live-status .code{ background:var(--gelb); border:2px solid var(--ink); border-radius:8px; padding:1px 8px; letter-spacing:2px; }
+  .live-players{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:10px; }
+  .live-players .sp{ font-size:13px; font-weight:600; background:#eef2f4; border:2px solid var(--ink); border-radius:10px; padding:5px 9px; }
+  .live-players .sp.ich{ background:var(--gelb); }
+  .live-players .sp b{ color:var(--rot); }
+  .live-hinweis{ font-size:13px; font-weight:500; opacity:.85; line-height:1.35; }
+  .live-hinweis code{ background:#eef2f4; border-radius:5px; padding:1px 5px; font-size:12px; }
+
+  /* Toast-Meldungen unten */
+  .toasts{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    display:flex; flex-direction:column; gap:8px; align-items:center;
+    z-index:70; pointer-events:none; width:max-content; max-width:94vw;
+  }
+  .toast{
+    background:var(--ink); color:#fff; font-weight:600; font-size:14px;
+    padding:11px 16px; border-radius:14px; box-shadow:0 4px 12px rgba(0,0,0,.25);
+    animation:toastIn .25s ease, toastOut .4s ease 3.6s forwards;
+    max-width:94vw;
+  }
+  .toast.bingo{ background:var(--gruen); }
+  .toast .wer{ color:var(--gelb); }
+  .toast.bingo .wer{ color:#fff; }
+  @keyframes toastIn{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes toastOut{ to{ opacity:0; transform:translateY(-8px); } }
+
+  /* ---------- Bingo-Raster ---------- */
+  .raster{
+    display:grid;
+    grid-template-columns:repeat(5, 1fr);
+    gap:7px;
+    max-width:min(96vw, 560px);
+    margin:0 auto;
+  }
+  .feld{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    gap:3px;
+    aspect-ratio:1 / 1;
+    min-width:60px;              /* gut mit dem Finger treffbar */
+    padding:5px 3px 4px;
+    background:var(--feld);
+    border:2.5px solid var(--ink);
+    border-radius:14px;
+    box-shadow:var(--schatten);
+    cursor:pointer;
+    overflow:hidden;
+    user-select:none;
+    transition:transform .07s ease, background .12s ease;
+  }
+  .feld:active{ transform:scale(.95); }
+  .feld svg{
+    width:clamp(28px, 9vw, 52px);
+    height:clamp(28px, 9vw, 52px);
+    flex:0 0 auto;
+    margin-top:2px;
+    pointer-events:none;
+  }
+  .feld .txt{
+    font-size:clamp(7px, 2.05vw, 11px);
+    font-weight:500;
+    line-height:1.05;
+    text-align:center;
+    pointer-events:none;
+    overflow:hidden;
+  }
+
+  /* markierter Zustand */
+  .feld.mark{
+    background:var(--gruen);
+    border-color:#1f7a43;
+  }
+  .feld.mark .txt{ color:#fff; }
+  .feld.mark svg{ filter:drop-shadow(0 0 1px rgba(0,0,0,.25)); }
+  /* Häkchen-Overlay */
+  .feld.mark::after{
+    content:"";
+    position:absolute;
+    right:5px; top:4px;
+    width:20px; height:20px;
+    border-radius:50%;
+    background:#fff;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='none' stroke='%2335a35f' stroke-width='4' stroke-linecap='round' stroke-linejoin='round' d='M5 13l4 4 10-11'/></svg>");
+    background-size:15px 15px;
+    background-position:center;
+    background-repeat:no-repeat;
+    box-shadow:0 1px 2px rgba(0,0,0,.25);
+  }
+  /* Freifeld (Mitte) */
+  .feld.frei{
+    background:var(--gelb);
+    border-color:#c99f00;
+    cursor:default;
+  }
+  .feld.frei .txt{ color:var(--ink); font-weight:700; }
+  .feld.frei::after{ display:none; }
+
+  /* Felder einer Gewinn-Linie hervorheben */
+  .feld.win{
+    animation:pop .5s ease;
+    box-shadow:0 0 0 3px var(--gelb), var(--schatten);
+  }
+  @keyframes pop{
+    0%{ transform:scale(1); }
+    40%{ transform:scale(1.08); }
+    100%{ transform:scale(1); }
+  }
+
+  /* ---------- Gewinn-Overlay ---------- */
+  .overlay{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    background:rgba(36,48,58,.45);
+    padding:20px;
+  }
+  .overlay.an{ display:flex; }
+  .box{
+    position:relative;
+    background:var(--feld);
+    border:4px solid var(--ink);
+    border-radius:24px;
+    padding:26px 22px 22px;
+    text-align:center;
+    max-width:360px;
+    width:100%;
+    box-shadow:0 10px 0 rgba(36,48,58,.2);
+    animation:pop .45s ease;
+  }
+  .box h2{
+    margin:0 0 6px;
+    font-size:44px;
+    font-weight:700;
+    letter-spacing:1px;
+    background:linear-gradient(90deg,var(--rot),var(--gelb) 45%,var(--gruen));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .box p{ margin:0 0 16px; font-weight:500; font-size:16px; }
+  .box .dialogTitel{ font-size:26px; font-weight:700; margin:0 0 10px; color:var(--ink); }
+  .box .btns{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+  /* Konfetti-Canvas liegt über allem */
+  #konfetti{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+    z-index:60;
+    display:none;
+  }
+  #konfetti.an{ display:block; }
+
+  /* Zeitstempel: wann wurde dieses Blatt erstellt */
+  .stempel{
+    max-width:min(96vw,560px);
+    margin:12px auto 0;
+    text-align:center;
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink);
+    background:var(--feld);
+    border:2px dashed var(--ink);
+    border-radius:12px;
+    padding:8px 12px;
+  }
+  .stempel span{ opacity:.7; font-weight:500; }
+
+  footer{
+    max-width:620px;
+    margin:22px auto 0;
+    text-align:center;
+    font-size:12px;
+    opacity:.6;
+    font-weight:500;
+  }
+
+  @media (max-width:380px){
+    .feld{ border-radius:11px; }
+    button{ padding:10px 12px; font-size:14px; }
+  }
+</style>
+</head>
+<body>
+
+  <header>
+    <div class="titel">
+      <span class="tri" aria-hidden="true"><span style="background:var(--gelb)"></span><span class="punkte"></span><span style="background:var(--gruen)"></span><span style="background:#fff"></span></span>
+      Tour-de-France Bingo
+    </div>
+    <p class="subtitel">Tippe an, was du im Rennen siehst! 🚴</p>
+    <a class="spiel-link" href="./bombe.html">💣 Bombenspiel spielen →</a>
+  </header>
+
+  <div class="leiste">
+    <button id="btnNeu" class="primaer">🎲 Neues Blatt (zufällig)</button>
+    <button id="btnReset">↺ Markierungen löschen</button>
+    <button id="btnSpielerPlus">＋ Blatt</button>
+    <button id="btnSpielerMinus">－ Blatt</button>
+    <button id="btnAnsicht">🧾 Ansicht: Untereinander</button>
+    <button id="btnResetAll" class="gefahr">🗑️ Alles zurücksetzen</button>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="info">
+    <div class="zaehler">Fertige Blätter: <b id="anzFertig">0</b> / <span id="anzBlaetter">1</span></div>
+  </div>
+
+  <!-- Live-Spiel: Raum beitreten und Meldungen der anderen sehen -->
+  <div class="live" id="livePanel">
+    <button id="btnLiveToggle" class="live-toggle" aria-expanded="false">📡 Live-Spiel</button>
+    <div class="live-body" id="liveBody" hidden>
+      <div class="live-row" id="liveJoinRow">
+        <input id="liveName" type="text" maxlength="16" placeholder="Dein Name" aria-label="Dein Name">
+        <input id="liveCode" type="text" maxlength="8" placeholder="Raumcode (leer = neu)" aria-label="Raumcode">
+        <button id="btnLiveJoin" class="gruen">Beitreten</button>
+        <button id="btnLiveLeave" class="gefahr" hidden>Verlassen</button>
+      </div>
+      <div class="live-status" id="liveStatus"></div>
+      <div class="live-players" id="livePlayers"></div>
+    </div>
+  </div>
+
+  <main id="board" class="board einzeln"></main>
+
+  <footer>
+    Ein Spaß-Spiel für vor dem Fernseher · Viel Freude beim Etappen-Gucken! 📺🚴
+    · Zustand bleibt in dieser Sitzung erhalten.
+  </footer>
+
+  <!-- Gewinn-Overlay -->
+  <div class="overlay" id="overlay">
+    <div class="box">
+      <h2>BINGO!</h2>
+      <p id="gewinnText">Super gemacht! 🎉</p>
+      <div class="btns">
+        <button id="btnWeiter" class="gruen">Weiterspielen</button>
+        <button id="btnNeu2" class="primaer">Neues Blatt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bestätigungs-Dialog für "Alles zurücksetzen" -->
+  <div class="overlay" id="confirmOverlay">
+    <div class="box">
+      <p class="dialogTitel">Alles zurücksetzen?</p>
+      <p>Damit werden <b>alle Blätter</b>, Namen und Markierungen gelöscht und es startet <b>ein einziges frisches Blatt</b>. Das kann nicht rückgängig gemacht werden.</p>
+      <div class="btns">
+        <button id="btnResetJa" class="gefahr">Ja, alles löschen</button>
+        <button id="btnResetNein" class="primaer">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="konfetti"></canvas>
+
+  <!-- Live-Meldungen (Toasts) -->
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+/* ============================================================================
+   Tour-de-France Bingo  –  reine Single-File-Lösung
+   ----------------------------------------------------------------------------
+   Aufbau des Codes:
+     1) ICON-Bausteine (kleine SVG-Helfer)
+     2) FELD-POOL (Text + selbst gezeichnetes SVG)
+     3) STATE  (In-Memory; über sessionStorage sitzungsübergreifend gesichert)
+     4) Raster erzeugen / rendern
+     5) Tippen -> markieren + Gewinnprüfung (Reihen/Spalten/Diagonalen)
+     6) Konfetti-Animation
+     7) Bedien-Buttons & Spieler-Tabs
+     8) Live-Spiel (optional, über Firebase Realtime Database per REST)
+   ========================================================================== */
+
+/* =========================================================================
+   LIVE-SPIEL – Konfiguration
+   -------------------------------------------------------------------------
+   Trage hier die URL deiner Firebase Realtime Database ein, dann wird das
+   Live-Spiel aktiv. Ohne URL läuft die App ganz normal, nur ohne "Live".
+   Beispiel: "https://deinprojekt-default-rtdb.europe-west1.firebasedatabase.app"
+   (OHNE Schrägstrich am Ende).  Anleitung: siehe LIVE-SETUP.md
+   ========================================================================= */
+const FIREBASE_DB_URL = "";
+
+/* -------------------------------------------------------------------------
+   1) Kleine SVG-Bausteine, die mehrere Icons gemeinsam nutzen
+   ------------------------------------------------------------------------- */
+const INK = '#24303a', GELB='#ffd21a', GRUEN='#35a35f', ROT='#e23b45', BLAU='#3d8bdd';
+
+// Ein einfaches Fahrrad (wird von mehreren Renn-Icons verwendet)
+function bike(frame=BLAU){
+  return `
+    <circle cx="17" cy="46" r="11" fill="none" stroke="${INK}" stroke-width="3"/>
+    <circle cx="47" cy="46" r="11" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M17 46 L31 46 L41 30 M31 46 L24 30 L41 30 L47 46" fill="none" stroke="${frame}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M22 30 L26 30" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`;
+}
+// Ein Renn-Trikot (Farbe + optionaler Aufdruck)
+function jersey(fill, extra=''){
+  return `<path d="M21 17 L28 13 L36 13 L43 17 L50 23 L44 29 L44 51 L20 51 L20 29 L14 23 Z"
+    fill="${fill}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>${extra}`;
+}
+// Ein Straßenschild an einem Pfosten
+function sign(fill, inner, border=INK){
+  return `<rect x="30" y="30" width="4" height="30" fill="${INK}"/>
+    <rect x="10" y="8" width="44" height="30" rx="5" fill="${fill}" stroke="${border}" stroke-width="2.6"/>${inner}`;
+}
+// Ein einfacher Kopf/Fahrer-Oberkörper
+function rider(jerseyCol=ROT){
+  return `<circle cx="32" cy="16" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M22 44 Q32 24 42 44 Z" fill="${jerseyCol}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`;
+}
+
+/* -------------------------------------------------------------------------
+   2) FELD-POOL  – jedes Feld: { t: Anzeigetext, s: SVG-Innenmarkup (64x64) }
+   ------------------------------------------------------------------------- */
+const POOL = [
+  { t:"Sturz", s:`
+    <circle cx="20" cy="50" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <circle cx="44" cy="52" r="7" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M20 50 L30 44 L40 50" fill="none" stroke="${BLAU}" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="40" cy="24" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M32 40 L46 30 L50 40" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M10 18 l6 4 M14 14 l3 6 M22 12 l0 7" stroke="${ROT}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Radwechsel", s:`
+    <circle cx="26" cy="40" r="16" fill="none" stroke="${INK}" stroke-width="3.5"/>
+    <circle cx="26" cy="40" r="3" fill="${INK}"/>
+    <path d="M26 26 L26 54 M12 40 L40 40 M16 30 L36 50 M16 50 L36 30" stroke="${BLAU}" stroke-width="2"/>
+    <path d="M44 16 l8 4 l-3 6 l7 4 l-4 8 l-7 -3 l-4 6 l-8 -4 z" fill="${GELB}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>`},
+
+  { t:"Verkleideter Fan", s:`
+    <circle cx="32" cy="36" r="12" fill="#f3c6a0" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M18 24 L26 8 L32 24 Z" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <path d="M46 24 L38 8 L32 24 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2"/>
+    <circle cx="26" cy="8" r="3" fill="${GELB}"/><circle cx="38" cy="8" r="3" fill="${GELB}"/>
+    <circle cx="27" cy="34" r="2" fill="${INK}"/><circle cx="37" cy="34" r="2" fill="${INK}"/>
+    <path d="M26 42 Q32 47 38 42" fill="none" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>`},
+
+  { t:"Gel essen", s:`
+    <rect x="24" y="12" width="16" height="40" rx="7" fill="${GRUEN}" stroke="${INK}" stroke-width="2.6"/>
+    <rect x="26" y="8" width="12" height="7" rx="2" fill="${INK}"/>
+    <path d="M27 24 h10 M27 32 h10 M27 40 h6" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`},
+
+  { t:"Flasche vom Auto", s:`
+    <rect x="6" y="30" width="34" height="16" rx="4" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="12" y="24" width="16" height="8" rx="3" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="14" cy="48" r="5" fill="${INK}"/><circle cx="32" cy="48" r="5" fill="${INK}"/>
+    <rect x="46" y="26" width="10" height="22" rx="4" fill="${BLAU}" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="49" y="20" width="4" height="8" rx="2" fill="${INK}"/>`},
+
+  { t:"Hubschrauber-Bild", s:`
+    <ellipse cx="30" cy="38" rx="18" ry="10" fill="${BLAU}" stroke="${INK}" stroke-width="2.6"/>
+    <path d="M44 34 L58 30 L54 42 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="26" y="30" width="10" height="8" rx="2" fill="#bfe0ff" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M8 18 H52 M30 18 V26" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M20 50 h8 M34 50 h8" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Ausreißer vorne", s:`
+    <g transform="translate(6,2)">${bike(GELB)}</g>
+    ${rider(GELB).replace(/cx="32"/g,'cx="30"').replace(/cy="16"/g,'cy="14"')}
+    <path d="M50 20 h8 M50 28 h6 M50 36 h8" stroke="${ROT}" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="1 4"/>`},
+
+  { t:"Steiler Berg", s:`
+    <path d="M4 54 L28 12 L40 34 L50 20 L60 54 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M22 22 L28 12 L34 22 Z" fill="#fff" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M46 27 L50 20 L54 27 Z" fill="#fff" stroke="${INK}" stroke-width="1.4"/>`},
+
+  { t:"Kuh oder Schaf", s:`
+    <ellipse cx="30" cy="36" rx="20" ry="13" fill="#fff" stroke="${INK}" stroke-width="2.6"/>
+    <ellipse cx="24" cy="34" rx="5" ry="4" fill="${INK}"/><ellipse cx="38" cy="40" rx="4" ry="3" fill="${INK}"/>
+    <path d="M46 30 q10 -4 8 6 q-2 6 -8 2 Z" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="50" cy="26" r="2.4" fill="${INK}"/>
+    <path d="M44 22 q2 -8 8 -6 M54 24 q6 -6 4 2" stroke="${INK}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M18 48 v6 M28 48 v6 M40 48 v6 M50 46 v6" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Fahne schwenken", s:`
+    <rect x="16" y="6" width="3.5" height="52" rx="1.5" fill="${INK}"/>
+    <path d="M20 8 Q34 2 48 8 Q40 16 48 24 Q34 18 20 24 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>`},
+
+  { t:"Wohnmobile am Rand", s:`
+    <rect x="6" y="24" width="46" height="24" rx="5" fill="#fff" stroke="${INK}" stroke-width="2.6"/>
+    <rect x="10" y="28" width="12" height="10" rx="2" fill="${BLAU}"/>
+    <rect x="26" y="28" width="10" height="10" rx="2" fill="${BLAU}"/>
+    <path d="M6 40 h46" stroke="${GRUEN}" stroke-width="4"/>
+    <circle cx="18" cy="50" r="5" fill="${INK}"/><circle cx="42" cy="50" r="5" fill="${INK}"/>`},
+
+  { t:"Kamera-Motorrad", s:`
+    <circle cx="16" cy="46" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <circle cx="46" cy="46" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M16 46 L28 46 L38 34 L48 34 M28 46 L34 34" stroke="${INK}" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <circle cx="34" cy="20" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <rect x="40" y="12" width="16" height="11" rx="2.5" fill="${INK}"/>
+    <circle cx="48" cy="17" r="3.4" fill="${BLAU}"/>`},
+
+  { t:"Sonnenblumenfeld", s:`
+    <g stroke="${INK}" stroke-width="2">
+    <circle cx="20" cy="24" r="7" fill="${INK}"/>
+    ${Array.from({length:8},(_,i)=>{const a=i/8*6.283;return `<ellipse cx="${(20+11*Math.cos(a)).toFixed(1)}" cy="${(24+11*Math.sin(a)).toFixed(1)}" rx="4" ry="2.6" fill="${GELB}" transform="rotate(${(a*57.3).toFixed(0)} ${(20+11*Math.cos(a)).toFixed(1)} ${(24+11*Math.sin(a)).toFixed(1)})"/>`}).join('')}
+    <circle cx="44" cy="34" r="5" fill="${INK}"/>
+    ${Array.from({length:8},(_,i)=>{const a=i/8*6.283;return `<ellipse cx="${(44+8*Math.cos(a)).toFixed(1)}" cy="${(34+8*Math.sin(a)).toFixed(1)}" rx="3" ry="2" fill="${GELB}" transform="rotate(${(a*57.3).toFixed(0)} ${(44+8*Math.cos(a)).toFixed(1)} ${(34+8*Math.sin(a)).toFixed(1)})"/>`}).join('')}
+    </g>
+    <path d="M20 32 V56 M44 40 V56" stroke="${GRUEN}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Burg oder Schloss", s:`
+    <path d="M14 54 V26 h6 v-6 h6 v6 h6 v-6 h6 v6 h6 v-6 h6 v6 h6 V54 Z" fill="#c9b79c" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="27" y="38" width="10" height="16" fill="${INK}"/>
+    <rect x="18" y="32" width="6" height="6" fill="${BLAU}"/><rect x="40" y="32" width="6" height="6" fill="${BLAU}"/>`},
+
+  { t:"Teamwagen", s:`
+    <path d="M6 44 L10 30 L48 30 L56 40 L56 44 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <rect x="14" y="32" width="12" height="8" rx="1.5" fill="#cfe6ff"/><rect x="30" y="32" width="12" height="8" rx="1.5" fill="#cfe6ff"/>
+    <circle cx="18" cy="47" r="6" fill="${INK}"/><circle cx="46" cy="47" r="6" fill="${INK}"/>
+    <circle cx="22" cy="22" r="7" fill="none" stroke="${INK}" stroke-width="2"/><circle cx="40" cy="22" r="7" fill="none" stroke="${INK}" stroke-width="2"/>
+    <path d="M12 24 h40" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Fahrer isst Banane", s:`
+    <circle cx="24" cy="20" r="9" fill="#f3c6a0" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M12 52 Q24 30 36 46" fill="none" stroke="${ROT}" stroke-width="6" stroke-linecap="round"/>
+    <path d="M30 44 Q48 40 50 18 Q44 40 28 40 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`},
+
+  { t:"Fahrer trinkt", s:`
+    ${rider(BLAU)}
+    <rect x="34" y="26" width="9" height="20" rx="4" fill="${GELB}" stroke="${INK}" stroke-width="2.2" transform="rotate(28 38 34)"/>
+    <path d="M30 22 Q36 24 40 28" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`},
+
+  { t:"Punkte-Wertung", s:jersey(GRUEN,`<circle cx="32" cy="34" r="7" fill="#fff" stroke="${INK}" stroke-width="1.6"/><text x="32" y="38" font-size="9" font-family="Fredoka" text-anchor="middle" fill="${INK}" font-weight="700">P</text>`)},
+
+  { t:"Fan rennt mit", s:`
+    <circle cx="30" cy="14" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M30 21 L26 36 L18 46 M26 36 L38 40 M30 26 L44 22 M30 30 L18 30" fill="none" stroke="${ROT}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M18 46 L10 52 M38 40 L44 50" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>`},
+
+  { t:"Fahrer winkt", s:`
+    ${rider(GELB)}
+    <path d="M40 40 L52 18" stroke="#f3c6a0" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="53" cy="15" r="5" fill="#f3c6a0" stroke="${INK}" stroke-width="1.8"/>`},
+
+  { t:"Abklatschen", s:`
+    <path d="M14 52 V30 q0 -6 4 -6 q4 0 4 6 v-4 q0 -6 4 -6 q4 0 4 6 v-2 q0 -6 4 -6 q4 0 4 6 v14 q0 8 -6 12 Z" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M42 8 l3 7 M50 12 l-3 6 M52 22 l-6 1" stroke="${GELB}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Regenjacke an", s:jersey(GELB,`<path d="M32 13 V51 M24 22 l-6 4 M40 22 l6 4" stroke="${INK}" stroke-width="1.8" fill="none"/><path d="M8 8 l2 5 M18 6 l1 5 M50 8 l-2 5" stroke="${BLAU}" stroke-width="2.4" stroke-linecap="round"/>`)},
+
+  { t:"Zielsprint", s:`
+    <g transform="translate(2,4) scale(.9)">${bike(ROT)}</g>
+    <path d="M50 6 h10 v22 h-10 Z" fill="#fff" stroke="${INK}" stroke-width="1.6"/>
+    ${[0,1,2].map(r=>[0,1].map(c=>`<rect x="${50+c*5}" y="${6+r*7+ (c? 0:3.5)}" width="5" height="3.5" fill="${INK}"/>`).join('')).join('')}
+    <rect x="49" y="6" width="3" height="50" fill="${INK}"/>`},
+
+  { t:"Podium & Blumen", s:`
+    <rect x="24" y="20" width="16" height="34" fill="${GELB}" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="6" y="32" width="18" height="22" fill="#cfd6db" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="40" y="38" width="18" height="16" fill="#e0b877" stroke="${INK}" stroke-width="2.2"/>
+    <text x="32" y="40" font-size="12" text-anchor="middle" fill="${INK}" font-weight="700" font-family="Fredoka">1</text>
+    <circle cx="32" cy="12" r="6" fill="${ROT}"/><circle cx="26" cy="16" r="4" fill="${GRUEN}"/><circle cx="38" cy="16" r="4" fill="${BLAU}"/>`},
+
+  { t:"Etappensieg-Jubel", s:`
+    <circle cx="32" cy="16" r="8" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M32 24 L26 44 M32 24 L38 44 M32 28 L16 12 M32 28 L48 12" fill="none" stroke="${GELB}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M8 20 l5 2 M56 20 l-5 2 M12 8 l3 4 M52 8 l-3 4" stroke="${ROT}" stroke-width="2.6" stroke-linecap="round"/>`},
+
+  { t:"Genervter Fahrer", s:`
+    <circle cx="32" cy="30" r="18" fill="${GELB}" stroke="${INK}" stroke-width="2.6"/>
+    <path d="M22 24 l7 3 M42 24 l-7 3" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="26" cy="30" r="2.4" fill="${INK}"/><circle cx="38" cy="30" r="2.4" fill="${INK}"/>
+    <path d="M24 42 Q32 36 40 42" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`},
+
+  { t:"Deutschland-Fahne", s:`
+    <rect x="14" y="8" width="3.5" height="50" rx="1.5" fill="${INK}"/>
+    <g stroke="${INK}" stroke-width="1.6">
+    <rect x="18" y="10" width="38" height="10" fill="#111"/>
+    <rect x="18" y="20" width="38" height="10" fill="${ROT}"/>
+    <rect x="18" y="30" width="38" height="10" fill="${GELB}"/>
+    </g>`},
+
+  { t:"Fans an der Bande", s:`
+    <rect x="4" y="34" width="56" height="14" rx="2" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>
+    <text x="32" y="44" font-size="8" text-anchor="middle" fill="#fff" font-weight="700" font-family="Fredoka">TOUR</text>
+    <circle cx="14" cy="24" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <circle cx="32" cy="20" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <circle cx="50" cy="24" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M9 34 l3 -6 M55 34 l-3 -6" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Pyro / Rauch", s:`
+    <path d="M26 54 V30 h4 v24 Z" fill="${INK}"/>
+    <path d="M28 30 q-10 -6 -4 -16 q6 8 14 2 q-2 10 6 12 q-8 6 -16 2 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.6"/>
+    <g fill="#b9c2c9" opacity=".9">
+    <circle cx="40" cy="16" r="7"/><circle cx="50" cy="12" r="6"/><circle cx="48" cy="22" r="6"/><circle cx="38" cy="24" r="5"/></g>`},
+
+  { t:"Flasche weggeworfen", s:`
+    <rect x="30" y="24" width="11" height="24" rx="5" fill="${GRUEN}" stroke="${INK}" stroke-width="2.4" transform="rotate(35 35 36)"/>
+    <rect x="33" y="18" width="5" height="8" rx="2" fill="${INK}" transform="rotate(35 35 22)"/>
+    <path d="M8 14 q6 4 4 10 M14 10 q8 4 6 12 M22 8 q8 6 4 14" fill="none" stroke="${BLAU}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Bergtrikot", s:jersey('#fff',`${[[26,26],[38,26],[32,36],[26,46],[38,46]].map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.2" fill="${ROT}"/>`).join('')}`)},
+
+  { t:"Gelbes Trikot", s:jersey(GELB,`<path d="M20 30 h24" stroke="${INK}" stroke-width="1.6"/>`)},
+
+  { t:"Polizei-Motorrad", s:`
+    <circle cx="16" cy="46" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <circle cx="46" cy="46" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M16 46 L28 46 L40 34 L50 34 M28 46 L34 34" stroke="${BLAU}" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+    <rect x="24" y="12" width="16" height="8" rx="3" fill="${BLAU}"/>
+    <circle cx="28" cy="16" r="2.5" fill="#fff"/><circle cx="36" cy="16" r="2.5" fill="${ROT}"/>`},
+
+  { t:"Kreisverkehr", s:sign(BLAU,`<g fill="none" stroke="#fff" stroke-width="3">
+    <circle cx="32" cy="23" r="8"/></g>
+    <path d="M32 23 m0 -8 l3 -5 l-6 0 z" fill="#fff"/>
+    <path d="M24 23 m8 0 l5 3 l0 -6 z" fill="#fff" transform="rotate(120 32 23)"/>
+    <path d="M24 23 m8 0 l5 3 l0 -6 z" fill="#fff" transform="rotate(240 32 23)"/>`)},
+
+  { t:"Zwischensprint", s:sign(GRUEN,`<circle cx="18" cy="23" r="5" fill="#fff"/><path d="M28 18 h16 M28 23 h16 M28 28 h10" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>`)},
+
+  { t:"Bergwertung", s:sign('#fff',`<path d="M14 32 L26 16 L34 26 L40 20 L50 32 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>`)},
+
+  { t:"Bahnübergang", s:`
+    <rect x="30" y="26" width="4" height="34" fill="${INK}"/>
+    <g stroke="${ROT}" stroke-width="6" stroke-linecap="round">
+    <path d="M12 8 L52 40"/><path d="M52 8 L12 40"/></g>`},
+
+  { t:"Defekt am Hinterrad", s:`
+    ${bike(INK)}
+    <path d="M47 46 m-11 0 a11 11 0 0 0 22 0" fill="none" stroke="${ROT}" stroke-width="3" stroke-dasharray="3 3"/>
+    <path d="M40 12 l4 6 M50 10 l-2 7 M56 16 l-6 3" stroke="${ROT}" stroke-width="2.6" stroke-linecap="round"/>`},
+
+  { t:"Neutraler Wagen", s:`
+    <path d="M6 44 L10 30 L46 30 L54 40 L54 44 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <rect x="14" y="32" width="12" height="8" rx="1.5" fill="#cfe6ff"/><rect x="30" y="32" width="10" height="8" rx="1.5" fill="#cfe6ff"/>
+    <circle cx="18" cy="47" r="6" fill="${INK}"/><circle cx="44" cy="47" r="6" fill="${INK}"/>
+    <circle cx="24" cy="20" r="8" fill="none" stroke="#fff" stroke-width="2.4"/><circle cx="42" cy="20" r="8" fill="none" stroke="#fff" stroke-width="2.4"/>`},
+
+  { t:"Tunnel", s:`
+    <path d="M10 54 V32 a22 22 0 0 1 44 0 V54 Z" fill="${INK}"/>
+    <path d="M18 54 V34 a14 14 0 0 1 28 0 V54 Z" fill="#0a0f14"/>
+    <path d="M10 54 V32 a22 22 0 0 1 44 0 V54" fill="none" stroke="#9aa6ad" stroke-width="3"/>
+    <circle cx="24" cy="30" r="2" fill="${GELB}"/><circle cx="40" cy="30" r="2" fill="${GELB}"/>`},
+
+  { t:"Kind auf Schultern", s:`
+    <circle cx="32" cy="46" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M22 62 Q32 50 42 62" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="32" cy="20" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M24 40 Q32 28 40 40 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M22 26 l-7 -6 M42 26 l7 -6" stroke="#f3c6a0" stroke-width="4" stroke-linecap="round"/>`},
+
+  { t:"Hund am Rand", s:`
+    <ellipse cx="30" cy="38" rx="18" ry="10" fill="#c98a4b" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="48" cy="30" r="9" fill="#c98a4b" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M48 22 l-4 -8 l7 3 Z" fill="#a06a34" stroke="${INK}" stroke-width="1.6"/>
+    <circle cx="51" cy="29" r="1.8" fill="${INK}"/><circle cx="55" cy="33" r="1.8" fill="${INK}"/>
+    <path d="M14 42 v8 M24 44 v8 M36 44 v8 M14 38 q-8 -4 -4 -10" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Musiker am Rand", s:`
+    <ellipse cx="24" cy="42" rx="12" ry="14" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="24" cy="42" r="4" fill="${INK}"/>
+    <path d="M34 34 L46 12" stroke="#8a5a2a" stroke-width="4" stroke-linecap="round"/>
+    <path d="M46 12 q8 -2 6 6 q-2 6 -8 2 Z" fill="${GELB}" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M52 20 q6 -2 4 6" fill="none" stroke="${INK}" stroke-width="2"/>`},
+
+  { t:"Fans in Badehose", s:`
+    <circle cx="32" cy="14" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M26 21 L26 40 L38 40 L38 21 Z" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M24 40 h16 v8 q-8 4 -16 0 Z" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <path d="M26 48 L22 60 M38 48 L42 60" stroke="#f3c6a0" stroke-width="4" stroke-linecap="round"/>
+    <path d="M26 24 l-8 8 M38 24 l8 8" stroke="#f3c6a0" stroke-width="4" stroke-linecap="round"/>`},
+
+  { t:"Menschenmenge am Berg", s:`
+    <path d="M2 54 L26 18 L44 42 L54 28 L62 54 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <g fill="${GELB}" stroke="${INK}" stroke-width="1.4">
+    <circle cx="14" cy="44" r="4"/><circle cx="24" cy="48" r="4"/><circle cx="34" cy="44" r="4"/><circle cx="44" cy="48" r="4"/><circle cx="52" cy="46" r="4"/></g>`},
+
+  { t:"Namen auf der Straße", s:`
+    <path d="M8 54 L22 14 L42 14 L56 54 Z" fill="#5a636a" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M30 16 V52" stroke="${GELB}" stroke-width="2.4" stroke-dasharray="4 5"/>
+    <text x="30" y="40" font-size="12" text-anchor="middle" fill="#fff" font-weight="700" font-family="Fredoka" transform="rotate(-4 30 40)">GO!</text>`},
+
+  { t:"Teamfunk", s:`
+    <path d="M18 34 a14 14 0 0 1 28 0" fill="none" stroke="${INK}" stroke-width="3.4"/>
+    <rect x="12" y="32" width="10" height="16" rx="4" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="42" y="32" width="10" height="16" rx="4" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M46 46 q4 8 -4 10" fill="none" stroke="${INK}" stroke-width="2.6"/>
+    <circle cx="40" cy="58" r="4" fill="${INK}"/>`},
+
+  { t:"Attacke!", s:`
+    <g transform="translate(2,4) scale(.92)">${bike(ROT)}</g>
+    ${rider(ROT).replace(/cy="16"/g,'cy="13"')}
+    <path d="M50 14 l10 -4 M50 22 l12 0 l-4 -4 M50 22 l8 4" fill="none" stroke="${GELB}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`},
+
+  { t:"Reporter auf Motorrad", s:`
+    <circle cx="16" cy="46" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <circle cx="46" cy="46" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M16 46 L28 46 L38 34 L48 34 M28 46 L34 34" stroke="${GRUEN}" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+    <circle cx="34" cy="20" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M34 24 L46 14" stroke="#f3c6a0" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="48" cy="12" r="5" fill="${INK}"/><rect x="46" y="4" width="4" height="6" rx="2" fill="${INK}"/>`},
+
+  { t:"Fan auf dem Dach", s:`
+    <rect x="6" y="30" width="46" height="20" rx="5" fill="#fff" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="10" y="34" width="12" height="9" rx="2" fill="${BLAU}"/><rect x="26" y="34" width="10" height="9" rx="2" fill="${BLAU}"/>
+    <circle cx="16" cy="52" r="5" fill="${INK}"/><circle cx="42" cy="52" r="5" fill="${INK}"/>
+    <circle cx="30" cy="16" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M30 22 L30 30 M30 24 L20 16 M30 24 L42 14" fill="none" stroke="${ROT}" stroke-width="4" stroke-linecap="round"/>`},
+
+  { t:"Wasser über Kopf", s:`
+    <circle cx="30" cy="40" r="9" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="24" y="6" width="12" height="16" rx="5" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M24 22 q-4 6 0 10 M30 24 q0 6 0 8 M36 22 q4 6 0 10" fill="none" stroke="${BLAU}" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M20 32 q-3 4 0 8 M40 32 q3 4 0 8" fill="none" stroke="${BLAU}" stroke-width="2.2" stroke-linecap="round"/>`},
+
+  { t:"Riesiges Bodenbild", s:`
+    <ellipse cx="32" cy="40" rx="26" ry="14" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M32 40 m-14 0 a14 8 0 0 1 28 0" fill="${ROT}"/>
+    <g stroke="${INK}" stroke-width="1.8" fill="none">
+    <path d="M16 40 l-4 -6 M24 36 l-2 -7 M32 34 l0 -7 M40 36 l2 -7 M48 40 l4 -6"/></g>
+    <g fill="${INK}"><circle cx="12" cy="33" r="2"/><circle cx="22" cy="28" r="2"/><circle cx="32" cy="26" r="2"/><circle cx="42" cy="28" r="2"/><circle cx="52" cy="33" r="2"/></g>`},
+
+  { t:"Kopfsteinpflaster", s:`
+    <g fill="#9aa6ad" stroke="${INK}" stroke-width="1.6">
+    ${[0,1,2,3].map(r=>[0,1,2,3].map(c=>`<rect x="${8+c*13 + (r%2?6:0)}" y="${10+r*12}" width="11" height="10" rx="3"/>`).join('')).join('')}
+    </g>`},
+
+  { t:"Blick nach hinten", s:`
+    <g transform="translate(2,4) scale(.92)">${bike(GRUEN)}</g>
+    <circle cx="34" cy="16" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M34 16 q-8 -1 -12 4" fill="none" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="28" cy="16" r="1.8" fill="${INK}"/>
+    <path d="M40 22 Q32 26 26 44" fill="${GRUEN}" stroke="${INK}" stroke-width="2.2"/>`},
+
+  { t:"Statue", s:`
+    <rect x="16" y="50" width="32" height="8" rx="1.5" fill="#8b939a" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="20" y="42" width="24" height="9" fill="#a7aeb4" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="32" cy="12" r="7" fill="#b7bec4" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M26 42 L27 22 Q32 17 37 22 L38 42 Z" fill="#b7bec4" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M28 25 L18 14" stroke="#b7bec4" stroke-width="5" stroke-linecap="round"/>
+    <path d="M28 25 L18 14" stroke="${INK}" stroke-width="2.2" fill="none"/>
+    <path d="M37 26 L46 34" stroke="#b7bec4" stroke-width="5" stroke-linecap="round"/>
+    <path d="M37 26 L46 34" stroke="${INK}" stroke-width="2.2" fill="none"/>`},
+
+  { t:"Fahrbahnteiler", s:`
+    <path d="M6 56 L22 12 L42 12 L58 56 Z" fill="#5a636a" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M17 56 L26 32 M47 56 L38 32" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M26 52 L28 26 L36 26 L38 52 Z" fill="#c7ccd0" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    ${[0,1,2,3].map(i=>`<path d="M27 ${48-i*7} h10" stroke="${ROT}" stroke-width="2" opacity=".5"/>`).join('')}
+    <rect x="30" y="12" width="4" height="18" fill="${INK}"/>
+    <circle cx="32" cy="12" r="9" fill="${BLAU}" stroke="#fff" stroke-width="2"/>
+    <path d="M32 6 L32 16 M32 16 L28 12 M32 16 L36 12" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`},
+
+  { t:"Hupendes Auto", s:`
+    <path d="M4 42 L8 30 L30 30 L37 38 L44 40 L44 42 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="11" y="32" width="9" height="7" rx="1.5" fill="#cfe6ff"/><rect x="22" y="32" width="8" height="7" rx="1.5" fill="#cfe6ff"/>
+    <circle cx="15" cy="45" r="5.5" fill="${INK}"/><circle cx="37" cy="45" r="5.5" fill="${INK}"/>
+    <circle cx="15" cy="45" r="1.8" fill="#fff"/><circle cx="37" cy="45" r="1.8" fill="#fff"/>
+    <path d="M6 26 h10" stroke="${INK}" stroke-width="2" stroke-linecap="round"/>
+    <g fill="none" stroke="${GELB}" stroke-width="2.8" stroke-linecap="round">
+      <path d="M48 26 q5 6 0 12"/>
+      <path d="M53 21 q9 11 0 22"/>
+      <path d="M58 16 q13 16 0 32"/>
+    </g>
+    <text x="46" y="16" font-size="10" fill="${ROT}" font-weight="700" font-family="Fredoka">!</text>`},
+
+  { t:"Tourarzt (Auto)", s:`
+    <path d="M6 44 L11 30 L47 30 L55 40 L55 44 Z" fill="#ffffff" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <rect x="15" y="32" width="12" height="8" rx="1.5" fill="#cfe6ff"/><rect x="31" y="32" width="12" height="8" rx="1.5" fill="#cfe6ff"/>
+    <circle cx="18" cy="47" r="6" fill="${INK}"/><circle cx="46" cy="47" r="6" fill="${INK}"/>
+    <circle cx="18" cy="47" r="2" fill="#fff"/><circle cx="46" cy="47" r="2" fill="#fff"/>
+    <rect x="26" y="13" width="14" height="11" rx="2" fill="#fff" stroke="${INK}" stroke-width="2"/>
+    <g fill="${ROT}"><rect x="31.5" y="15" width="3" height="7" rx="1"/><rect x="29.5" y="17" width="7" height="3" rx="1"/></g>
+    <g fill="${ROT}"><rect x="34.5" y="33" width="3" height="7" rx="1"/><rect x="32.5" y="35" width="7" height="3" rx="1"/></g>`},
+
+  { t:"Frankreich-Fahne", s:`
+    <rect x="14" y="8" width="3.5" height="50" rx="1.5" fill="${INK}"/>
+    <g stroke="${INK}" stroke-width="1.6">
+    <rect x="18" y="10" width="13" height="30" fill="${BLAU}"/>
+    <rect x="31" y="10" width="13" height="30" fill="#fff"/>
+    <rect x="44" y="10" width="13" height="30" fill="${ROT}"/>
+    </g>`},
+
+  { t:"Über 50 km/h", s:`
+    <rect x="30" y="40" width="4" height="20" fill="${INK}"/>
+    <rect x="8" y="6" width="48" height="36" rx="6" fill="#1a2229" stroke="${INK}" stroke-width="2.6"/>
+    <text x="30" y="30" font-size="20" text-anchor="middle" fill="${GELB}" font-weight="700" font-family="Fredoka">58</text>
+    <text x="47" y="18" font-size="7" text-anchor="middle" fill="${ROT}" font-weight="700" font-family="Fredoka">!</text>
+    <text x="30" y="39" font-size="7" text-anchor="middle" fill="#7fb0e0" font-weight="600" font-family="Fredoka">km/h</text>`},
+
+  { t:"Grünes Trikot", s:jersey(GRUEN,`<path d="M20 30 h24" stroke="#fff" stroke-width="1.8"/>`)},
+
+  { t:"Fan auf dem Rad", s:`
+    <g transform="translate(2,2)">${bike('#8b939a')}</g>
+    <circle cx="34" cy="14" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M32 6 q4 -3 8 -1" stroke="${ROT}" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M34 20 L36 34" stroke="${ROT}" stroke-width="5" stroke-linecap="round"/>
+    <path d="M35 24 L48 12" stroke="#f3c6a0" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="49" cy="10" r="4" fill="#f3c6a0" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M36 34 L30 44 M36 34 L44 44" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>`},
+
+  { t:"Belgien-Fahne", s:`
+    <rect x="14" y="8" width="3.5" height="50" rx="1.5" fill="${INK}"/>
+    <g stroke="${INK}" stroke-width="1.6">
+    <rect x="18" y="10" width="13" height="30" fill="#1a1a1a"/>
+    <rect x="31" y="10" width="13" height="30" fill="${GELB}"/>
+    <rect x="44" y="10" width="13" height="30" fill="${ROT}"/>
+    </g>`},
+
+  { t:"Niederlande-Fahne", s:`
+    <rect x="14" y="8" width="3.5" height="50" rx="1.5" fill="${INK}"/>
+    <g stroke="${INK}" stroke-width="1.6">
+    <rect x="18" y="10" width="39" height="10" fill="${ROT}"/>
+    <rect x="18" y="20" width="39" height="10" fill="#fff"/>
+    <rect x="18" y="30" width="39" height="10" fill="${BLAU}"/>
+    </g>`},
+
+  { t:"Italien-Fahne", s:`
+    <rect x="14" y="8" width="3.5" height="50" rx="1.5" fill="${INK}"/>
+    <g stroke="${INK}" stroke-width="1.6">
+    <rect x="18" y="10" width="13" height="30" fill="${GRUEN}"/>
+    <rect x="31" y="10" width="13" height="30" fill="#fff"/>
+    <rect x="44" y="10" width="13" height="30" fill="${ROT}"/>
+    </g>`},
+
+  { t:"Dänemark-Fahne", s:`
+    <rect x="14" y="8" width="3.5" height="50" rx="1.5" fill="${INK}"/>
+    <rect x="18" y="10" width="39" height="30" fill="${ROT}" stroke="${INK}" stroke-width="1.6"/>
+    <rect x="28" y="10" width="6" height="30" fill="#fff"/>
+    <rect x="18" y="22" width="39" height="6" fill="#fff"/>`},
+
+  { t:"Norwegen-Fahne", s:`
+    <rect x="14" y="8" width="3.5" height="50" rx="1.5" fill="${INK}"/>
+    <rect x="18" y="10" width="39" height="30" fill="${ROT}" stroke="${INK}" stroke-width="1.6"/>
+    <rect x="27" y="10" width="8" height="30" fill="#fff"/>
+    <rect x="18" y="21" width="39" height="8" fill="#fff"/>
+    <rect x="29" y="10" width="4" height="30" fill="${BLAU}"/>
+    <rect x="18" y="23" width="39" height="4" fill="${BLAU}"/>`},
+
+  { t:"Baskenland-Fahne", s:`
+    <rect x="14" y="8" width="3.5" height="50" rx="1.5" fill="${INK}"/>
+    <rect x="18" y="10" width="39" height="30" fill="${ROT}" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M18 10 L57 40 M57 10 L18 40" stroke="${GRUEN}" stroke-width="4.5"/>
+    <rect x="35" y="10" width="5" height="30" fill="#fff"/>
+    <rect x="18" y="22.5" width="39" height="5" fill="#fff"/>`},
+
+  { t:"Fan mit Kuhglocke", s:`
+    <circle cx="20" cy="16" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M10 44 Q20 24 30 44 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M26 30 L38 20" stroke="#f3c6a0" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M38 12 h6 M41 12 v4" stroke="${INK}" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+    <path d="M37 16 L45 16 L48 30 L34 30 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M34 30 L48 30" stroke="#c99f00" stroke-width="2.4"/>
+    <circle cx="41" cy="33" r="2.4" fill="${INK}"/>
+    <g fill="none" stroke="${ROT}" stroke-width="2.4" stroke-linecap="round">
+      <path d="M52 18 q4 6 0 12"/>
+      <path d="M57 14 q7 10 0 20"/>
+    </g>`},
+
+  { t:"Weißes Trikot", s:jersey('#fff',`<path d="M20 30 h24" stroke="${INK}" stroke-width="1.6"/>`)},
+
+  { t:"Rotznase", s:`
+    <circle cx="24" cy="26" r="14" fill="#f3c6a0" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="28" cy="22" r="2.2" fill="${INK}"/>
+    <path d="M37 24 q5 2 0 7" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M24 34 q4 3 9 1" stroke="${INK}" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M34 46 Q40 34 40 30" stroke="#f3c6a0" stroke-width="5" stroke-linecap="round"/>
+    <g fill="none" stroke="${GRUEN}" stroke-width="2.6" stroke-linecap="round">
+      <path d="M42 30 q7 0 13 -2"/>
+      <path d="M42 34 q8 2 14 1"/>
+    </g>
+    <circle cx="57" cy="27" r="1.8" fill="${GRUEN}"/><circle cx="58" cy="36" r="1.8" fill="${GRUEN}"/>`},
+
+  { t:"Flamme Rouge", s:`
+    <path d="M6 56 h52" stroke="#5a636a" stroke-width="4" stroke-linecap="round"/>
+    <path d="M9 56 V24 Q32 9 55 24 V56" fill="none" stroke="${ROT}" stroke-width="7" stroke-linejoin="round"/>
+    <rect x="18" y="20" width="28" height="15" rx="3" fill="${ROT}" stroke="${INK}" stroke-width="1.8"/>
+    <text x="32" y="31" font-size="9" text-anchor="middle" fill="#fff" font-weight="700" font-family="Fredoka">1 km</text>
+    <path d="M32 6 L32 17 L41 11 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.4" stroke-linejoin="round"/>`},
+
+  { t:"Passschild", s:sign('#fff',`
+    <text x="32" y="19" font-size="7.5" text-anchor="middle" fill="${INK}" font-weight="700" font-family="Fredoka">COL</text>
+    <text x="32" y="31" font-size="9" text-anchor="middle" fill="${ROT}" font-weight="700" font-family="Fredoka">1850m</text>`)},
+
+  { t:"Serpentinen", s:`
+    <path d="M4 56 L30 12 L60 56 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M25 15 L30 12 L35 15 Z" fill="#fff" stroke="${INK}" stroke-width="1.2"/>
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 54 H42 Q50 50 42 47 H24 Q16 44 24 41 H40 Q48 37 40 34 H29" stroke="${INK}" stroke-width="7"/>
+      <path d="M12 54 H42 Q50 50 42 47 H24 Q16 44 24 41 H40 Q48 37 40 34 H29" stroke="#d9dee1" stroke-width="4.5"/>
+    </g>`},
+
+  { t:"Windräder", s:`
+    <path d="M2 55 h60" stroke="${GRUEN}" stroke-width="4" stroke-linecap="round"/>
+    <rect x="20.5" y="26" width="3" height="29" fill="#c7ccd0" stroke="${INK}" stroke-width="1.5"/>
+    <path d="M22 26 L22 11 M22 26 L35 33 M22 26 L9 33" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="22" cy="26" r="3" fill="#fff" stroke="${INK}" stroke-width="1.5"/>
+    <rect x="45" y="34" width="2.5" height="21" fill="#c7ccd0" stroke="${INK}" stroke-width="1.4"/>
+    <path d="M46 34 L46 23 M46 34 L55 40 M46 34 L37 40" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="46" cy="34" r="2.4" fill="#fff" stroke="${INK}" stroke-width="1.4"/>`},
+
+  { t:"Tourteufel", s:`
+    <path d="M17 13 L14 5 L21 11 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.4" stroke-linejoin="round"/>
+    <path d="M31 13 L34 5 L27 11 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.4" stroke-linejoin="round"/>
+    <circle cx="24" cy="20" r="9" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <circle cx="21" cy="19" r="1.6" fill="#fff"/><circle cx="27" cy="19" r="1.6" fill="#fff"/>
+    <path d="M20 24 q4 3 8 0" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M14 50 Q24 28 34 50 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M31 34 L45 22" stroke="${ROT}" stroke-width="4" stroke-linecap="round"/>
+    <rect x="45" y="12" width="3" height="42" rx="1.5" fill="#8a5a2a" stroke="${INK}" stroke-width="1"/>
+    <path d="M41 16 V8 M46.5 15 V6 M52 16 V8 M41 16 H52" stroke="${GELB}" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`},
+
+  { t:"Fan mit Perücke", s:`
+    <circle cx="32" cy="36" r="12" fill="#f3c6a0" stroke="${INK}" stroke-width="2.4"/>
+    <g stroke="${INK}" stroke-width="1.6">
+      <circle cx="19" cy="26" r="7" fill="${ROT}"/>
+      <circle cx="28" cy="18" r="7.5" fill="${GELB}"/>
+      <circle cx="38" cy="18" r="7.5" fill="${GRUEN}"/>
+      <circle cx="46" cy="26" r="7" fill="${BLAU}"/>
+    </g>
+    <circle cx="28" cy="36" r="1.9" fill="${INK}"/><circle cx="37" cy="36" r="1.9" fill="${INK}"/>
+    <path d="M27 42 Q32 46 38 42" stroke="${INK}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`},
+
+  { t:"Fan macht Selfie", s:`
+    <circle cx="18" cy="42" r="9" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M24 38 L39 30" stroke="#f3c6a0" stroke-width="5" stroke-linecap="round"/>
+    <g transform="rotate(20 45 24)">
+      <rect x="37" y="9" width="17" height="30" rx="4" fill="${INK}"/>
+      <rect x="39.5" y="13" width="12" height="19" rx="1.5" fill="#cfe6ff"/>
+      <circle cx="45.5" cy="22" r="3.4" fill="#f3c6a0" stroke="${INK}" stroke-width="1"/>
+      <circle cx="45.5" cy="36" r="1.4" fill="#cfe6ff"/>
+    </g>
+    <path d="M52 8 l2 4 M59 12 l-4 2" stroke="${GELB}" stroke-width="2.2" stroke-linecap="round"/>`},
+
+  { t:"Fan mit Schild", s:`
+    <rect x="9" y="10" width="46" height="18" rx="3" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    <text x="32" y="23" font-size="10" text-anchor="middle" fill="${INK}" font-weight="700" font-family="Fredoka">ALLEZ!</text>
+    <circle cx="32" cy="42" r="8" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M26 38 L20 28 M38 38 L44 28" stroke="#f3c6a0" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M22 52 Q32 46 42 52 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>`},
+
+  { t:"Pferd", s:`
+    <ellipse cx="28" cy="34" rx="16" ry="9" fill="#b07a42" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M40 31 Q50 28 47 14 Q46 11 52 13 Q58 28 46 37 Z" fill="#b07a42" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M49 14 l1 -5 l4 4 Z" fill="#b07a42" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>
+    <circle cx="50" cy="20" r="1.6" fill="${INK}"/>
+    <path d="M45 13 Q41 22 44 31" stroke="#6f4a22" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M13 33 Q9 40 13 48" stroke="#6f4a22" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <g stroke="${INK}" stroke-width="4" stroke-linecap="round">
+      <path d="M20 42 V54 M28 42 V54 M35 42 V54 M41 41 V54"/></g>`},
+
+  { t:"Traktor", s:`
+    <circle cx="44" cy="42" r="12" fill="${INK}"/><circle cx="44" cy="42" r="5" fill="#c7ccd0"/>
+    <circle cx="15" cy="46" r="7" fill="${INK}"/><circle cx="15" cy="46" r="3" fill="#c7ccd0"/>
+    <path d="M9 40 L9 30 L28 30 L30 21 L40 21 L43 40 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <rect x="30" y="24" width="9" height="7" rx="1.5" fill="#cfe6ff"/>
+    <rect x="12" y="16" width="3" height="14" fill="${INK}"/>
+    <circle cx="13.5" cy="14" r="2.2" fill="#9aa6ad"/><circle cx="17" cy="10" r="1.6" fill="#b9c2c9"/>`},
+];
+
+/* -------------------------------------------------------------------------
+   3) STATE
+   Wir halten den Zustand im JavaScript (In-Memory).  Damit er auch ein
+   Neuladen der Seite innerhalb derselben Sitzung übersteht, spiegeln wir ihn
+   – wo verfügbar – zusätzlich in sessionStorage (das ist NICHT localStorage
+   und in Sandbox-Umgebungen meist zuverlässiger).  Fällt sessionStorage aus,
+   läuft alles rein aus dem Speicher weiter.
+   ------------------------------------------------------------------------- */
+const SPEICHER_KEY = 'tdf-bingo-state-v1';
+
+// In-Memory-Zustand (Quelle der Wahrheit)
+let state = null;
+
+function speichern(){
+  try{ sessionStorage.setItem(SPEICHER_KEY, JSON.stringify(state)); }
+  catch(e){ /* sessionStorage nicht verfügbar -> egal, In-Memory reicht */ }
+}
+function laden(){
+  try{
+    const roh = sessionStorage.getItem(SPEICHER_KEY);
+    if(roh) return JSON.parse(roh);
+  }catch(e){}
+  return null;
+}
+
+// Erzeugt ein neues Blatt (Array aus 25 Feldern; Mitte = Freifeld)
+function neuesBlatt(){
+  // 24 zufällige, unterschiedliche Pool-Indizes ziehen
+  const indizes = [...POOL.keys()];
+  // Fisher-Yates-Mischen
+  for(let i=indizes.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [indizes[i], indizes[j]] = [indizes[j], indizes[i]];
+  }
+  const gezogen = indizes.slice(0,24);
+
+  const zellen = [];
+  let z = 0;
+  for(let pos=0; pos<25; pos++){
+    if(pos === 12){                      // Mitte = festes Freifeld
+      zellen.push({ frei:true, marked:true, text:"FREIFELD" });
+    }else{
+      const p = gezogen[z++];
+      zellen.push({ frei:false, marked:false, pool:p, text:POOL[p].t });
+    }
+  }
+  // erstelltAm = Zeitpunkt der Erzeugung (macht ein heimliches Neu-Würfeln sichtbar)
+  // gewonnen = löst die Feier aus (einmalig);  fertig = hatte schon ein Bingo (bleibt bestehen, zählt für die Statistik)
+  return { zellen, gewonnen:false, fertig:false, erstelltAm: Date.now() };
+}
+
+// Erzeugt ein frisches Blatt mit Namen
+function neuerSpieler(nr){
+  return { name:"Blatt " + nr, blatt: neuesBlatt() };
+}
+
+// Grundzustand herstellen (frisch)
+function frischerState(){
+  return { spieler:[ neuerSpieler(1) ], aktiv:0, ansicht:'tabs' };
+}
+
+/* -------------------------------------------------------------------------
+   4) Rendern
+   ------------------------------------------------------------------------- */
+const tabsEl        = document.getElementById('tabs');
+const boardEl       = document.getElementById('board');
+const anzFertigEl   = document.getElementById('anzFertig');
+const anzBlaetterEl = document.getElementById('anzBlaetter');
+const btnAnsicht    = document.getElementById('btnAnsicht');
+
+function aktiverSpieler(){ return state.spieler[state.aktiv]; }
+// Findet das Raster-Element einer bestimmten Blatt-Karte
+function karteGrid(i){ return boardEl.querySelector(`.karte[data-i="${i}"] .k-raster`); }
+function zellenMarkiert(blatt){ return blatt.zellen.filter(z=>!z.frei && z.marked).length; }
+
+// Text für den Zeitstempel eines Blatts
+function stempelText(blatt){
+  const ts = blatt.erstelltAm;
+  if(!ts) return '<span>Blatt erstellt: unbekannt</span>';
+  const d = new Date(ts).toLocaleString('de-DE', {
+    day:'2-digit', month:'2-digit', year:'numeric',
+    hour:'2-digit', minute:'2-digit', second:'2-digit'
+  });
+  return `🕒 <span>Blatt erstellt am</span> ${d} Uhr`;
+}
+
+// Icon fürs Freifeld (gelbes Trikot mit Stern)
+function freiIcon(){
+  return jersey(GELB, `<path d="M32 26 l2.4 5 5.4 .5 -4 3.6 1.2 5.3 -5 -2.8 -5 2.8 1.2 -5.3 -4 -3.6 5.4 -.5 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.2"/>`);
+}
+
+// Zeichnet Tabs – nur in der Einzel-Ansicht und nur bei mehr als 1 Blatt
+function renderTabs(){
+  tabsEl.innerHTML = '';
+  if(state.ansicht === 'stapel' || state.spieler.length <= 1){ tabsEl.style.display='none'; return; }
+  tabsEl.style.display='flex';
+  state.spieler.forEach((sp, i)=>{
+    const b = document.createElement('button');
+    b.className = 'tab' + (i===state.aktiv ? ' aktiv':'') + (sp.blatt.fertig ? ' hatbingo':'');
+    b.textContent = (sp.blatt.fertig ? '🏆 ' : '') + sp.name;
+    b.onclick = ()=>{ state.aktiv = i; speichern(); renderAlles(); };
+    tabsEl.appendChild(b);
+  });
+}
+
+// Baut eine komplette Blatt-Karte (Kopf + Raster + Zeitstempel)
+function renderKarte(i){
+  const sp = state.spieler[i];
+  const blatt = sp.blatt;
+
+  const sec = document.createElement('section');
+  sec.className = 'karte' + (i===state.aktiv ? ' aktiv':'');
+  sec.dataset.i = i;
+
+  // --- Kopf: Name, Zähler, Mini-Buttons ---
+  const kopf = document.createElement('div');
+  kopf.className = 'karte-kopf';
+
+  const name = document.createElement('input');
+  name.type = 'text'; name.maxLength = 16; name.value = sp.name;
+  name.className = 'k-name'; name.placeholder = 'Blatt-Name';
+  name.setAttribute('aria-label', 'Name des Blatts');
+  name.addEventListener('input', ()=>{
+    sp.name = name.value || 'Blatt'; state.aktiv = i; speichern(); renderTabs();
+  });
+  name.addEventListener('focus', ()=>{ state.aktiv = i; markiereAktiv(); });
+
+  const zaehler = document.createElement('div');
+  zaehler.className = 'zaehler';
+  zaehler.innerHTML = `Gefunden: <b class="k-anz">${zellenMarkiert(blatt)}</b> / 24`;
+
+  const actions = document.createElement('div');
+  actions.className = 'k-actions';
+  const bNeu = document.createElement('button');
+  bNeu.className = 'mini'; bNeu.textContent = '🎲';
+  bNeu.title = 'Neues Blatt (nur dieses)'; bNeu.setAttribute('aria-label','Neues Blatt');
+  bNeu.onclick = ()=>{ neuesBlattFuer(i); };
+  const bDel = document.createElement('button');
+  bDel.className = 'mini'; bDel.textContent = '↺';
+  bDel.title = 'Markierungen löschen (nur dieses)'; bDel.setAttribute('aria-label','Markierungen löschen');
+  bDel.onclick = ()=>{ resetMarkierungenFuer(i); };
+  actions.append(bNeu, bDel);
+
+  kopf.append(name, zaehler, actions);
+
+  // --- Raster ---
+  const grid = document.createElement('div');
+  grid.className = 'raster k-raster';
+  blatt.zellen.forEach((z, idx)=>{
+    const feld = document.createElement('div');
+    feld.className = 'feld' + (z.frei ? ' frei':'') + (z.marked && !z.frei ? ' mark':'');
+    feld.setAttribute('role','button');
+    feld.setAttribute('tabindex','0');
+    const svgInner = z.frei ? freiIcon() : POOL[z.pool].s;
+    feld.innerHTML =
+      `<svg viewBox="0 0 64 64" aria-hidden="true">${svgInner}</svg>` +
+      `<div class="txt">${z.text}</div>`;
+    if(!z.frei){
+      feld.addEventListener('click', ()=> tippe(i, idx));
+      feld.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); tippe(i, idx);} });
+    }
+    grid.appendChild(feld);
+  });
+
+  // --- Zeitstempel ---
+  const stempel = document.createElement('p');
+  stempel.className = 'stempel k-stempel';
+  stempel.innerHTML = stempelText(blatt);
+
+  sec.append(kopf, grid, stempel);
+  return sec;
+}
+
+// Setzt die "aktiv"-Markierung der Karten (ohne Neuaufbau)
+function markiereAktiv(){
+  boardEl.querySelectorAll('.karte').forEach(k=>{
+    k.classList.toggle('aktiv', Number(k.dataset.i) === state.aktiv);
+  });
+  renderTabs();
+}
+
+// Baut das Board: Einzel-Ansicht = nur aktives Blatt, Stapel = alle Blätter
+function renderBoard(){
+  boardEl.className = 'board ' + (state.ansicht === 'stapel' ? 'stapel' : 'einzeln');
+  boardEl.innerHTML = '';
+  const indizes = state.ansicht === 'stapel'
+    ? state.spieler.map((_, i)=> i)
+    : [state.aktiv];
+  indizes.forEach(i => boardEl.appendChild(renderKarte(i)));
+}
+
+// Zählt, wie viele Blätter schon ein Bingo hatten (über alle Blätter hinweg)
+function renderFertig(){
+  anzFertigEl.textContent   = state.spieler.filter(sp => sp.blatt.fertig).length;
+  anzBlaetterEl.textContent = state.spieler.length;
+}
+
+// Beschriftung des Ansicht-Umschalters
+function renderAnsichtButton(){
+  btnAnsicht.innerHTML = state.ansicht === 'stapel'
+    ? '🗂️ Ansicht: Tabs'
+    : '🧾 Ansicht: Untereinander';
+}
+
+function renderAlles(){
+  renderAnsichtButton();
+  renderTabs();
+  renderBoard();
+  renderFertig();
+}
+
+/* -------------------------------------------------------------------------
+   5) Tippen + Gewinnprüfung
+   ------------------------------------------------------------------------- */
+function tippe(i, idx){
+  state.aktiv = i;                   // dieses Blatt wird das "aktive"
+  const blatt = state.spieler[i].blatt;
+  const z = blatt.zellen[idx];
+  if(z.frei) return;                 // Freifeld bleibt immer markiert
+  z.marked = !z.marked;              // umschalten (markieren / rückgängig)
+  speichern();
+
+  // betroffenes Feld dieser Karte neu darstellen (Klasse toggeln reicht)
+  const grid = karteGrid(i);
+  if(grid) grid.children[idx].classList.toggle('mark', z.marked);
+  // Zähler dieser Karte aktualisieren
+  const anzB = boardEl.querySelector(`.karte[data-i="${i}"] .k-anz`);
+  const anzahl = zellenMarkiert(blatt);
+  if(anzB) anzB.textContent = anzahl;
+  markiereAktiv();
+
+  // Live-Spiel: neues Markieren als Meldung senden, Abwählen nur den Stand aktualisieren
+  if(LIVE.connected){
+    if(z.marked) liveFundMelden(z.text, anzahl);
+    else         liveCountAktualisieren(anzahl);
+  }
+
+  // Nach jedem Tipp prüfen, ob eine komplette Linie markiert ist
+  const linie = pruefeGewinn(blatt);
+  if(linie && !blatt.gewonnen){
+    blatt.gewonnen = true;      // löst die einmalige Feier aus
+    blatt.fertig   = true;      // bleibt bestehen -> zählt als "fertiges Blatt"
+    speichern();
+    renderFertig();             // Zähler aktualisieren
+    renderTabs();               // Pokal-Symbol am Tab
+    if(LIVE.connected) liveBingoMelden();   // Bingo in den Raum melden
+    zeigeGewinn(i, linie);
+  }
+}
+
+/*
+   Prüft ALLE 12 Gewinnlinien:  5 Reihen, 5 Spalten, 2 Diagonalen.
+   Gibt die erste vollständige Linie (Array aus 5 Indizes) zurück
+   oder null, wenn keine Linie komplett markiert ist.
+   Das Freifeld (Mitte, Index 12) ist immer markiert und zählt mit.
+*/
+function pruefeGewinn(blatt){
+  const m = i => blatt.zellen[i].marked;   // ist Feld i markiert?
+  const linien = [];
+
+  // 5 Reihen
+  for(let r=0; r<5; r++) linien.push([0,1,2,3,4].map(c => r*5 + c));
+  // 5 Spalten
+  for(let c=0; c<5; c++) linien.push([0,1,2,3,4].map(r => r*5 + c));
+  // 2 Diagonalen
+  linien.push([0,6,12,18,24]);
+  linien.push([4,8,12,16,20]);
+
+  for(const l of linien){
+    if(l.every(m)) return l;
+  }
+  return null;
+}
+
+/* -------------------------------------------------------------------------
+   6) Gewinn anzeigen + Konfetti
+   ------------------------------------------------------------------------- */
+const overlay   = document.getElementById('overlay');
+const gewinnText= document.getElementById('gewinnText');
+
+function zeigeGewinn(i, linie){
+  // Gewinnlinie in der betroffenen Karte kurz hervorheben
+  const grid = karteGrid(i);
+  if(grid) linie.forEach(k=> grid.children[k].classList.add('win'));
+
+  gewinnText.textContent = `${state.spieler[i].name} hat eine Reihe voll! 🎉`;
+  overlay.classList.add('an');
+  starteKonfetti();
+}
+
+document.getElementById('btnWeiter').onclick = ()=>{
+  overlay.classList.remove('an');
+  stopKonfetti();
+  // Markierungen bleiben; man darf weitermachen (z.B. Blackout anstreben)
+  // "gewonnen" zurücksetzen, damit eine spätere neue Linie wieder feiern kann
+  aktiverSpieler().blatt.gewonnen = false;
+  speichern();
+  const grid = karteGrid(state.aktiv);
+  if(grid) [...grid.children].forEach(f=>f.classList.remove('win'));
+};
+document.getElementById('btnNeu2').onclick = ()=>{
+  overlay.classList.remove('an');
+  stopKonfetti();
+  neuesBlattFuer(state.aktiv);
+};
+
+/* ---- Konfetti auf Canvas ---- */
+const canvas = document.getElementById('konfetti');
+const ctx = canvas.getContext('2d');
+let konfettiTeile = [];
+let konfettiLaeuft = false;
+let konfettiRaf = null;
+
+function canvasGroesse(){
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', canvasGroesse);
+
+function starteKonfetti(){
+  canvasGroesse();
+  canvas.classList.add('an');
+  const farben = [GELB, GRUEN, ROT, BLAU, '#ffffff'];
+  konfettiTeile = [];
+  for(let i=0; i<140; i++){
+    konfettiTeile.push({
+      x: Math.random()*canvas.width,
+      y: -20 - Math.random()*canvas.height*0.5,
+      w: 6 + Math.random()*8,
+      h: 8 + Math.random()*10,
+      farbe: farben[Math.floor(Math.random()*farben.length)],
+      vy: 2 + Math.random()*3.5,
+      vx: -1.5 + Math.random()*3,
+      dreh: Math.random()*Math.PI,
+      vdreh: -0.2 + Math.random()*0.4
+    });
+  }
+  konfettiLaeuft = true;
+  const start = performance.now();
+  function tick(now){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let sichtbar = 0;
+    for(const t of konfettiTeile){
+      t.x += t.vx; t.y += t.vy; t.dreh += t.vdreh;
+      if(t.y < canvas.height + 20) sichtbar++;
+      ctx.save();
+      ctx.translate(t.x, t.y);
+      ctx.rotate(t.dreh);
+      ctx.fillStyle = t.farbe;
+      ctx.fillRect(-t.w/2, -t.h/2, t.w, t.h);
+      ctx.restore();
+    }
+    // nach 4 Sekunden oder wenn alles unten ist, aufhören
+    if(konfettiLaeuft && sichtbar>0 && (now - start) < 4500){
+      konfettiRaf = requestAnimationFrame(tick);
+    }else{
+      stopKonfetti();
+    }
+  }
+  konfettiRaf = requestAnimationFrame(tick);
+}
+function stopKonfetti(){
+  konfettiLaeuft = false;
+  if(konfettiRaf) cancelAnimationFrame(konfettiRaf);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  canvas.classList.remove('an');
+}
+
+/* -------------------------------------------------------------------------
+   7) Buttons & Spielerverwaltung
+   ------------------------------------------------------------------------- */
+
+// Neues Blatt für ein bestimmtes Blatt
+function neuesBlattFuer(i){
+  state.aktiv = i;
+  state.spieler[i].blatt = neuesBlatt();
+  speichern();
+  renderAlles();
+}
+
+// Nur Markierungen eines bestimmten Blatts löschen (Motive bleiben gleich)
+function resetMarkierungenFuer(i){
+  state.aktiv = i;
+  const blatt = state.spieler[i].blatt;
+  blatt.zellen.forEach(z=>{ if(!z.frei) z.marked = false; });
+  blatt.gewonnen = false;
+  blatt.fertig   = false;      // ohne Markierungen ist das Blatt nicht mehr "fertig"
+  speichern();
+  renderAlles();
+}
+
+// Komplett zurücksetzen: alle Blätter weg, wieder ein einziges frisches Blatt
+function vollReset(){
+  const ansicht = state.ansicht;      // gewählte Ansicht beibehalten
+  state = frischerState();
+  state.ansicht = ansicht;
+  speichern();
+  renderAlles();
+}
+
+// Top-Buttons wirken auf das aktive Blatt
+document.getElementById('btnNeu').onclick   = ()=> neuesBlattFuer(state.aktiv);
+document.getElementById('btnReset').onclick = ()=> resetMarkierungenFuer(state.aktiv);
+
+// Ansicht umschalten: Tabs <-> Untereinander
+btnAnsicht.onclick = ()=>{
+  state.ansicht = (state.ansicht === 'stapel') ? 'tabs' : 'stapel';
+  speichern();
+  renderAlles();
+};
+
+// "Alles zurücksetzen" -> Sicherheitsabfrage anzeigen
+const confirmOverlay = document.getElementById('confirmOverlay');
+document.getElementById('btnResetAll').onclick = ()=> confirmOverlay.classList.add('an');
+document.getElementById('btnResetNein').onclick = ()=> confirmOverlay.classList.remove('an');
+document.getElementById('btnResetJa').onclick = ()=>{
+  confirmOverlay.classList.remove('an');
+  vollReset();
+};
+// Klick auf den dunklen Hintergrund bricht ebenfalls ab
+confirmOverlay.addEventListener('click', (e)=>{ if(e.target === confirmOverlay) confirmOverlay.classList.remove('an'); });
+
+// Blatt hinzufügen (max 6)
+document.getElementById('btnSpielerPlus').onclick = ()=>{
+  if(state.spieler.length >= 6) return;
+  state.spieler.push(neuerSpieler(state.spieler.length+1));
+  state.aktiv = state.spieler.length - 1;
+  speichern();
+  renderAlles();
+};
+// Blatt entfernen (min 1)
+document.getElementById('btnSpielerMinus').onclick = ()=>{
+  if(state.spieler.length <= 1) return;
+  state.spieler.splice(state.aktiv, 1);
+  if(state.aktiv >= state.spieler.length) state.aktiv = state.spieler.length - 1;
+  speichern();
+  renderAlles();
+};
+
+/* -------------------------------------------------------------------------
+   8) LIVE-SPIEL  (optional, Firebase Realtime Database per REST)
+   -------------------------------------------------------------------------
+   Ohne konfigurierte URL (FIREBASE_DB_URL) bleibt alles deaktiviert.
+   Prinzip:
+     - Jeder Spieler behält sein EIGENES Blatt.
+     - Beim Markieren eines Feldes wird eine kurze Meldung in den Raum
+       geschickt: {name, motiv, type:'found'}.  Alle im Raum sehen einen
+       Toast: 'Luisa hat „Sturz" gefunden'.  Bingo wird ebenso gemeldet.
+     - Empfang läuft über EventSource (Server-Sent-Events der RTDB-REST-API),
+       Senden über fetch (POST/PUT/DELETE).  Kein Firebase-SDK nötig.
+   ------------------------------------------------------------------------- */
+const LIVE = {
+  id: 'p_' + Math.random().toString(36).slice(2, 10),  // eindeutige Client-ID
+  url: (FIREBASE_DB_URL || '').replace(/\/+$/, ''),      // ohne Schrägstrich am Ende
+  room: null,
+  name: '',
+  es: null,
+  connected: false,
+  baselineDone: false,   // erster Snapshot verarbeitet?
+  seen: new Set(),       // bereits getoastete Event-IDs
+  data: {}               // lokale Spiegelung des Raums
+};
+
+const liveEls = {
+  panel:   document.getElementById('livePanel'),
+  toggle:  document.getElementById('btnLiveToggle'),
+  body:    document.getElementById('liveBody'),
+  joinRow: document.getElementById('liveJoinRow'),
+  name:    document.getElementById('liveName'),
+  code:    document.getElementById('liveCode'),
+  join:    document.getElementById('btnLiveJoin'),
+  leave:   document.getElementById('btnLiveLeave'),
+  status:  document.getElementById('liveStatus'),
+  players: document.getElementById('livePlayers'),
+  toasts:  document.getElementById('toasts')
+};
+
+function liveKonfiguriert(){ return !!LIVE.url; }
+
+// Toast-Meldung unten einblenden (verschwindet von selbst)
+function toast(html, art=''){
+  const t = document.createElement('div');
+  t.className = 'toast' + (art ? ' ' + art : '');
+  t.innerHTML = html;
+  liveEls.toasts.appendChild(t);
+  // nach der Ausblend-Animation entfernen
+  setTimeout(()=>{ t.remove(); }, 4200);
+}
+
+function liveStatus(html){ liveEls.status.innerHTML = html; }
+
+// Panel auf/zu
+liveEls.toggle.onclick = ()=>{
+  const auf = liveEls.body.hasAttribute('hidden');
+  if(auf){ liveEls.body.removeAttribute('hidden'); } else { liveEls.body.setAttribute('hidden',''); }
+  liveEls.toggle.setAttribute('aria-expanded', String(auf));
+  if(auf && !liveKonfiguriert()){
+    liveStatus(`<div class="live-hinweis">Live-Spiel ist noch nicht eingerichtet.<br>
+      Trage in <code>index.html</code> deine Firebase-Datenbank-URL bei
+      <code>FIREBASE_DB_URL</code> ein.<br>Anleitung: <code>LIVE-SETUP.md</code></div>`);
+    liveEls.joinRow.style.display = 'none';
+  }
+};
+
+// Pfad-Helfer: setzt/löscht einen Wert im lokalen Spiegel unter "/a/b/c"
+function livePfadSetzen(obj, pfad, wert){
+  const teile = pfad.split('/').filter(Boolean);
+  if(teile.length === 0){ return; }
+  let o = obj;
+  for(let k=0; k<teile.length-1; k++){
+    if(typeof o[teile[k]] !== 'object' || o[teile[k]] === null) o[teile[k]] = {};
+    o = o[teile[k]];
+  }
+  const last = teile[teile.length-1];
+  if(wert === null) delete o[last]; else o[last] = wert;
+}
+
+// Wendet ein put/patch an und toastet neue Events
+function liveAnwenden(pfad, wert){
+  if(pfad === '/' || pfad === ''){ LIVE.data = (wert && typeof wert==='object') ? wert : {}; }
+  else { livePfadSetzen(LIVE.data, pfad, wert); }
+
+  // neue Events erkennen
+  const evs = LIVE.data.events || {};
+  Object.keys(evs).forEach(id=>{
+    if(!LIVE.seen.has(id)){
+      LIVE.seen.add(id);
+      if(LIVE.baselineDone) liveToastEvent(evs[id]);   // Alt-Events beim Beitritt NICHT toasten
+    }
+  });
+  if(!LIVE.baselineDone && (pfad === '/' || pfad === '')) LIVE.baselineDone = true;
+
+  liveRenderPlayers();
+}
+
+function liveToastEvent(ev){
+  if(!ev || ev.by === LIVE.id) return;                 // eigene Meldungen ignorieren
+  const wer = `<span class="wer">${escapeHtml(ev.name || 'Jemand')}</span>`;
+  if(ev.type === 'bingo'){
+    toast(`🎉 ${wer} hat BINGO!`, 'bingo');
+  }else{
+    toast(`${wer} hat „${escapeHtml(ev.motiv || '?')}" gefunden`);
+  }
+}
+
+// kleine HTML-Absicherung für Namen/Motive
+function escapeHtml(s){
+  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function liveRenderPlayers(){
+  const players = LIVE.data.players || {};
+  const liste = Object.entries(players)
+    .map(([id, p]) => ({ id, name: (p && p.name) || '?', count: (p && p.count) || 0 }))
+    .sort((a,b)=> b.count - a.count);
+  liveEls.players.innerHTML = liste.map(p =>
+    `<span class="sp${p.id===LIVE.id?' ich':''}">${escapeHtml(p.name)} <b>${p.count}</b></span>`
+  ).join('');
+}
+
+// Präsenz (Name + gefundene Felder) in den Raum schreiben
+function livePresenz(count){
+  if(!LIVE.connected) return;
+  fetch(`${LIVE.url}/rooms/${LIVE.room}/players/${LIVE.id}.json`, {
+    method:'PUT',
+    body: JSON.stringify({ name: LIVE.name, count: count|0, ts: {'.sv':'timestamp'} })
+  }).catch(()=>{});
+}
+
+// Ein Ereignis in den Raum melden (found / bingo)
+function liveMelden(ev){
+  if(!LIVE.connected) return;
+  fetch(`${LIVE.url}/rooms/${LIVE.room}/events.json`, {
+    method:'POST',
+    body: JSON.stringify(Object.assign({ by: LIVE.id, name: LIVE.name, ts: {'.sv':'timestamp'} }, ev))
+  }).catch(()=>{});
+}
+
+// Öffentliche Helfer, die vom Spiel aufgerufen werden:
+function liveFundMelden(motiv, count){ liveMelden({ type:'found', motiv }); livePresenz(count); }
+function liveBingoMelden(){ liveMelden({ type:'bingo' }); }
+function liveCountAktualisieren(count){ livePresenz(count); }
+
+// Raum beitreten
+function liveJoin(){
+  if(!liveKonfiguriert()) return;
+  const name = (liveEls.name.value || '').trim();
+  if(!name){ liveStatus('Bitte zuerst einen Namen eingeben.'); liveEls.name.focus(); return; }
+  let code = (liveEls.code.value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(!code){ // leer -> neuen Raum erzeugen
+    code = Array.from({length:4}, ()=> 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
+    liveEls.code.value = code;
+  }
+  LIVE.name = name; LIVE.room = code;
+  LIVE.baselineDone = false; LIVE.seen = new Set(); LIVE.data = {};
+
+  // Stream öffnen (Server-Sent-Events der RTDB)
+  try{
+    LIVE.es = new EventSource(`${LIVE.url}/rooms/${code}.json`);
+  }catch(e){
+    liveStatus('Verbindung nicht möglich – URL prüfen.');
+    return;
+  }
+  LIVE.es.addEventListener('put', (e)=>{
+    try{ const m = JSON.parse(e.data); liveAnwenden(m.path, m.data); }catch(_){}
+  });
+  LIVE.es.addEventListener('patch', (e)=>{
+    try{
+      const m = JSON.parse(e.data);
+      Object.keys(m.data||{}).forEach(k=>{
+        const p = (m.path === '/' ? '' : m.path) + '/' + k;
+        liveAnwenden(p, m.data[k]);
+      });
+    }catch(_){}
+  });
+  LIVE.es.onopen = ()=>{
+    LIVE.connected = true;
+    livePresenz(zellenMarkiert(aktiverSpieler().blatt));   // eigenen Stand eintragen
+    liveStatus(`Verbunden · Raum <span class="code">${code}</span> · teile diesen Code!`);
+    liveEls.toggle.classList.add('verbunden');
+    liveEls.join.hidden = true; liveEls.leave.hidden = false;
+    liveEls.name.disabled = true; liveEls.code.disabled = true;
+  };
+  LIVE.es.onerror = ()=>{
+    if(!LIVE.connected) liveStatus('Verbindung fehlgeschlagen – URL/Regeln prüfen.');
+    else liveStatus(`Verbindung unterbrochen … neuer Versuch · Raum <span class="code">${LIVE.room}</span>`);
+  };
+}
+
+// Raum verlassen
+function liveLeave(){
+  if(LIVE.es){ LIVE.es.close(); LIVE.es = null; }
+  if(LIVE.connected){
+    fetch(`${LIVE.url}/rooms/${LIVE.room}/players/${LIVE.id}.json`, { method:'DELETE' }).catch(()=>{});
+  }
+  LIVE.connected = false; LIVE.room = null;
+  liveEls.toggle.classList.remove('verbunden');
+  liveEls.join.hidden = false; liveEls.leave.hidden = true;
+  liveEls.name.disabled = false; liveEls.code.disabled = false;
+  liveEls.players.innerHTML = '';
+  liveStatus('Raum verlassen.');
+}
+
+liveEls.join.onclick  = liveJoin;
+liveEls.leave.onclick = liveLeave;
+// Beim Schließen des Tabs sauber abmelden
+window.addEventListener('pagehide', ()=>{ if(LIVE.connected){ try{ navigator.sendBeacon; }catch(_){} liveLeave(); } });
+
+// Panel nur zeigen, wenn überhaupt sinnvoll (immer sichtbar; Hinweis falls nicht konfiguriert)
+
+/* -------------------------------------------------------------------------
+   START:  gespeicherten Zustand laden oder frisch beginnen
+   ------------------------------------------------------------------------- */
+function grundValidieren(s){
+  // grobe Prüfung, ob geladener Zustand zum aktuellen Pool passt
+  if(!s || !Array.isArray(s.spieler) || s.spieler.length<1) return false;
+  return s.spieler.every(sp =>
+    sp.blatt && Array.isArray(sp.blatt.zellen) && sp.blatt.zellen.length===25 &&
+    sp.blatt.zellen.every(z => z.frei || (z.pool>=0 && z.pool<POOL.length))
+  );
+}
+
+const geladen = laden();
+state = grundValidieren(geladen) ? geladen : frischerState();
+// Ansicht absichern (alte gespeicherte Zustände kennen das Feld evtl. nicht)
+if(state.ansicht !== 'stapel' && state.ansicht !== 'tabs') state.ansicht = 'tabs';
+renderAlles();
+
+/* -------------------------------------------------------------------------
+   PWA:  Service Worker registrieren (nur über https / localhost aktiv).
+   Unter file:// wird das übersprungen – die App läuft trotzdem normal.
+   ------------------------------------------------------------------------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{ /* z.B. file:// -> ignorieren */ });
+  });
+}
+</script>
+</body>
+</html>
