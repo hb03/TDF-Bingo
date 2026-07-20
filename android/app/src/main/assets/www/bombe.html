@@ -169,6 +169,40 @@
     background:rgba(0,0,0,.3); border:1px solid var(--line); color:var(--ink);
     border-radius:10px; padding:7px 11px; font-size:.85rem; cursor:pointer;
   }
+
+  /* ---------- Einstellungen (Setup) ---------- */
+  .settings{
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:6px 14px; margin-bottom:12px;
+  }
+  .settings summary{
+    cursor:pointer; font-weight:700; padding:8px 0; list-style:none;
+  }
+  .settings summary::-webkit-details-marker{ display:none; }
+  .settings summary::after{ content:"▾"; float:right; color:var(--muted); }
+  .settings[open] summary::after{ content:"▴"; }
+  .set-row{ padding:10px 0; border-top:1px solid var(--line); }
+  .set-row > label{ display:block; font-size:.9rem; color:var(--muted); margin-bottom:8px; }
+  .dur-inputs{ display:flex; align-items:center; gap:8px; }
+  .dur-inputs input{
+    width:72px; background:var(--bg); border:1px solid var(--line); color:var(--ink);
+    border-radius:10px; padding:8px 10px; font-size:1rem; text-align:center;
+  }
+  .dur-inputs span{ color:var(--muted); font-size:.9rem; }
+  .set-row select{
+    width:100%; background:var(--bg); border:1px solid var(--line); color:var(--ink);
+    border-radius:10px; padding:11px 10px; font-size:1rem;
+  }
+
+  /* ---------- Explosion: mehrere Gewinner ---------- */
+  .boom-holder{ font-size:1.15rem; color:var(--muted); margin-top:2px; }
+  .boom-holder b{ color:var(--ink); }
+  .boom-winners{
+    font-size:clamp(1.8rem,10vw,3.2rem); font-weight:800; line-height:1.12;
+    margin-top:8px; word-break:break-word; max-width:100%;
+  }
+  .boom-winlabel{ color:var(--muted); font-size:.9rem; text-transform:uppercase; letter-spacing:2px; margin-top:14px; }
+  .boom-hint.locked{ animation:none; opacity:.5; }
 </style>
 </head>
 <body>
@@ -184,10 +218,32 @@
 
     <button id="addBtn" class="btn ghost" type="button">＋ Spieler hinzufügen</button>
 
+    <details class="settings">
+      <summary>⚙️ Einstellungen</summary>
+      <div class="set-row">
+        <label>Bombe läuft (Sekunden, zufällig zwischen)</label>
+        <div class="dur-inputs">
+          <input id="minSec" type="number" min="1" max="600" inputmode="numeric" value="10">
+          <span>bis</span>
+          <input id="maxSec" type="number" min="1" max="600" inputmode="numeric" value="60">
+          <span>Sek.</span>
+        </div>
+      </div>
+      <div class="set-row">
+        <label>Punkt bekommt …</label>
+        <select id="scoreMode">
+          <option value="explode">Wer die Bombe explodieren lässt (Standard)</option>
+          <option value="survivors">Alle außer dem, bei dem sie explodiert</option>
+          <option value="longest">Wer die Bombe am längsten gehalten hat</option>
+          <option value="shortest">Wer die Bombe am kürzesten gehalten hat</option>
+        </select>
+      </div>
+    </details>
+
     <div class="footer-btns">
       <button id="startBtn" class="btn start" type="button">▶︎ Spiel starten</button>
       <a class="btn ghost" href="./index.html" style="text-decoration:none">🚴 Zurück zum Bingo</a>
-      <p class="hint">Timer läuft versteckt · Bumm nach 10–60&nbsp;Sek.</p>
+      <p class="hint">Timer läuft versteckt · Standard: Bumm nach 10–60&nbsp;Sek.</p>
     </div>
   </div>
 </section>
@@ -210,10 +266,11 @@
 <div id="boom">
   <div class="boom-emoji">💥</div>
   <div class="boom-title">BUMM!</div>
-  <div id="loserName" class="boom-loser">–</div>
-  <div id="boomSub" class="boom-sub">bekommt einen Punkt 💥</div>
+  <div id="boomHolder" class="boom-holder">–</div>
+  <div id="boomWinLabel" class="boom-winlabel">Punkt für</div>
+  <div id="boomWinners" class="boom-winners">–</div>
   <div id="board" class="board"></div>
-  <div class="boom-hint">👆 Tippen für die nächste Runde</div>
+  <div id="boomHint" class="boom-hint">👆 Tippen für die nächste Runde</div>
 </div>
 
 <div id="flash" class="flash"></div>
@@ -237,6 +294,16 @@
   let rafId = null;
   let wobbleTimer = null;      // Timer für zufällige Wackel-Phasen
   let turnStart = 0;           // Startzeit des aktuellen Spielers (für Sekundenanzeige)
+  let clickLockUntil = 0;      // Klick-Sperre nach Weiterschalten (0,5s)
+  let boomReadyAt = 0;         // Explosions-Overlay erst nach 3s antippbar
+
+  // ---------- Einstellungen ----------
+  let durMin = 10;             // Bombe läuft mindestens (Sek.)
+  let durMax = 60;             // Bombe läuft höchstens (Sek.)
+  let scoreMode = "explode";   // explode | survivors | longest | shortest
+
+  const CLICK_LOCK_MS = 500;   // Timer-Pause + Klick-Sperre nach jedem Weiterschalten
+  const BOOM_LOCK_MS  = 3000;  // Bildschirm-Sperre nach der Explosion
 
   // ---------- DOM ----------
   const $ = s => document.querySelector(s);
@@ -249,8 +316,10 @@
   const secsEl    = $("#turnSecs");
   const nextBtn   = $("#nextBtn");
   const boomEl    = $("#boom");
-  const loserEl   = $("#loserName");
-  const boomSubEl = $("#boomSub");
+  const boomHolderEl  = $("#boomHolder");
+  const boomWinLabelEl = $("#boomWinLabel");
+  const boomWinnersEl = $("#boomWinners");
+  const boomHintEl    = $("#boomHint");
   const boardEl   = $("#board");
   const flashEl   = $("#flash");
 
@@ -376,12 +445,41 @@
 
   $("#addBtn").addEventListener("click", () => { audioInit(); addPlayer(""); });
 
+  // Einstellungen aus dem Setup lesen & merken
+  function readSettings(){
+    let mn = parseInt($("#minSec").value, 10);
+    let mx = parseInt($("#maxSec").value, 10);
+    if (!Number.isFinite(mn) || mn < 1) mn = 10;
+    if (!Number.isFinite(mx) || mx < 1) mx = 60;
+    if (mx < mn){ const t = mn; mn = mx; mx = t; }   // vertauscht? tauschen
+    durMin = mn; durMax = mx;
+    $("#minSec").value = mn; $("#maxSec").value = mx;
+    scoreMode = $("#scoreMode").value;
+    try {
+      localStorage.setItem("bombe.settings",
+        JSON.stringify({ durMin, durMax, scoreMode }));
+    } catch (e) {}
+  }
+
+  // Gemerkte Einstellungen laden
+  (function loadSettings(){
+    try {
+      const s = JSON.parse(localStorage.getItem("bombe.settings") || "null");
+      if (s){
+        if (s.durMin) $("#minSec").value = s.durMin;
+        if (s.durMax) $("#maxSec").value = s.durMax;
+        if (s.scoreMode) $("#scoreMode").value = s.scoreMode;
+      }
+    } catch (e) {}
+  })();
+
   $("#startBtn").addEventListener("click", () => {
     audioInit();
+    readSettings();
     const rows = [...playersEl.children];
     players = rows.map((row, i) => {
       const val = row.querySelector("input").value.trim();
-      return { name: val || ("Spieler " + (i + 1)), color: COLORS[i % COLORS.length], points: 0 };
+      return { name: val || ("Spieler " + (i + 1)), color: COLORS[i % COLORS.length], points: 0, roundMs: 0 };
     });
     if (players.length < 2){
       alert("Bitte mindestens 2 Spieler eingeben.");
@@ -419,15 +517,14 @@
     gameEl.classList.toggle("active", which === "game");
   }
 
-  // Neue Runde: versteckten Timer (10–60s) setzen, Ticken starten
+  // Neue Runde: versteckten Timer setzen, Haltezeiten & Sperren zurücksetzen
   function newRound(keepCurrent){
     boomEl.classList.remove("show");
-    if (!keepCurrent){
-      // Verlierer beginnt die nächste Runde
-      // (curIdx bleibt auf dem Spieler, der den Punkt bekommen hat)
-    }
+    // Haltezeit-Akku aller Spieler für die neue Runde zurücksetzen
+    players.forEach(p => p.roundMs = 0);
+    clickLockUntil = 0;
     running = true;
-    const secs = 10 + Math.random() * 50;      // 10–60 Sekunden
+    const secs = durMin + Math.random() * (durMax - durMin);   // Dauer aus Einstellungen
     explodeAt = Date.now() + secs * 1000;
     updateCurrent();
     startTicking();
@@ -486,7 +583,13 @@
     updateSecs();
   }
 
+  // Bisher gehaltene Zeit des aktuellen Spielers verbuchen
+  function commitHold(){
+    if (players[curIdx]) players[curIdx].roundMs += Date.now() - turnStart;
+  }
+
   function nextPlayer(){
+    commitHold();                              // Haltezeit des abgebenden Spielers sichern
     curIdx = (curIdx + 1) % players.length;
     updateCurrent();
     playTick(true);            // kleines Feedback beim Weiterschalten
@@ -496,6 +599,7 @@
     running = false;
     stopTicking();
     clearWobble();
+    commitHold();                 // letzte Haltezeit des aktuellen Spielers verbuchen
     playExplosion();
 
     // Blitz
@@ -506,16 +610,55 @@
     // Vibration (falls unterstützt)
     if (navigator.vibrate) navigator.vibrate([80, 60, 200]);
 
-    // Punkt für aktuellen Spieler
-    const loser = players[curIdx];
-    loser.points += 1;
+    const holder = players[curIdx];           // bei wem ist sie explodiert
+    const winners = pickWinners();            // wer bekommt den Punkt (Modus)
+    winners.forEach(p => p.points += 1);
 
-    const held = ((Date.now() - turnStart) / 1000).toFixed(1).replace(".", ",");
-    loserEl.textContent = loser.name;
-    loserEl.style.color = loser.color;
-    boomSubEl.textContent = "bekommt einen Punkt · hielt die Bombe " + held + " s 💥";
+    // Holder-Zeile
+    const held = (holder.roundMs / 1000).toFixed(1).replace(".", ",");
+    boomHolderEl.innerHTML =
+      "💣 <b>" + escapeHtml(holder.name) + "</b> ließ die Bombe explodieren · hielt sie " + held + " s";
+
+    // Label je nach Modus
+    boomWinLabelEl.textContent =
+      scoreMode === "survivors" ? "Punkte für"
+      : scoreMode === "longest" ? "Längste Haltezeit → Punkt"
+      : scoreMode === "shortest" ? "Kürzeste Haltezeit → Punkt"
+      : "Punkt für";
+
+    // Gewinner-Namen (farbig)
+    boomWinnersEl.innerHTML = winners.map(p =>
+      `<span style="color:${p.color}">${escapeHtml(p.name)}</span>`).join(" · ");
+
     renderBoard();
+
+    // Bildschirm 3s sperren, damit das Ende nicht versehentlich übersprungen wird
+    boomReadyAt = Date.now() + BOOM_LOCK_MS;
+    boomHintEl.classList.add("locked");
+    boomHintEl.textContent = "… kurz warten …";
     boomEl.classList.add("show");
+    setTimeout(() => {
+      boomHintEl.classList.remove("locked");
+      boomHintEl.textContent = "👆 Tippen für die nächste Runde";
+    }, BOOM_LOCK_MS);
+  }
+
+  // Bestimmt anhand des Einstellungs-Modus, wer den Punkt bekommt
+  function pickWinners(){
+    if (scoreMode === "survivors"){
+      return players.filter((_, i) => i !== curIdx);
+    }
+    if (scoreMode === "longest" || scoreMode === "shortest"){
+      // nur Spieler berücksichtigen, die die Bombe überhaupt gehalten haben
+      const held = players.filter(p => p.roundMs > 0);
+      const pool = held.length ? held : players;
+      const best = pool.reduce((acc, p) =>
+        scoreMode === "longest" ? Math.max(acc, p.roundMs) : Math.min(acc, p.roundMs),
+        scoreMode === "longest" ? -Infinity : Infinity);
+      return pool.filter(p => p.roundMs === best);      // bei Gleichstand: alle
+    }
+    // "explode" (Standard): der Spieler, bei dem sie hochging
+    return [players[curIdx]];
   }
 
   // =======================================================
@@ -563,20 +706,32 @@
   // =======================================================
   //  Eingaben (Tippen)
   // =======================================================
+  // Weiterschalten mit Doppelklick-Schutz: nach jedem Klick 0,5s gesperrt,
+  // in dieser Zeit wird der versteckte Timer ebenfalls pausiert.
+  function tryAdvance(){
+    if (!running) return;
+    const now = Date.now();
+    if (now < clickLockUntil) return;          // innerhalb der Sperre → ignorieren
+    clickLockUntil = now + CLICK_LOCK_MS;
+    explodeAt += CLICK_LOCK_MS;                 // Timer 0,5s anhalten (Pause)
+    nextPlayer();
+  }
+
   // Weiter-Knopf = nächster Spieler
   nextBtn.addEventListener("click", (e) => {
     e.stopPropagation();                       // kein doppeltes Weiterschalten
-    if (running) nextPlayer();
+    tryAdvance();
   });
 
   // Tippen auf das Spielfeld = ebenfalls nächster Spieler
   gameEl.addEventListener("click", (e) => {
     if (e.target.closest(".corner")) return;   // Beenden-Button ignorieren
-    if (running) nextPlayer();
+    tryAdvance();
   });
 
-  // Tippen auf Explosions-Overlay = nächste Runde starten
+  // Tippen auf Explosions-Overlay = nächste Runde starten (erst nach 3s-Sperre)
   boomEl.addEventListener("click", () => {
+    if (Date.now() < boomReadyAt) return;      // Bildschirm noch gesperrt
     audioInit();
     // Rotation läuft weiter: nächster Spieler beginnt die neue Runde
     curIdx = (curIdx + 1) % players.length;
