@@ -116,7 +116,19 @@
     font-size:clamp(2.4rem,13vw,4.6rem); font-weight:800; margin-top:6px;
     line-height:1.05; word-break:break-word; max-width:100%;
   }
-  .tap-hint{ margin-top:26px; color:var(--muted); font-size:.95rem; animation:pulse 1.6s ease-in-out infinite; }
+  .turn-secs{
+    margin-top:14px; font-variant-numeric:tabular-nums;
+    font-weight:700; font-size:1.4rem; color:var(--muted);
+  }
+  .turn-secs b{ color:var(--ink); }
+  .next-btn{
+    margin-top:22px; border:none; cursor:pointer; border-radius:16px;
+    padding:16px 34px; font-size:1.2rem; font-weight:800; color:#241436;
+    background:linear-gradient(180deg, var(--accent2), #ffb638);
+    box-shadow:0 8px 22px rgba(255,140,40,.35);
+  }
+  .next-btn:active{ transform:translateY(1px); }
+  .tap-hint{ margin-top:16px; color:var(--muted); font-size:.85rem; animation:pulse 1.6s ease-in-out infinite; }
   @keyframes pulse{ 50%{ opacity:.35; } }
 
   .bomb.shake{ animation:shake .28s infinite; }
@@ -188,7 +200,9 @@
     <div class="turnlabel">Dran ist</div>
     <div id="bomb" class="bomb">💣</div>
     <div id="curname" class="curname">–</div>
-    <div class="tap-hint">👆 Tippen = nächster Spieler</div>
+    <div id="turnSecs" class="turn-secs"><b>0,0</b> s</div>
+    <button id="nextBtn" class="next-btn" type="button">Weiter →</button>
+    <div class="tap-hint">Knopf drücken oder Bildschirm antippen = nächster Spieler</div>
   </div>
 </section>
 
@@ -197,7 +211,7 @@
   <div class="boom-emoji">💥</div>
   <div class="boom-title">BUMM!</div>
   <div id="loserName" class="boom-loser">–</div>
-  <div class="boom-sub">bekommt einen Punkt 💥</div>
+  <div id="boomSub" class="boom-sub">bekommt einen Punkt 💥</div>
   <div id="board" class="board"></div>
   <div class="boom-hint">👆 Tippen für die nächste Runde</div>
 </div>
@@ -222,6 +236,7 @@
   let explodeAt = 0;           // Zeitpunkt der Explosion (Date.now-Basis)
   let rafId = null;
   let wobbleTimer = null;      // Timer für zufällige Wackel-Phasen
+  let turnStart = 0;           // Startzeit des aktuellen Spielers (für Sekundenanzeige)
 
   // ---------- DOM ----------
   const $ = s => document.querySelector(s);
@@ -231,8 +246,11 @@
   const topbarEl  = $("#topbar");
   const bombEl    = $("#bomb");
   const curnameEl = $("#curname");
+  const secsEl    = $("#turnSecs");
+  const nextBtn   = $("#nextBtn");
   const boomEl    = $("#boom");
   const loserEl   = $("#loserName");
+  const boomSubEl = $("#boomSub");
   const boardEl   = $("#board");
   const flashEl   = $("#flash");
 
@@ -421,11 +439,18 @@
   // damit das Wackeln nichts über die Restzeit verrät)
   function tickLoop(){
     if (!running) return;
+    updateSecs();
     if (Date.now() >= explodeAt){
       explode();
       return;
     }
     rafId = requestAnimationFrame(tickLoop);
+  }
+
+  // Sekundenanzeige: wie lange hält der aktuelle Spieler die Bombe schon?
+  function updateSecs(){
+    const s = (Date.now() - turnStart) / 1000;
+    secsEl.innerHTML = "<b>" + s.toFixed(1).replace(".", ",") + "</b> s";
   }
 
   // Bombe wackelt zu zufälligen Zeitpunkten – bewusst NICHT an die
@@ -457,6 +482,8 @@
     curnameEl.textContent = p.name;
     curnameEl.style.color = p.color;
     [...topbarEl.children].forEach((c, i) => c.classList.toggle("cur", i === curIdx));
+    turnStart = Date.now();     // Sekundenzähler für neuen Spieler zurücksetzen
+    updateSecs();
   }
 
   function nextPlayer(){
@@ -483,8 +510,10 @@
     const loser = players[curIdx];
     loser.points += 1;
 
+    const held = ((Date.now() - turnStart) / 1000).toFixed(1).replace(".", ",");
     loserEl.textContent = loser.name;
     loserEl.style.color = loser.color;
+    boomSubEl.textContent = "bekommt einen Punkt · hielt die Bombe " + held + " s 💥";
     renderBoard();
     boomEl.classList.add("show");
   }
@@ -534,7 +563,13 @@
   // =======================================================
   //  Eingaben (Tippen)
   // =======================================================
-  // Tippen auf das Spielfeld = nächster Spieler
+  // Weiter-Knopf = nächster Spieler
+  nextBtn.addEventListener("click", (e) => {
+    e.stopPropagation();                       // kein doppeltes Weiterschalten
+    if (running) nextPlayer();
+  });
+
+  // Tippen auf das Spielfeld = ebenfalls nächster Spieler
   gameEl.addEventListener("click", (e) => {
     if (e.target.closest(".corner")) return;   // Beenden-Button ignorieren
     if (running) nextPlayer();
