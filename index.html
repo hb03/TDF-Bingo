@@ -442,6 +442,7 @@
     <button id="btnSpielerPlus">＋ Blatt</button>
     <button id="btnSpielerMinus">－ Blatt</button>
     <button id="btnAnsicht">🧾 Ansicht: Untereinander</button>
+    <button id="btnCache" title="Service-Worker abmelden, alle Caches löschen und frisch neu laden">🧹 Cache leeren & neu laden</button>
     <button id="btnResetAll" class="gefahr">🗑️ Alles zurücksetzen</button>
   </div>
 
@@ -1773,6 +1774,32 @@ if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('./sw.js').catch(()=>{ /* z.B. file:// -> ignorieren */ });
   });
+}
+
+/* -------------------------------------------------------------------------
+   Cache leeren & neu laden:
+   Service-Worker abmelden + alle Caches löschen, dann frisch neu laden.
+   localStorage (Blätter, Einstellungen) bleibt erhalten.
+   ------------------------------------------------------------------------- */
+async function cacheLeerenUndNeuLaden(btn){
+  try{
+    if('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+    if(window.caches){
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+  }catch(e){ /* egal – trotzdem neu laden */ }
+  // Cache-Buster, damit auch der Browser-HTTP-Cache umgangen wird
+  const u = new URL(location.href);
+  u.searchParams.set('nc', Date.now().toString());
+  location.replace(u.toString());
+}
+{
+  const b = document.getElementById('btnCache');
+  if(b) b.onclick = ()=>{ b.disabled = true; b.textContent = '🧹 leere …'; cacheLeerenUndNeuLaden(b); };
 }
 </script>
 </body>

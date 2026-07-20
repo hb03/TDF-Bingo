@@ -243,6 +243,7 @@
     <div class="footer-btns">
       <button id="startBtn" class="btn start" type="button">▶︎ Spiel starten</button>
       <a class="btn ghost" href="./index.html" style="text-decoration:none">🚴 Zurück zum Bingo</a>
+      <button id="cacheBtn" class="btn ghost" type="button">🧹 Cache leeren &amp; neu laden</button>
       <p class="hint">Timer läuft versteckt · Standard: Bumm nach 10–60&nbsp;Sek.</p>
     </div>
   </div>
@@ -742,6 +743,32 @@
   if ("serviceWorker" in navigator){
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
+  }
+
+  // ---------- Cache leeren & neu laden ----------
+  // Service-Worker abmelden + alle Caches löschen, dann frisch neu laden.
+  // localStorage (Einstellungen) bleibt erhalten.
+  async function clearCacheAndReload(btn){
+    try {
+      if ("serviceWorker" in navigator){
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+      if (window.caches){
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+    } catch (e) { /* egal – trotzdem neu laden */ }
+    const u = new URL(location.href);
+    u.searchParams.set("nc", Date.now().toString());   // Browser-HTTP-Cache umgehen
+    location.replace(u.toString());
+  }
+  {
+    const b = $("#cacheBtn");
+    if (b) b.addEventListener("click", () => {
+      b.disabled = true; b.textContent = "🧹 leere …";
+      clearCacheAndReload(b);
     });
   }
 
