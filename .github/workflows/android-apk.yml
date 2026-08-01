@@ -71,24 +71,28 @@ jobs:
 
       - name: Release „TdF Bingo“ veroeffentlichen
         if: github.ref == 'refs/heads/claude/tour-de-france-bingo-app-jendbs'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: bingo-latest
-          name: "TdF Bingo (neueste APK)"
-          body: |
-            Installierbare APK von **TdF Bingo**.
-            Auf dem Handy herunterladen und oeffnen – Installation aus
-            unbekannten Quellen muss ggf. einmalig erlaubt werden.
-          files: out/tdf-bingo.apk
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          notes="Installierbare APK von TdF Bingo. Auf dem Handy oeffnen und installieren (ggf. Installation aus unbekannten Quellen einmalig erlauben)."
+          if gh release view bingo-latest >/dev/null 2>&1; then
+            gh release upload bingo-latest out/tdf-bingo.apk --clobber
+          else
+            gh release create bingo-latest out/tdf-bingo.apk \
+              --title "TdF Bingo (neueste APK)" --notes "$notes" --target "$GITHUB_SHA"
+          fi
 
       - name: Release „Bombenspiel“ veroeffentlichen
         if: github.ref == 'refs/heads/claude/tour-de-france-bingo-app-jendbs'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: bombe-latest
-          name: "Bombenspiel (neueste APK)"
-          body: |
-            Installierbare APK vom **Bombenspiel**.
-            Auf dem Handy herunterladen und oeffnen – Installation aus
-            unbekannten Quellen muss ggf. einmalig erlaubt werden.
-          files: out/bombenspiel.apk
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          notes="Installierbare APK vom Bombenspiel. Auf dem Handy oeffnen und installieren (ggf. Installation aus unbekannten Quellen einmalig erlauben)."
+          if gh release view bombe-latest >/dev/null 2>&1; then
+            gh release upload bombe-latest out/bombenspiel.apk --clobber
+          else
+            gh release create bombe-latest out/bombenspiel.apk \
+              --title "Bombenspiel (neueste APK)" --notes "$notes" --target "$GITHUB_SHA"
+          fi
