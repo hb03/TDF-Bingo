@@ -462,7 +462,6 @@
       Tour-de-France Bingo
     </div>
     <p class="subtitel">Tippe an, was du im Rennen siehst! 🚴</p>
-    <a class="spiel-link" href="./bombe.html">💣 Bombenspiel spielen →</a>
   </header>
 
   <div class="leiste">
@@ -1934,7 +1933,9 @@ renderAlles();
    PWA:  Service Worker registrieren (nur über https / localhost aktiv).
    Unter file:// wird das übersprungen – die App läuft trotzdem normal.
    ------------------------------------------------------------------------- */
-if('serviceWorker' in navigator){
+// In der Android-APK (appassets-Host) kein Service-Worker – die Assets liegen
+// lokal und sind ohnehin offline verfügbar.
+if('serviceWorker' in navigator && location.hostname !== 'appassets.androidplatform.net'){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('./sw.js').catch(()=>{ /* z.B. file:// -> ignorieren */ });
   });

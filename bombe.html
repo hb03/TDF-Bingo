@@ -234,7 +234,6 @@
     <div class="footer-btns">
       <button id="startBtn" class="btn start" type="button">▶︎ Spiel starten</button>
       <button id="openSettings" class="btn ghost" type="button">⚙️ Einstellungen</button>
-      <a class="btn ghost" href="./index.html" style="text-decoration:none">🚴 Zurück zum Bingo</a>
       <button id="cacheBtn" class="btn ghost" type="button">🧹 Cache leeren &amp; neu laden</button>
       <p id="setSummary" class="set-summary">Timer läuft versteckt.</p>
     </div>
@@ -868,7 +867,8 @@
   });
 
   // ---------- PWA / Offline ----------
-  if ("serviceWorker" in navigator){
+  // In der Android-APK (appassets-Host) kein Service-Worker nötig.
+  if ("serviceWorker" in navigator && location.hostname !== "appassets.androidplatform.net"){
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     });

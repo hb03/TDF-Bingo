@@ -1,0 +1,19 @@
+{
+  "name": "Tour-de-France Bingo",
+  "short_name": "TdF Bingo",
+  "description": "Interaktives Bingo für Kinder rund um die Tour de France.",
+  "lang": "de",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdfaf2",
+  "theme_color": "#ffd21a",
+  "categories": ["games", "kids", "entertainment"],
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

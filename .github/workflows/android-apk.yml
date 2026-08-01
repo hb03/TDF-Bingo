@@ -1,8 +1,9 @@
-name: Android APK bauen
+name: Android APKs bauen
 
-# Baut aus dem WebView-Wrapper (Ordner android/) eine installierbare APK.
-# Das Android-SDK ist auf den GitHub-Runnern vorinstalliert – daher laeuft der
-# Build hier, auch wenn er in der Entwicklungsumgebung nicht moeglich ist.
+# Baut zwei getrennte APKs aus den WebView-Wrappern (Ordner android/):
+#   - TdF Bingo     (Modul :bingo,  bündelt index.html)
+#   - Bombenspiel   (Modul :bombe,  bündelt bombe.html)
+# Das Android-SDK ist auf den GitHub-Runnern vorinstalliert.
 
 on:
   push:
@@ -14,7 +15,6 @@ on:
       - "index.html"
       - "bombe.html"
       - "manifest.webmanifest"
-      - "sw.js"
       - "icons/**"
       - ".github/workflows/android-apk.yml"
   workflow_dispatch:
@@ -32,10 +32,14 @@ jobs:
       - name: Web-Dateien in die App-Assets spiegeln
         run: |
           set -e
-          dest=android/app/src/main/assets/www
-          mkdir -p "$dest/icons"
-          cp index.html bombe.html manifest.webmanifest sw.js "$dest"/
-          cp icons/*.png "$dest/icons/"
+          # Bingo bekommt nur index.html, Bombenspiel nur bombe.html
+          bingo=android/bingo/src/main/assets/www
+          bombe=android/bombe/src/main/assets/www
+          mkdir -p "$bingo/icons" "$bombe/icons"
+          cp index.html manifest.webmanifest "$bingo"/
+          cp icons/*.png "$bingo/icons/"
+          cp bombe.html manifest.webmanifest "$bombe"/
+          cp icons/*.png "$bombe/icons/"
 
       - name: JDK 17 einrichten
         uses: actions/setup-java@v4
@@ -46,34 +50,45 @@ jobs:
       - name: Gradle einrichten (mit Cache)
         uses: gradle/actions/setup-gradle@v4
 
-      - name: APK bauen (Debug + Release)
+      - name: Beide APKs bauen (Release)
         working-directory: android
-        run: ./gradlew --no-daemon assembleDebug assembleRelease
+        run: ./gradlew --no-daemon :bingo:assembleRelease :bombe:assembleRelease
 
-      - name: APKs umbenennen
+      - name: APKs sammeln & umbenennen
         run: |
           set -e
           mkdir -p out
-          cp android/app/build/outputs/apk/debug/app-debug.apk out/bingo-bombe-debug.apk
-          cp android/app/build/outputs/apk/release/app-release.apk out/bingo-bombe.apk
+          cp android/bingo/build/outputs/apk/release/bingo-release.apk out/tdf-bingo.apk
+          cp android/bombe/build/outputs/apk/release/bombe-release.apk out/bombenspiel.apk
+          ls -la out
 
-      - name: APK als Artefakt hochladen
+      - name: APKs als Artefakt hochladen
         uses: actions/upload-artifact@v4
         with:
-          name: bingo-bombe-apk
+          name: apks
           path: out/*.apk
           if-no-files-found: error
 
-      - name: Release mit APK veroeffentlichen
+      - name: Release „TdF Bingo“ veroeffentlichen
         if: github.ref == 'refs/heads/claude/tour-de-france-bingo-app-jendbs'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: android-latest
-          name: "Android-App (neueste APK)"
+          tag_name: bingo-latest
+          name: "TdF Bingo (neueste APK)"
           body: |
-            Installierbare APK von Bingo & Bombenspiel.
+            Installierbare APK von **TdF Bingo**.
             Auf dem Handy herunterladen und oeffnen – Installation aus
             unbekannten Quellen muss ggf. einmalig erlaubt werden.
-          files: |
-            out/bingo-bombe.apk
-            out/bingo-bombe-debug.apk
+          files: out/tdf-bingo.apk
+
+      - name: Release „Bombenspiel“ veroeffentlichen
+        if: github.ref == 'refs/heads/claude/tour-de-france-bingo-app-jendbs'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: bombe-latest
+          name: "Bombenspiel (neueste APK)"
+          body: |
+            Installierbare APK vom **Bombenspiel**.
+            Auf dem Handy herunterladen und oeffnen – Installation aus
+            unbekannten Quellen muss ggf. einmalig erlaubt werden.
+          files: out/bombenspiel.apk
