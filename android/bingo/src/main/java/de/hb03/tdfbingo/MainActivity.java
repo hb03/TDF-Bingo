@@ -12,11 +12,10 @@ import android.webkit.WebViewClient;
 import androidx.webkit.WebViewAssetLoader;
 
 /**
- * Schlanke WebView-Hülle: lädt die gebündelten Web-Dateien (Bingo + Bombenspiel)
- * aus den App-Assets. Über den WebViewAssetLoader werden sie unter einer
- * https-Herkunft ausgeliefert, damit Service-Worker & Web-Audio sauber laufen.
- * Die App funktioniert komplett offline – nur das optionale Live-Spiel im Bingo
- * braucht Internet.
+ * Schlanke WebView-Hülle für das TdF-Bingo. Lädt die gebündelte index.html
+ * aus den App-Assets über den WebViewAssetLoader (https-Herkunft, damit
+ * DOM-Storage sauber persistiert). Läuft offline – nur das optionale
+ * Live-Spiel braucht Internet.
  */
 public class MainActivity extends Activity {
 

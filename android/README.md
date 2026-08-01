@@ -1,41 +1,52 @@
-# Android-App (Bingo & Bombenspiel)
+# Android-Apps (zwei getrennte APKs)
 
-Schlanke native **WebView-Hülle** um die Web-App. Die HTML-/JS-/Icon-Dateien
-werden als App-Assets gebündelt und über den `WebViewAssetLoader` unter einer
-`https`-Herkunft ausgeliefert – die App läuft damit **komplett offline**
-(nur das optionale Live-Spiel im Bingo braucht Internet).
+Zwei eigenständige WebView-Apps, jede bündelt nur ihr eigenes Spiel und läuft
+komplett offline:
 
-## APK herunterladen
+| Modul     | App-Name    | Package                  | Start-Seite  |
+|-----------|-------------|--------------------------|--------------|
+| `:bingo`  | TdF Bingo   | `de.hb03.tdfbingo`       | `index.html` |
+| `:bombe`  | Bombenspiel | `de.hb03.bombenspiel`    | `bombe.html` |
 
-Die APK wird automatisch von GitHub Actions gebaut
-(Workflow `.github/workflows/android-apk.yml`):
+Beide Spiele sind vollständig getrennt – keine Verlinkung untereinander. Weil
+sie unterschiedliche Package-IDs haben, lassen sie sich parallel auf demselben
+Gerät installieren.
 
-- **Als Release-Datei:** unter *Releases → „Android-App (neueste APK)"* →
-  `bingo-bombe.apk` herunterladen.
-- **Als Build-Artefakt:** im jeweiligen Actions-Lauf unter *Artifacts →
-  `bingo-bombe-apk`*.
+## APKs herunterladen
 
-Auf dem Android-Handy die Datei öffnen und installieren. Beim ersten Mal muss
-„Installation aus unbekannten Quellen" für den Browser bzw. die Dateien-App
-erlaubt werden.
+Gebaut von GitHub Actions (`.github/workflows/android-apk.yml`), je als eigenes
+Release:
+
+- **TdF Bingo** → Release *„TdF Bingo (neueste APK)"* → `tdf-bingo.apk`
+- **Bombenspiel** → Release *„Bombenspiel (neueste APK)"* → `bombenspiel.apk`
+
+Alternativ als Build-Artefakt `apks` im jeweiligen Actions-Lauf.
+
+Auf dem Handy die `.apk` öffnen und installieren (einmalig „Installation aus
+unbekannten Quellen" erlauben).
 
 ## Lokal bauen (Android SDK erforderlich)
 
 ```bash
 cd android
-# Web-Dateien in die Assets spiegeln (einmalig bzw. nach Änderungen):
-mkdir -p app/src/main/assets/www/icons
-cp ../index.html ../bombe.html ../manifest.webmanifest ../sw.js app/src/main/assets/www/
-cp ../icons/*.png app/src/main/assets/www/icons/
+# Web-Dateien in die Modul-Assets spiegeln:
+cp ../index.html ../manifest.webmanifest bingo/src/main/assets/www/
+cp ../icons/*.png bingo/src/main/assets/www/icons/
+cp ../bombe.html ../manifest.webmanifest bombe/src/main/assets/www/
+cp ../icons/*.png bombe/src/main/assets/www/icons/
 
-./gradlew assembleRelease   # Ergebnis: app/build/outputs/apk/release/app-release.apk
+./gradlew :bingo:assembleRelease :bombe:assembleRelease
+# Ergebnisse:
+#   bingo/build/outputs/apk/release/bingo-release.apk
+#   bombe/build/outputs/apk/release/bombe-release.apk
 ```
 
-Die Release-APK wird der Einfachheit halber mit dem Debug-Schlüssel signiert,
-damit sie ohne eigenes Keystore-Setup direkt installierbar ist.
+Die Release-APKs werden der Einfachheit halber mit dem Debug-Schlüssel
+signiert, damit sie ohne eigenes Keystore-Setup direkt installierbar sind.
 
-## Eckdaten
+## Datenspeicherung
 
-- `applicationId`: `de.hb03.tdfbingo`
-- `minSdk` 23 (Android 6.0), `targetSdk`/`compileSdk` 34
-- Einzige Abhängigkeit: `androidx.webkit`
+Beide Apps aktivieren DOM-Storage (`setDomStorageEnabled`). Der `localStorage`
+wird von der Android-WebView dauerhaft im privaten App-Speicher abgelegt und
+überlebt App-Neustarts (Spielstände, Einstellungen). In der APK wird kein
+Service-Worker registriert – die Assets liegen lokal und sind ohnehin offline.
