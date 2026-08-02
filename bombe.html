@@ -101,6 +101,26 @@
   .turn-secs b{ color:var(--ink); }
   .countdown{ display:none; margin-top:6px; font-weight:800; font-size:1.8rem; color:var(--accent2); font-variant-numeric:tabular-nums; }
   .countdown.on{ display:block; }
+  .chip.out{ opacity:.28; text-decoration:line-through; }
+
+  /* Rechen-Modus */
+  .math-panel{ margin-bottom:12px; }
+  .math-q{ font-size:clamp(2rem,10vw,3.4rem); font-weight:800; margin-bottom:14px; font-variant-numeric:tabular-nums; }
+  .math-opts{ display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:420px; margin:0 auto; }
+  .math-opts button{ border:none; cursor:pointer; border-radius:16px; padding:20px; font-size:1.6rem; font-weight:800;
+    color:var(--btnink); background:linear-gradient(180deg,var(--accent2),#ffb638); box-shadow:0 6px 16px rgba(255,140,40,.3); font-variant-numeric:tabular-nums; }
+  .math-opts button:active{ transform:translateY(1px); }
+  .math-opts button.wrong{ background:linear-gradient(180deg,#ff6a4d,var(--accent)); color:#fff; }
+
+  /* Joker / „nicht lösbar" – kleine Nebenknöpfe */
+  .ctrl-row{ display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
+  .mini-btn{ border:1px solid var(--line); cursor:pointer; border-radius:14px; padding:14px 16px; font-size:1.05rem; font-weight:800;
+    color:var(--ink); background:var(--panel); }
+  .mini-btn:active{ transform:translateY(1px); }
+  .mini-btn.joker{ background:rgba(255,207,58,.16); color:var(--accent2); border-color:var(--accent2); }
+  .mini-btn.unsolv{ background:rgba(255,90,60,.16); color:var(--accent); border-color:var(--accent); }
+  .mini-btn:disabled{ opacity:.4; }
+  .cat-row .cbad sup{ font-size:.65em; }
 
   .playfield{ position:relative; flex:1; display:flex; align-items:center; justify-content:center; min-height:0; width:100%; }
   .bomb{ font-size:clamp(5rem,30vw,11rem); line-height:1; filter:drop-shadow(0 10px 20px rgba(0,0,0,.5)); }
@@ -398,6 +418,18 @@
         <p class="set-hint-sm" style="margin:8px 0 0" data-i18n="teams_hint">Spieler werden abwechselnd auf die Teams verteilt; gewertet wird pro Team.</p>
       </div>
 
+      <div class="set-block">
+        <label class="set-label" data-i18n="set_variants">Spielvarianten</label>
+        <label class="toggle"><input id="setEliminate" type="checkbox"><span data-i18n="set_eliminate">🚪 Rauswurf-Modus (wer trifft, fliegt raus – Letzter gewinnt)</span></label>
+        <label class="toggle"><input id="setCountdown" type="checkbox"><span data-i18n="set_countdown">🔢 Countdown der letzten 3 Sekunden (Ton/Ansage)</span></label>
+        <label class="toggle"><input id="setMinHold" type="checkbox"><span data-i18n="set_minhold">⏳ Mindest-Haltezeit vor dem Weitergeben</span></label>
+        <div class="dur-inputs" style="margin:2px 0 2px 34px"><input id="setMinHoldSec" type="number" min="1" max="30" inputmode="numeric" value="2" class="num-inline"><span data-i18n="seconds">Sekunden</span></div>
+        <label class="set-label" style="margin-top:12px" data-i18n="set_jokers">🃏 Joker pro Spieler &amp; Runde</label>
+        <div class="dur-inputs"><input id="setJokers" type="number" min="0" max="9" inputmode="numeric" value="0" class="num-inline"><span data-i18n="set_jokers_hint">× ohne Antwort weitergeben (0 = aus)</span></div>
+        <label class="toggle" style="margin-top:12px"><input id="setMath" type="checkbox"><span data-i18n="set_math">➗ Rechen-Modus (richtige Antwort tippen; falsch = Bumm)</span></label>
+        <p class="set-hint-sm" style="margin:6px 0 0" data-i18n="set_math_hint">Schwierigkeit pro Spieler mit dem Knopf neben dem Namen: 🟢 leicht · 🟡 mittel · 🔴 schwer.</p>
+      </div>
+
     </div>
 
     <div class="footer-btns">
@@ -428,7 +460,15 @@
       <div id="bomb" class="bomb">💣</div>
     </div>
     <div class="stage-bottom">
-      <button id="nextBtn" class="next-btn" type="button" data-i18n="next">Weiter →</button>
+      <div id="mathPanel" class="math-panel" style="display:none">
+        <div id="mathQ" class="math-q">? = ?</div>
+        <div id="mathOpts" class="math-opts"></div>
+      </div>
+      <div class="ctrl-row">
+        <button id="jokerBtn" class="mini-btn joker" type="button" style="display:none">🃏 <span id="jokerCount">0</span></button>
+        <button id="nextBtn" class="next-btn" type="button" data-i18n="next">Weiter →</button>
+        <button id="unsolvableBtn" class="mini-btn unsolv" type="button" style="display:none" data-i18n="unsolvable">🚫 nicht lösbar</button>
+      </div>
       <div id="tapHint" class="tap-hint">Knopf drücken oder Bildschirm antippen</div>
     </div>
   </div>
@@ -557,7 +597,15 @@
       boom:"Bumm", team:"Team", won:"Siege", tts_test:"🔊 Ansage testen", category_label:"Kategorie",
       letter_label:"Buchstabe", with_letter:"mit", set_catletter:"🔤 … zusätzlich mit Buchstabe (z. B. „Tier mit A“)",
       set_chg_hint:"Nach jedem Spieler neu würfeln:", set_chg_cat:"🔄 Kategorie wechseln", set_chg_letter:"🔄 Buchstabe wechseln",
-      set_ann_hint:"Per Sprache ansagen (wenn Ton-Ansagen an):", set_ann_cat:"🗣️ Kategorie ansagen", set_ann_letter:"🗣️ Buchstabe ansagen"
+      set_ann_hint:"Per Sprache ansagen (wenn Ton-Ansagen an):", set_ann_cat:"🗣️ Kategorie ansagen", set_ann_letter:"🗣️ Buchstabe ansagen",
+      set_variants:"Spielvarianten", set_eliminate:"🚪 Rauswurf-Modus (wer trifft, fliegt raus – Letzter gewinnt)",
+      set_countdown:"🔢 Countdown der letzten 3 Sekunden (Ton/Ansage)", set_minhold:"⏳ Mindest-Haltezeit vor dem Weitergeben",
+      seconds:"Sekunden", set_jokers:"🃏 Joker pro Spieler & Runde", set_jokers_hint:"× ohne Antwort weitergeben (0 = aus)",
+      set_math:"➗ Rechen-Modus (richtige Antwort tippen; falsch = Bumm)",
+      set_math_hint:"Schwierigkeit pro Spieler mit dem Knopf neben dem Namen: 🟢 leicht · 🟡 mittel · 🔴 schwer.",
+      unsolvable:"🚫 nicht lösbar", hint_math:"Richtige Antwort antippen", min_hold_wait:"⏳ noch {s} s halten",
+      eliminated:"Rausgeflogen", flag_bad:"nicht lösbare Buchstaben",
+      bad_prompt:"Nicht lösbare Buchstaben (durch Leerzeichen getrennt):"
     },
     en:{
       sub:"Enter names and go. Whoever holds it at the boom gets a point.",
@@ -585,7 +633,15 @@
       boom:"Boom", team:"Team", won:"wins", tts_test:"🔊 Test announcement", category_label:"Category",
       letter_label:"Letter", with_letter:"with", set_catletter:"🔤 … also with a letter (e.g. “Animal with A”)",
       set_chg_hint:"Re-roll after each player:", set_chg_cat:"🔄 Change category", set_chg_letter:"🔄 Change letter",
-      set_ann_hint:"Announce by voice (when voice announcements on):", set_ann_cat:"🗣️ Announce category", set_ann_letter:"🗣️ Announce letter"
+      set_ann_hint:"Announce by voice (when voice announcements on):", set_ann_cat:"🗣️ Announce category", set_ann_letter:"🗣️ Announce letter",
+      set_variants:"Game variants", set_eliminate:"🚪 Elimination mode (whoever gets hit is out – last one wins)",
+      set_countdown:"🔢 Count down the last 3 seconds (sound/voice)", set_minhold:"⏳ Minimum hold time before passing",
+      seconds:"seconds", set_jokers:"🃏 Jokers per player & round", set_jokers_hint:"× pass without answering (0 = off)",
+      set_math:"➗ Math mode (tap the correct answer; wrong = boom)",
+      set_math_hint:"Difficulty per player via the button next to the name: 🟢 easy · 🟡 medium · 🔴 hard.",
+      unsolvable:"🚫 unsolvable", hint_math:"Tap the correct answer", min_hold_wait:"⏳ hold {s} s more",
+      eliminated:"Eliminated", flag_bad:"unsolvable letters",
+      bad_prompt:"Unsolvable letters (separated by spaces):"
     }
   };
   function t(key, vars){ let s=(I18N[LANG]&&I18N[LANG][key]); if(s==null) s=I18N.de[key]; if(s==null) s=key;
@@ -623,12 +679,14 @@
     pointLimit:0, winBy:"fewest", control:"anywhere", roundIntro:false, showBoard:false,
     catchSpeed:5, catchRandom:false,
     bombSkin:"💣", tts:false, categoryMode:false, categoryLetter:true, teams:0, lang:"de",
-    catChgCat:false, catChgLetter:false, ttsCat:true, ttsLetter:true, kidsMode:false
+    catChgCat:false, catChgLetter:false, ttsCat:true, ttsLetter:true, kidsMode:false,
+    eliminate:false, countdown:false, minHold:false, minHoldSec:2, jokers:0, mathMode:false
   };
   let S = Object.assign({}, DEFAULTS);
   let skinSel="💣", teamsSel=0;
   let passesThisRound=0;
   let curCat="", curLetter="";
+  let lastCountSec=-1, curMath=null, minHoldTimer=null;
   const LETTERS="ABCDEFGHIKLMNOPRSTUW";
 
   // ---------- Persistente Zusatzdaten ----------
@@ -637,7 +695,7 @@
   //   kids     = kindgerecht  (Kinder-Modus zeigt nur diese)
   //   letterOk = mit Buchstabe spielbar (im Buchstaben-Modus werden Kategorien
   //              ohne diese Eigenschaft ausgeschlossen)
-  function C(name, o){ return Object.assign({name, on:true, kids:true, letterOk:true}, o||{}); }
+  function C(name, o){ return Object.assign({name, on:true, kids:true, letterOk:true, bad:[]}, o||{}); }
   const DEFAULT_CATS = [
     // Tiere & Natur
     C("Tier"), C("Haustier"), C("Wildtier"), C("Zootier"), C("Bauernhoftier"),
@@ -694,10 +752,12 @@
     C("etwas im Zoo", {letterOk:false}), C("etwas im Weltall", {letterOk:false}),
     C("Emoji-Bedeutung", {kids:false, letterOk:false})
   ];
+  function normBad(b){ if(!Array.isArray(b)) return [];
+    return [...new Set(b.map(x=>String(x).trim().toUpperCase()).filter(x=>x.length===1))]; }
   function normCats(arr){ return arr.map(x=>{
-      if(typeof x==="string") return {name:x.trim(), on:true, kids:true, letterOk:true};
+      if(typeof x==="string") return {name:x.trim(), on:true, kids:true, letterOk:true, bad:[]};
       return { name:String((x&&x.name)||"").trim(), on:!(x&&x.on===false),
-               kids:!(x&&x.kids===false), letterOk:!(x&&x.letterOk===false) };
+               kids:!(x&&x.kids===false), letterOk:!(x&&x.letterOk===false), bad:normBad(x&&x.bad) };
     }).filter(c=>c.name); }
   function loadCats(){ try{ const c=JSON.parse(localStorage.getItem("bombe.categories")||"null");
       if(Array.isArray(c)&&c.length) return normCats(c); }catch(e){}
@@ -739,7 +799,9 @@
         nextBtn=$("#nextBtn"), tapHintEl=$("#tapHint"), gameEl=$("#game"),
         boomEl=$("#boom"), boomHolderEl=$("#boomHolder"), boomWinLabelEl=$("#boomWinLabel"),
         boomWinnersEl=$("#boomWinners"), boomHintEl=$("#boomHint"), boardEl=$("#board"),
-        flashEl=$("#flash"), confettiEl=$("#confetti"), boardBtn=$("#boardBtn");
+        flashEl=$("#flash"), confettiEl=$("#confetti"), boardBtn=$("#boardBtn"),
+        jokerBtn=$("#jokerBtn"), jokerCountEl=$("#jokerCount"), unsolvableBtn=$("#unsolvableBtn"),
+        mathPanel=$("#mathPanel"), mathQEl=$("#mathQ"), mathOptsEl=$("#mathOpts");
 
   // =======================================================
   //  Audio (Web Audio API)
@@ -793,18 +855,23 @@
   // =======================================================
   //  Setup-Screen (Spieler)
   // =======================================================
-  function makePlayerRow(name, color){
+  const DIFFS=["easy","mid","hard"]; const DIFF_ICON={easy:"🟢",mid:"🟡",hard:"🔴"};
+  function makePlayerRow(name, color, diff){
     const idx = playersEl.children.length;
     color = color || COLORS[idx % COLORS.length];
+    diff = DIFFS.includes(diff) ? diff : "mid";
     const row = document.createElement("div");
-    row.className = "prow"; row.dataset.color = color;
+    row.className = "prow"; row.dataset.color = color; row.dataset.diff = diff;
     row.innerHTML =
       `<span class="swatch" style="background:${color}"><input type="color" value="${color}"></span>`+
       `<input class="name" type="text" maxlength="16" placeholder="Spieler ${idx+1}" value="${name?escapeHtml(name):""}">`+
+      `<button class="diff" type="button" title="Rechen-Schwierigkeit (nur Rechen-Modus)">${DIFF_ICON[diff]}</button>`+
       `<button class="del" type="button" title="Entfernen">✕</button>`;
     const swatch=row.querySelector(".swatch"), picker=row.querySelector('input[type=color]');
     picker.addEventListener("input", ()=>{ row.dataset.color=picker.value; swatch.style.background=picker.value; savePlayers(); });
     row.querySelector(".name").addEventListener("input", savePlayers);
+    row.querySelector(".diff").addEventListener("click", e=>{ const cur=row.dataset.diff||"mid";
+      const nx=DIFFS[(DIFFS.indexOf(cur)+1)%3]; row.dataset.diff=nx; e.currentTarget.textContent=DIFF_ICON[nx]; savePlayers(); });
     row.querySelector(".del").addEventListener("click", ()=>{ row.remove(); recolor(); savePlayers(); });
     playersEl.appendChild(row); return row;
   }
@@ -813,13 +880,14 @@
   function addPlayer(name,color){ const r=makePlayerRow(name,color); r.querySelector(".name").focus(); }
   function readRows(){ return [...playersEl.children].map((row,i)=>({
       name: row.querySelector(".name").value.trim() || ("Spieler "+(i+1)),
-      color: row.dataset.color || COLORS[i%COLORS.length] })); }
+      color: row.dataset.color || COLORS[i%COLORS.length],
+      diff: row.dataset.diff || "mid" })); }
 
   function savePlayers(){ try{ localStorage.setItem("bombe.players", JSON.stringify(
-      [...playersEl.children].map(r=>({ name:r.querySelector(".name").value, color:r.dataset.color })) )); }catch(e){} }
+      [...playersEl.children].map(r=>({ name:r.querySelector(".name").value, color:r.dataset.color, diff:r.dataset.diff||"mid" })) )); }catch(e){} }
   function loadPlayers(){
     let saved=null; try{ saved=JSON.parse(localStorage.getItem("bombe.players")||"null"); }catch(e){}
-    if(saved && saved.length){ saved.forEach(p=>makePlayerRow(p.name||"", p.color)); }
+    if(saved && saved.length){ saved.forEach(p=>makePlayerRow(p.name||"", p.color, p.diff)); }
     else { addPlayer("",""); addPlayer("",""); }
   }
 
@@ -859,6 +927,9 @@
     $("#setCatChgCat").checked=S.catChgCat; $("#setCatChgLetter").checked=S.catChgLetter;
     $("#setTtsCat").checked=S.ttsCat; $("#setTtsLetter").checked=S.ttsLetter;
     $("#setKids").checked=S.kidsMode;
+    $("#setEliminate").checked=S.eliminate; $("#setCountdown").checked=S.countdown;
+    $("#setMinHold").checked=S.minHold; $("#setMinHoldSec").value=S.minHoldSec;
+    $("#setJokers").value=S.jokers; $("#setMath").checked=S.mathMode;
     skinSel=S.bombSkin; markGroup("#skinBtns","skin",skinSel);
     teamsSel=S.teams; markGroup("#teamBtns","teams",String(teamsSel));
     langSel=S.lang; markGroup("#langBtns","lang",S.lang);
@@ -887,6 +958,11 @@
     S.catChgCat=$("#setCatChgCat").checked; S.catChgLetter=$("#setCatChgLetter").checked;
     S.ttsCat=$("#setTtsCat").checked; S.ttsLetter=$("#setTtsLetter").checked;
     S.kidsMode=$("#setKids").checked;
+    S.eliminate=$("#setEliminate").checked; S.countdown=$("#setCountdown").checked;
+    S.minHold=$("#setMinHold").checked;
+    let mh=parseInt($("#setMinHoldSec").value,10); if(!Number.isFinite(mh)||mh<1) mh=DEFAULTS.minHoldSec; S.minHoldSec=clamp(mh,1,30);
+    let jk=parseInt($("#setJokers").value,10); if(!Number.isFinite(jk)||jk<0) jk=0; S.jokers=clamp(jk,0,9);
+    S.mathMode=$("#setMath").checked;
     S.bombSkin=skinSel; S.teams=teamsSel; S.lang=langSel;
     S.theme=currentThemeSel();
   }
@@ -940,13 +1016,13 @@
   // =======================================================
   //  Spielstart / Persistenz (F1)
   // =======================================================
-  function mkPlayer(name,color){ return {name,color,points:0,roundMs:0,explosions:0,maxHold:0,totalHold:0,team:0}; }
+  function mkPlayer(name,color,diff){ return {name,color,points:0,roundMs:0,explosions:0,maxHold:0,totalHold:0,team:0,out:false,jokerLeft:0,diff:diff||"mid"}; }
 
   $("#startBtn").addEventListener("click", ()=>{
     audioInit();
     const rows=readRows();
     if(rows.length<2){ alert("Bitte mindestens 2 Spieler eingeben."); return; }
-    players = rows.map(r=>mkPlayer(r.name,r.color));
+    players = rows.map(r=>mkPlayer(r.name,r.color,r.diff));
     curIdx=0; roundNo=0; gameOver=false;
     startGame();
   });
@@ -986,18 +1062,22 @@
   //  Steuerungs-Modus (F2 + Bombe-Modi)
   // =======================================================
   function bombMode(){ return S.control==="bombTap" || S.control==="bombCatch"; }
-  function applyControlMode(){
-    const bm=bombMode();
-    stageEl.classList.toggle("bombfloat", bm);
-    // Weiter-Knopf bleibt bei „shake" als Fallback sichtbar
-    nextBtn.classList.toggle("hidden", bm);
-    boardBtn.style.display = S.showBoard ? "" : "none";
-    tapHintEl.textContent =
-      S.control==="button" ? t("hint_button")
+  function hintText(){
+    if(S.mathMode) return t("hint_math");
+    return S.control==="button" ? t("hint_button")
       : S.control==="shake" ? t("hint_shake")
       : S.control==="bombTap" ? t("hint_bombtap")
       : S.control==="bombCatch" ? t("hint_bombcatch")
       : t("hint_anywhere");
+  }
+  function applyControlMode(){
+    const bm=bombMode() && !S.mathMode;
+    stageEl.classList.toggle("bombfloat", bm);
+    // Im Rechen-Modus wird ausschließlich über die Antwort-Knöpfe weitergegeben
+    nextBtn.classList.toggle("hidden", bm || S.mathMode);
+    mathPanel.style.display = S.mathMode ? "" : "none";
+    boardBtn.style.display = S.showBoard ? "" : "none";
+    tapHintEl.textContent = hintText();
   }
 
   // ---------- Handy schütteln zum Weitergeben ----------
@@ -1061,9 +1141,92 @@
   }
   // ---------- Kategorien-Modus: Auswahl, Banner, Ansage ----------
   function pickCat(){ const pool=activeCats(); return pool.length ? pool[Math.floor(Math.random()*pool.length)] : ""; }
-  function pickLetter(){ return LETTERS[Math.floor(Math.random()*LETTERS.length)]; }
+  function catByName(name){ return categories.find(c=>c.name===name) || null; }
+  // Buchstabe wählen – vermeidet als „nicht lösbar" markierte Buchstaben der Kategorie
+  function pickLetter(catName){
+    const c=catByName(catName); const bad=(c&&Array.isArray(c.bad))?c.bad:[];
+    let pool=LETTERS.split("").filter(l=>bad.indexOf(l)<0);
+    if(!pool.length) pool=LETTERS.split("");
+    return pool[Math.floor(Math.random()*pool.length)];
+  }
+  // ---------- Rauswurf-Modus (Elimination) ----------
+  function aliveCount(){ return players.reduce((n,p)=>n+(p.out?0:1),0); }
+  function nextAliveFrom(idx){ const n=players.length;
+    for(let k=1;k<=n;k++){ const j=(idx+k)%n; if(!players[j].out) return j; } return idx; }
+
+  // ---------- Joker ----------
+  function updateJoker(){
+    const p=players[curIdx];
+    const show = running && S.jokers>0 && p && (p.jokerLeft||0)>0;
+    jokerBtn.style.display = show ? "" : "none";
+    if(p) jokerCountEl.textContent = p.jokerLeft||0;
+  }
+  function useJoker(){
+    if(!running||paused) return;
+    const now=Date.now(); if(now<clickLockUntil) return;
+    const p=players[curIdx]; if(!p || (p.jokerLeft||0)<=0) return;
+    p.jokerLeft--;
+    clickLockUntil=now+CLICK_LOCK_MS; explodeAt+=CLICK_LOCK_MS;
+    nextPlayer();
+  }
+
+  // ---------- „nicht lösbar" (Buchstabe merken) ----------
+  function updateUnsolvable(){
+    const show = running && !S.mathMode && S.categoryMode && S.categoryLetter && !!curCat && !!curLetter;
+    unsolvableBtn.style.display = show ? "" : "none";
+  }
+  function markUnsolvable(){
+    if(!S.categoryMode || !S.categoryLetter || !curCat || !curLetter) return;
+    const c=catByName(curCat);
+    if(c){ if(!Array.isArray(c.bad)) c.bad=[]; if(c.bad.indexOf(curLetter)<0) c.bad.push(curLetter); saveCats(); }
+    curLetter=pickLetter(curCat); showCatBanner(); updateUnsolvable();
+    if(S.tts && S.ttsLetter && S.categoryLetter) speakNow(t("letter_label")+" "+curLetter);
+  }
+
+  // ---------- Rechen-Modus ----------
+  function ri(a,b){ return a+Math.floor(Math.random()*(b-a+1)); }
+  function genMath(diff){
+    let a,b,ans,q;
+    if(diff==="easy"){
+      if(Math.random()<0.5){ a=ri(1,10); b=ri(1,10); ans=a+b; q=a+" + "+b; }
+      else { a=ri(2,10); b=ri(1,a); ans=a-b; q=a+" − "+b; }
+    } else if(diff==="hard"){
+      const r=Math.random();
+      if(r<0.5){ a=ri(2,12); b=ri(2,12); ans=a*b; q=a+" × "+b; }
+      else if(r<0.75){ a=ri(20,99); b=ri(20,99); ans=a+b; q=a+" + "+b; }
+      else { a=ri(50,199); b=ri(10,a); ans=a-b; q=a+" − "+b; }
+    } else {
+      const r=Math.random();
+      if(r<0.4){ a=ri(2,9); b=ri(2,9); ans=a*b; q=a+" × "+b; }
+      else if(r<0.7){ a=ri(10,50); b=ri(10,50); ans=a+b; q=a+" + "+b; }
+      else { a=ri(10,50); b=ri(1,a); ans=a-b; q=a+" − "+b; }
+    }
+    const opts=new Set([ans]);
+    const offs=[1,-1,2,-2,3,-3,5,-5,10,-10];
+    for(let i=0;i<offs.length && opts.size<4;i++){ let d=ans+offs[i]; if(d<0) d=ans+Math.abs(offs[i])+1; if(d!==ans) opts.add(d); }
+    let g=1; while(opts.size<4){ opts.add(ans+g*7); g++; }
+    return { q:q+" = ?", ans, opts:[...opts].sort(()=>Math.random()-0.5) };
+  }
+  function newMath(){
+    if(!S.mathMode){ mathPanel.style.display="none"; curMath=null; return; }
+    curMath=genMath((players[curIdx]&&players[curIdx].diff)||"mid");
+    mathQEl.textContent=curMath.q;
+    mathOptsEl.innerHTML="";
+    curMath.opts.forEach(v=>{ const b=document.createElement("button"); b.type="button"; b.textContent=v;
+      b.addEventListener("click", e=>{ e.stopPropagation(); answerMath(v,b); });
+      mathOptsEl.appendChild(b); });
+    mathPanel.style.display="";
+  }
+  function answerMath(v, btn){
+    if(!running||paused || !curMath) return;
+    const now=Date.now(); if(now<clickLockUntil) return;
+    if(v===curMath.ans){ clickLockUntil=now+CLICK_LOCK_MS; explodeAt+=CLICK_LOCK_MS; nextPlayer(); }
+    else { if(btn) btn.classList.add("wrong"); explode(); }
+  }
+
   function showCatBanner(){
     const cb=$("#catBanner");
+    if(S.mathMode){ cb.style.display="none"; return; }
     if(!S.categoryMode || !curCat){ cb.style.display="none"; return; }
     let html='<span class="cat-lbl">'+t("category_label")+'</span>'+escapeHtml(curCat);
     if(S.categoryLetter && curLetter)
@@ -1083,16 +1246,19 @@
   }
 
   function beginRound(){
-    running=true; paused=false; passesThisRound=0;
+    running=true; paused=false; passesThisRound=0; lastCountSec=-1;
+    players.forEach(p=>p.jokerLeft=S.jokers);                       // Joker pro Runde auffüllen
     bombEl.textContent = S.bombSkin || "💣";
-    if(S.categoryMode){ curCat=pickCat(); curLetter = S.categoryLetter ? pickLetter() : ""; showCatBanner(); }
-    else { $("#catBanner").style.display="none"; }
+    if(S.categoryMode && !S.mathMode){ curCat=pickCat(); curLetter = S.categoryLetter ? pickLetter(curCat) : ""; showCatBanner(); }
+    else { curCat=""; curLetter=""; $("#catBanner").style.display="none"; }
     let base = S.durMin + Math.random()*(S.durMax-S.durMin);
     if(S.accelerate){ base = Math.max(3, base*Math.pow(0.85, roundNo-1)); }
     explodeAt = Date.now() + base*1000;
     turnStart = Date.now(); lastFrame = Date.now();
     countdownEl.classList.toggle("on", S.visibleTimer);
-    if(bombMode()) placeBombStart();
+    if(bombMode() && !S.mathMode) placeBombStart();
+    newMath();
+    updateJoker(); updateUnsolvable();
     announceTurn();
     // Marathon-Erfolg
     ach.rounds=(ach.rounds||0)+1; saveAch(ach); if(ach.rounds>=50) unlockAch("marathon");
@@ -1102,9 +1268,16 @@
   function loop(){
     if(!running || paused) return;
     const now=Date.now(), dt=(now-lastFrame)/1000; lastFrame=now;
-    if(S.control==="bombCatch") moveBomb(dt);
+    if(S.control==="bombCatch" && !S.mathMode) moveBomb(dt);
     updateSecs();
-    if(S.visibleTimer){ const rem=Math.max(0,(explodeAt-now)/1000); countdownEl.textContent="⏱ "+rem.toFixed(1).replace(".",",")+" s"; }
+    const rem=Math.max(0,(explodeAt-now)/1000);
+    let showCd=false;
+    if(S.visibleTimer){ showCd=true; countdownEl.textContent="⏱ "+rem.toFixed(1).replace(".",",")+" s"; }
+    if(S.countdown && rem<=3 && rem>0){                              // hörbarer Countdown der letzten 3 s
+      const sec=Math.ceil(rem); showCd=true; countdownEl.textContent="⏱ "+sec;
+      if(sec!==lastCountSec){ lastCountSec=sec; playTick(true); if(S.tts) speakNow(String(sec)); }
+    }
+    countdownEl.classList.toggle("on", showCd);
     if(now>=explodeAt){ explode(); return; }
     rafId=requestAnimationFrame(loop);
   }
@@ -1159,8 +1332,8 @@
 
   function updateCurrent(){
     const p=players[curIdx]; curnameEl.textContent=p.name; curnameEl.style.color=p.color;
-    [...topbarEl.children].forEach((c,i)=>c.classList.toggle("cur", i===curIdx));
-    turnStart=Date.now(); updateSecs();
+    [...topbarEl.children].forEach((c,i)=>{ c.classList.toggle("cur", i===curIdx); c.classList.toggle("out", !!players[i].out); });
+    turnStart=Date.now(); updateSecs(); updateJoker();
   }
   function commitHold(){ const p=players[curIdx]; if(!p) return;
     const seg=Date.now()-turnStart; p.roundMs+=seg; p.totalHold+=seg; if(seg>p.maxHold) p.maxHold=seg; }
@@ -1170,20 +1343,24 @@
     commitHold();
     if(seg<400) unlockAch("blitz");                    // Blitzreflex
     passesThisRound++; if(passesThisRound>=15) unlockAch("hot_potato");
-    curIdx=(curIdx+1)%players.length; updateCurrent(); playTick(true);
+    curIdx = S.eliminate ? nextAliveFrom(curIdx) : (curIdx+1)%players.length;
+    updateCurrent(); playTick(true);
     // Kategorie/Buchstabe optional nach jedem Spieler wechseln
-    if(S.categoryMode && (S.catChgCat || S.catChgLetter)){
+    if(S.categoryMode && !S.mathMode && (S.catChgCat || S.catChgLetter)){
       if(S.catChgCat) curCat=pickCat();
-      if(S.catChgLetter && S.categoryLetter) curLetter=pickLetter();
+      if(S.catChgLetter && S.categoryLetter) curLetter=pickLetter(curCat);
       showCatBanner();
     }
+    updateUnsolvable();
+    if(S.mathMode) newMath();
     announceTurn();
-    if(S.control==="bombCatch") setBombVel(false);
+    if(S.control==="bombCatch" && !S.mathMode) setBombVel(false);
   }
 
   // ---------- Explosion ----------
   function explode(){
     running=false; stopTicking(); clearWobble(); commitHold();
+    updateJoker(); updateUnsolvable();
     playExplosion();
     flashEl.classList.remove("go"); void flashEl.offsetWidth; flashEl.classList.add("go");
     if(S.vibrate && navigator.vibrate) navigator.vibrate([80,60,200]);
@@ -1191,19 +1368,25 @@
     $("#catBanner").style.display="none";
     speak(t("boom"));
     const holder=players[curIdx]; holder.explosions++;
-    const winners=pickWinners(); winners.forEach(p=>p.points++);
 
     // Erfolge prüfen
     if(holder.maxHold>=12000) unlockAch("ice");
     if(holder.explosions>=5) unlockAch("unlucky");
 
     boomHolderEl.innerHTML=t("boom_holder",{skin:(S.bombSkin||"💣"), name:escapeHtml(holder.name), s:fmt(holder.roundMs)});
-    boomWinLabelEl.textContent = t("wl_"+S.scoreMode);
-    boomWinnersEl.innerHTML=winners.map(p=>`<span style="color:${p.color}">${escapeHtml(p.name)}</span><span class="win-time"> · ${t("held")} ${fmt(p.roundMs)} s</span>`).join("<br>");
-    renderBoard(boardEl);
 
-    // Spielende? (E1)
-    pendingWin = S.pointLimit>0 && players.some(p=>p.points>=S.pointLimit);
+    if(S.eliminate){
+      holder.out=true;
+      boomWinLabelEl.textContent=t("eliminated");
+      boomWinnersEl.innerHTML=`<span style="color:${holder.color}">${escapeHtml(holder.name)}</span>`;
+      pendingWin = aliveCount()<=1;                                 // Letzter Überlebender → Sieg
+    } else {
+      const winners=pickWinners(); winners.forEach(p=>p.points++);
+      boomWinLabelEl.textContent = t("wl_"+S.scoreMode);
+      boomWinnersEl.innerHTML=winners.map(p=>`<span style="color:${p.color}">${escapeHtml(p.name)}</span><span class="win-time"> · ${t("held")} ${fmt(p.roundMs)} s</span>`).join("<br>");
+      pendingWin = S.pointLimit>0 && players.some(p=>p.points>=S.pointLimit);   // Spielende? (E1)
+    }
+    renderBoard(boardEl);
     saveGame();
 
     boomReadyAt=Date.now()+BOOM_LOCK_MS;
@@ -1234,7 +1417,12 @@
   function showWinner(){
     gameOver=true;
     let winnersLabel, winSet=new Set();
-    if(S.teams>0){
+    if(S.eliminate){
+      const alive=players.filter(p=>!p.out);
+      alive.forEach(p=>winSet.add(p));
+      $("#winName").innerHTML=alive.map(p=>`<span style="color:${p.color}">${escapeHtml(p.name)}</span>`).join(" & ") || "–";
+      winnersLabel=alive.map(p=>p.name).join(" & ");
+    } else if(S.teams>0){
       const teams=teamAgg().sort((a,b)=> S.winBy==="most"? b.points-a.points : a.points-b.points);
       const best=teams[0].points; const wt=teams.filter(x=>x.points===best);
       winnersLabel=wt.map(x=>t("team")+" "+(x.team+1)).join(" & ");
@@ -1345,28 +1533,37 @@
   function renderCatList(){
     const el=$("#catList"); el.innerHTML="";
     catDraft.forEach((c,i)=>{ const r=document.createElement("div"); r.className="cat-row"+(c.on?"":" off");
+      const nBad=(c.bad&&c.bad.length)||0;
       r.innerHTML=`<input type="checkbox" ${c.on?"checked":""}>`+
         `<span class="cn">${escapeHtml(c.name)}</span>`+
         `<button class="cflag fkids${c.kids?" on":""}" type="button" title="${t("flag_kids")}">🧒</button>`+
         `<button class="cflag flet${c.letterOk?" on":""}" type="button" title="${t("flag_letter")}">🔤</button>`+
+        `<button class="cflag cbad${nBad?" on":""}" type="button" title="${t("flag_bad")}">🚫${nBad?"<sup>"+nBad+"</sup>":""}</button>`+
         `<button class="cdel" type="button" title="${t("delete")}">✕</button>`;
       r.querySelector("input").addEventListener("change", e=>{ c.on=e.target.checked; r.classList.toggle("off",!c.on); updateCatCount(); });
       r.querySelector(".fkids").addEventListener("click", ev=>{ c.kids=!c.kids; ev.currentTarget.classList.toggle("on",c.kids); });
       r.querySelector(".flet").addEventListener("click", ev=>{ c.letterOk=!c.letterOk; ev.currentTarget.classList.toggle("on",c.letterOk); });
+      r.querySelector(".cbad").addEventListener("click", ()=>{
+        const cur=(c.bad||[]).join(" ");
+        const inp=window.prompt(t("bad_prompt")+"\n"+c.name, cur);
+        if(inp===null) return;
+        c.bad=normBad(inp.toUpperCase().replace(/[^A-ZÄÖÜ]/g,"").split(""));
+        renderCatList();
+      });
       r.querySelector(".cdel").addEventListener("click", ()=>{ catDraft.splice(i,1); renderCatList(); });
       el.appendChild(r); });
     updateCatCount();
   }
   function addCat(){ const inp=$("#catNew"); const v=inp.value.trim(); if(!v) return;
-    if(!catDraft.some(c=>c.name.toLowerCase()===v.toLowerCase())) catDraft.unshift({name:v, on:true, kids:true, letterOk:true});
+    if(!catDraft.some(c=>c.name.toLowerCase()===v.toLowerCase())) catDraft.unshift({name:v, on:true, kids:true, letterOk:true, bad:[]});
     inp.value=""; renderCatList(); inp.focus(); }
-  $("#editCats").addEventListener("click", ()=>{ catDraft=categories.map(c=>({...c})); $("#catNew").placeholder=t("cat_new_ph"); renderCatList(); $("#catEditor").classList.add("show"); });
+  $("#editCats").addEventListener("click", ()=>{ catDraft=categories.map(c=>({...c, bad:[...(c.bad||[])]})); $("#catNew").placeholder=t("cat_new_ph"); renderCatList(); $("#catEditor").classList.add("show"); });
   $("#catAdd").addEventListener("click", addCat);
   $("#catNew").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addCat(); } });
   $("#catAll").addEventListener("click", ()=>{ catDraft.forEach(c=>c.on=true); renderCatList(); });
   $("#catNone").addEventListener("click", ()=>{ catDraft.forEach(c=>c.on=false); renderCatList(); });
-  $("#catDefault").addEventListener("click", ()=>{ DEFAULT_CATS.forEach(dc=>{ if(!catDraft.some(c=>c.name.toLowerCase()===dc.name.toLowerCase())) catDraft.push({...dc}); }); renderCatList(); });
-  $("#catSave").addEventListener("click", ()=>{ categories = catDraft.length?catDraft:DEFAULT_CATS.map(n=>({name:n,on:true})); saveCats(); $("#catEditor").classList.remove("show"); });
+  $("#catDefault").addEventListener("click", ()=>{ DEFAULT_CATS.forEach(dc=>{ if(!catDraft.some(c=>c.name.toLowerCase()===dc.name.toLowerCase())) catDraft.push({...dc, bad:[...(dc.bad||[])]}); }); renderCatList(); });
+  $("#catSave").addEventListener("click", ()=>{ categories = catDraft.length?catDraft:DEFAULT_CATS.map(c=>({...c, bad:[...(c.bad||[])]})); saveCats(); $("#catEditor").classList.remove("show"); });
   $("#catCancel").addEventListener("click", ()=>{ $("#catEditor").classList.remove("show"); });
 
   // =======================================================
@@ -1397,34 +1594,46 @@
       return;
     }
     const max=Math.max(...players.map(p=>p.points));
-    const sorted=[...players].sort((a,b)=>b.points-a.points);
+    const sorted = S.eliminate
+      ? [...players].sort((a,b)=> ((a.out?1:0)-(b.out?1:0)) || (b.points-a.points))
+      : [...players].sort((a,b)=>b.points-a.points);
     sorted.forEach(p=>{ const r=document.createElement("div");
-      const lead = winSet ? winSet.has(p) : (p.points===max && max>0);
-      r.className="r"+(lead?" lead":"");
-      let stat = showStats ? `<span class="st">💥${p.explosions} · ⌀${fmt(p.totalHold)}s</span>` : "";
+      const lead = winSet ? winSet.has(p) : (!S.eliminate && p.points===max && max>0);
+      r.className="r"+(lead?" lead":""); if(p.out) r.style.opacity=".45";
+      let stat = S.eliminate ? `<span class="st">${p.out?"💀 "+t("eliminated"):"✅"}</span>`
+                : (showStats ? `<span class="st">💥${p.explosions} · ⌀${fmt(p.totalHold)}s</span>` : "");
       r.innerHTML=`<span class="dot" style="background:${p.color}"></span>`+
         `<span class="nm">${escapeHtml(p.name)}${lead&&winSet?' <span class="crown">👑</span>':''}</span>`+
-        stat+`<span class="pt">${p.points}</span>`;
+        stat+(S.eliminate?"":`<span class="pt">${p.points}</span>`);
       el.appendChild(r); });
   }
 
   // =======================================================
   //  Eingaben
   // =======================================================
+  function flashMinHold(){
+    const left=Math.max(0, Math.ceil(S.minHoldSec-(Date.now()-turnStart)/1000));
+    tapHintEl.textContent=t("min_hold_wait",{s:left});
+    if(minHoldTimer) clearTimeout(minHoldTimer);
+    minHoldTimer=setTimeout(()=>{ tapHintEl.textContent=hintText(); }, 900);
+  }
   function tryAdvance(){
-    if(!running||paused) return;
+    if(!running||paused || S.mathMode) return;
     const now=Date.now();
+    if(S.minHold && (now-turnStart) < S.minHoldSec*1000){ flashMinHold(); return; }   // Mindest-Haltezeit
     if(now<clickLockUntil){ clickLockUntil=now+CLICK_LOCK_MS; return; }
     clickLockUntil=now+CLICK_LOCK_MS; explodeAt+=CLICK_LOCK_MS; nextPlayer();
   }
   nextBtn.addEventListener("click", e=>{ e.stopPropagation(); tryAdvance(); });
-  gameEl.addEventListener("click", e=>{ if(e.target.closest(".corner")) return; if(S.control==="anywhere") tryAdvance(); });
-  bombEl.addEventListener("click", e=>{ if(!bombMode()) return; e.stopPropagation();
+  jokerBtn.addEventListener("click", e=>{ e.stopPropagation(); useJoker(); });
+  unsolvableBtn.addEventListener("click", e=>{ e.stopPropagation(); markUnsolvable(); });
+  gameEl.addEventListener("click", e=>{ if(e.target.closest(".corner")) return; if(S.control==="anywhere" && !S.mathMode) tryAdvance(); });
+  bombEl.addEventListener("click", e=>{ if(!bombMode()||S.mathMode) return; e.stopPropagation();
     if(S.control==="bombTap") repositionBomb(); tryAdvance(); });
 
   boomEl.addEventListener("click", ()=>{ if(Date.now()<boomReadyAt) return; audioInit();
     if(pendingWin){ showWinner(); return; }
-    curIdx=(curIdx+1)%players.length; newRound(false); });
+    curIdx = S.eliminate ? nextAliveFrom(curIdx) : (curIdx+1)%players.length; newRound(false); });
 
   // =======================================================
   //  PWA / Cache / Auto-Update (A1)
