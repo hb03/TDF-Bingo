@@ -169,9 +169,12 @@
     box-shadow:0 8px 22px rgba(0,0,0,.4); cursor:pointer; }
   #updateBanner.show{ display:block; }
 
-  /* Kategorie-Banner (Kategorien-Modus) */
-  .cat-banner{ display:inline-block; margin:0 auto 8px; background:var(--panel); border:1px solid var(--accent2);
-    border-radius:999px; padding:6px 16px; font-weight:700; font-size:1rem; color:var(--accent2); }
+  /* Kategorie-Banner (Kategorien-Modus) – groß & gut lesbar */
+  .cat-banner{ display:block; margin:0 auto 10px; max-width:560px;
+    background:linear-gradient(180deg, var(--accent2), #ffb638); color:var(--btnink);
+    border-radius:16px; padding:14px 18px; font-weight:800; line-height:1.15;
+    font-size:clamp(1.5rem, 7vw, 2.4rem); box-shadow:0 6px 18px rgba(255,160,40,.35); }
+  .cat-banner .cat-lbl{ display:block; font-size:.5em; font-weight:700; opacity:.8; text-transform:uppercase; letter-spacing:2px; margin-bottom:2px; }
   /* Erfolgs-Toast */
   .ach-toast{ position:fixed; left:50%; transform:translateX(-50%) translateY(-120%); top:max(12px,env(safe-area-inset-top));
     z-index:70; background:var(--ok); color:#062715; font-weight:700; padding:10px 16px; border-radius:12px;
@@ -328,6 +331,7 @@
         <label class="toggle"><input id="setFinal" type="checkbox"><span>💥 Schneller ticken kurz vor dem Bumm</span></label>
         <label class="toggle"><input id="setVibrate" type="checkbox"><span>📳 Vibration beim Bumm</span></label>
         <label class="toggle"><input id="setTts" type="checkbox"><span>🗣️ Sprach-Ansagen (Name &amp; „Bumm")</span></label>
+        <button id="ttsTest" class="btn ghost" type="button" style="margin-top:6px" data-i18n="tts_test">🔊 Ansage testen</button>
       </div>
 
       <div class="set-block">
@@ -514,7 +518,7 @@
       winner:"Sieger", ready:"Bereit?", tap_start:"👆 Tippen zum Starten", pause:"Pause", resume:"▶︎ Weiter",
       standings:"Punktestand", round:"Runde", new_game:"🔄 Neues Spiel", keep_playing:"Weiterspielen",
       no_games:"Noch keine Spiele gespielt.", king:"👑 Bomben-König", best_hold:"⏱ Längste Haltezeit",
-      boom:"Bumm", team:"Team", won:"Siege"
+      boom:"Bumm", team:"Team", won:"Siege", tts_test:"🔊 Ansage testen", category_label:"Kategorie"
     },
     en:{
       sub:"Enter names and go. Whoever holds it at the boom gets a point.",
@@ -536,7 +540,7 @@
       winner:"Winner", ready:"Ready?", tap_start:"👆 Tap to start", pause:"Pause", resume:"▶︎ Continue",
       standings:"Standings", round:"Round", new_game:"🔄 New game", keep_playing:"Keep playing",
       no_games:"No games played yet.", king:"👑 Bomb king", best_hold:"⏱ Longest hold",
-      boom:"Boom", team:"Team", won:"wins"
+      boom:"Boom", team:"Team", won:"wins", tts_test:"🔊 Test announcement", category_label:"Category"
     }
   };
   function t(key, vars){ let s=(I18N[LANG]&&I18N[LANG][key]); if(s==null) s=I18N.de[key]; if(s==null) s=key;
@@ -784,6 +788,8 @@
   $("#setBig").addEventListener("change", e=> document.documentElement.classList.toggle("big", e.target.checked));
   $("#setVolume").addEventListener("input", e=>{ if(!actx) audioInit(); setVolume(clamp(e.target.value/100,0,1)); });
   $("#setCatchSpeed").addEventListener("input", e=>{ $("#catchSpeedVal").textContent=e.target.value; });
+  $("#ttsTest").addEventListener("click", ()=>{ ttsWarmup();
+    speakNow(langSel==="en" ? "Bomb game. Anna, it's your turn. Boom!" : "Bombenspiel. Anna, du bist dran. Bumm!", langSel); });
 
   // Presets (E3)
   const PRESETS = {
@@ -835,6 +841,7 @@
   }
 
   function startGame(){
+    if(S.tts) ttsWarmup();                                         // TTS in der Geste freischalten
     if(S.teams>0) players.forEach((p,i)=> p.team = i % S.teams);   // Teams abwechselnd zuweisen
     if(S.startMode==="random" && roundNo===0) curIdx=Math.floor(Math.random()*players.length);
     bombEl.textContent = S.bombSkin || "💣";                        // Bomben-Skin
@@ -884,10 +891,31 @@
   function stopShake(){ if(shakeOn){ window.removeEventListener("devicemotion", onMotion); shakeOn=false; } }
 
   // ---------- Sprach-Ansagen (TTS) ----------
-  function speak(text){
-    if(!S.tts || !("speechSynthesis" in window)) return;
-    try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang = S.lang==="en"?"en-US":"de-DE"; u.rate=1.05; speechSynthesis.speak(u); }catch(e){}
+  let ttsVoices=[], ttsReady=false;
+  function loadVoices(){ try{ ttsVoices = window.speechSynthesis.getVoices()||[]; }catch(e){} }
+  if("speechSynthesis" in window){ loadVoices();
+    try{ window.speechSynthesis.addEventListener("voiceschanged", loadVoices); }catch(e){} }
+  function pickVoice(lang){ const l=lang.slice(0,2);
+    return ttsVoices.find(v=>v.lang===lang) || ttsVoices.find(v=>v.lang && v.lang.slice(0,2)===l) || null; }
+  // Muss innerhalb einer Nutzergeste (z.B. Start-Klick) aufgerufen werden
+  function ttsWarmup(){
+    if(ttsReady || !("speechSynthesis" in window)) return;
+    try{ const u=new SpeechSynthesisUtterance(" "); u.volume=0; window.speechSynthesis.speak(u); ttsReady=true; loadVoices(); }catch(e){}
   }
+  function speakNow(text, langOverride){
+    if(!("speechSynthesis" in window)) return;
+    try{
+      const synth=window.speechSynthesis;
+      const u=new SpeechSynthesisUtterance(text);
+      u.lang = (langOverride||S.lang)==="en" ? "en-US" : "de-DE";
+      const v=pickVoice(u.lang); if(v) u.voice=v;
+      u.rate=1.05; u.volume=1;
+      if(synth.speaking || synth.pending) synth.cancel();
+      // kleiner Aufschub umgeht den bekannten cancel()/speak()-Race-Bug
+      setTimeout(()=>{ try{ synth.speak(u); }catch(e){} }, 55);
+    }catch(e){}
+  }
+  function speak(text){ if(S.tts) speakNow(text); }
 
   // =======================================================
   //  Runde / Timer
@@ -906,7 +934,7 @@
     // Kategorien-Modus: zufällige Kategorie zeigen & ansagen
     const cb=$("#catBanner");
     if(S.categoryMode && categories.length){ const c=categories[Math.floor(Math.random()*categories.length)];
-      cb.textContent="🗂️ "+c; cb.style.display=""; speak(c); } else { cb.style.display="none"; }
+      cb.innerHTML='<span class="cat-lbl">'+t("category_label")+'</span>🗂️ '+escapeHtml(c); cb.style.display=""; speak(c); } else { cb.style.display="none"; }
     let base = S.durMin + Math.random()*(S.durMax-S.durMin);
     if(S.accelerate){ base = Math.max(3, base*Math.pow(0.85, roundNo-1)); }
     explodeAt = Date.now() + base*1000;
