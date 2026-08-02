@@ -365,6 +365,7 @@
       <div class="set-block">
         <label class="set-label" data-i18n="set_modes">Spielmodi</label>
         <label class="toggle"><input id="setCategory" type="checkbox"><span data-i18n="set_category">🗂️ Kategorien-Modus (Wort nennen &amp; weitergeben)</span></label>
+        <label class="toggle"><input id="setCatLetter" type="checkbox"><span data-i18n="set_catletter">🔤 … zusätzlich mit Buchstabe (z.&nbsp;B. „Tier mit A")</span></label>
         <button id="editCats" class="btn ghost" type="button" style="margin-top:8px" data-i18n="set_editcats">Kategorien bearbeiten</button>
         <label class="set-label" style="margin-top:14px" data-i18n="set_teams">Teams</label>
         <div class="themebtns" id="teamBtns">
@@ -522,7 +523,7 @@
       standings:"Punktestand", round:"Runde", new_game:"🔄 Neues Spiel", keep_playing:"Weiterspielen",
       no_games:"Noch keine Spiele gespielt.", king:"👑 Bomben-König", best_hold:"⏱ Längste Haltezeit",
       boom:"Bumm", team:"Team", won:"Siege", tts_test:"🔊 Ansage testen", category_label:"Kategorie",
-      letter_label:"Buchstabe", with_letter:"mit"
+      letter_label:"Buchstabe", with_letter:"mit", set_catletter:"🔤 … zusätzlich mit Buchstabe (z. B. „Tier mit A“)"
     },
     en:{
       sub:"Enter names and go. Whoever holds it at the boom gets a point.",
@@ -545,7 +546,7 @@
       standings:"Standings", round:"Round", new_game:"🔄 New game", keep_playing:"Keep playing",
       no_games:"No games played yet.", king:"👑 Bomb king", best_hold:"⏱ Longest hold",
       boom:"Boom", team:"Team", won:"wins", tts_test:"🔊 Test announcement", category_label:"Category",
-      letter_label:"Letter", with_letter:"with"
+      letter_label:"Letter", with_letter:"with", set_catletter:"🔤 … also with a letter (e.g. “Animal with A”)"
     }
   };
   function t(key, vars){ let s=(I18N[LANG]&&I18N[LANG][key]); if(s==null) s=I18N.de[key]; if(s==null) s=key;
@@ -582,7 +583,7 @@
     theme:"lila", big:false, wobble:true, visibleTimer:false, accelerate:false,
     pointLimit:0, winBy:"fewest", control:"anywhere", roundIntro:false, showBoard:false,
     catchSpeed:5, catchRandom:false,
-    bombSkin:"💣", tts:false, categoryMode:false, teams:0, lang:"de"
+    bombSkin:"💣", tts:false, categoryMode:false, categoryLetter:true, teams:0, lang:"de"
   };
   let S = Object.assign({}, DEFAULTS);
   let skinSel="💣", teamsSel=0;
@@ -592,7 +593,23 @@
   const DEFAULT_CATS = [
     "Tier","Automarke","Land","Stadt","Vorname","Obst oder Gemüse","Beruf","Farbe",
     "Fußballverein","Filmtitel","Getränk","Körperteil","etwas Rotes","Musikinstrument",
-    "Superheld","Brettspiel","Werkzeug","etwas in der Küche","Fluss","Süßigkeit"
+    "Superheld","Brettspiel","Werkzeug","etwas in der Küche","Fluss","Süßigkeit",
+    "Nachname","Comicfigur","Serie","Sänger oder Band","Sportart","Kleidungsstück",
+    "Blume oder Pflanze","Vogel","Meerestier","Insekt","Hunderasse","Gebäude",
+    "Möbelstück","Spielzeug","Schulfach","Sprache","Kontinent","Insel","Gebirge","See",
+    "Planet oder Stern","Märchen","Zeichentrickfilm","Videospiel","Brettspiel-Figur",
+    "etwas Blaues","etwas Rundes","etwas Kaltes","etwas Süßes","etwas im Bad",
+    "etwas im Garten","etwas am Strand","etwas im Zoo","etwas in der Schule",
+    "Werkzeug oder Gerät","Küchengerät","Backzutat","Gewürz","Käsesorte","Pizzabelag",
+    "Eissorte","Cocktail","Frühstück","Gemüse","Nuss","Beere",
+    "Wintersport","Ballsport","Musikrichtung","Tanz","Instrument im Orchester",
+    "Beruf im Krankenhaus","Beruf auf dem Bauernhof","Werkzeug beim Bauen",
+    "Fabelwesen","griechischer Gott","Sternzeichen","Edelstein","Metall",
+    "Automarke aus Deutschland","Hauptstadt","US-Bundesstaat","deutsche Stadt",
+    "Fluss in Europa","Wüste","Naturphänomen","Wetter-Wort",
+    "Emoji-Bedeutung","App auf dem Handy","Marke","Cerealie","Fast-Food-Kette",
+    "berühmte Person","Erfinder","historische Figur","König oder Königin",
+    "Feiertag","Monat","Wochentag","etwas im Weltall","Dinosaurier"
   ];
   function loadCats(){ try{ const c=JSON.parse(localStorage.getItem("bombe.categories")||"null"); if(Array.isArray(c)&&c.length) return c; }catch(e){} return DEFAULT_CATS.slice(); }
   function saveCats(c){ try{ localStorage.setItem("bombe.categories", JSON.stringify(c)); }catch(e){} }
@@ -740,7 +757,7 @@
     $("#setFinal").checked=S.finalTicks; $("#setVibrate").checked=S.vibrate;
     $("#setBig").checked=S.big; $("#setIntro").checked=S.roundIntro; $("#setBoard").checked=S.showBoard;
     $("#setCatchSpeed").value=S.catchSpeed; $("#catchSpeedVal").textContent=S.catchSpeed; $("#setCatchRandom").checked=S.catchRandom;
-    $("#setTts").checked=S.tts; $("#setCategory").checked=S.categoryMode;
+    $("#setTts").checked=S.tts; $("#setCategory").checked=S.categoryMode; $("#setCatLetter").checked=S.categoryLetter;
     skinSel=S.bombSkin; markGroup("#skinBtns","skin",skinSel);
     teamsSel=S.teams; markGroup("#teamBtns","teams",String(teamsSel));
     langSel=S.lang; markGroup("#langBtns","lang",S.lang);
@@ -765,7 +782,7 @@
     S.finalTicks=$("#setFinal").checked; S.vibrate=$("#setVibrate").checked;
     S.big=$("#setBig").checked; S.roundIntro=$("#setIntro").checked; S.showBoard=$("#setBoard").checked;
     S.catchSpeed=clamp(parseInt($("#setCatchSpeed").value,10)||5,1,12); S.catchRandom=$("#setCatchRandom").checked;
-    S.tts=$("#setTts").checked; S.categoryMode=$("#setCategory").checked;
+    S.tts=$("#setTts").checked; S.categoryMode=$("#setCategory").checked; S.categoryLetter=$("#setCatLetter").checked;
     S.bombSkin=skinSel; S.teams=teamsSel; S.lang=langSel;
     S.theme=currentThemeSel();
   }
@@ -944,10 +961,11 @@
     // Kategorien-Modus: zufällige Kategorie zeigen & ansagen
     const cb=$("#catBanner");
     if(S.categoryMode && categories.length){ const c=categories[Math.floor(Math.random()*categories.length)];
-      const LET="ABCDEFGHIKLMNOPRSTUW"; const L=LET[Math.floor(Math.random()*LET.length)];
-      cb.innerHTML='<span class="cat-lbl">'+t("category_label")+'</span>'+escapeHtml(c)+
-        '<span class="cat-letter"><span class="cat-letter-lbl">'+t("letter_label")+'</span><b>'+L+'</b></span>';
-      cb.style.display=""; speak(c+" "+t("with_letter")+" "+L); }
+      let html='<span class="cat-lbl">'+t("category_label")+'</span>'+escapeHtml(c); let say=c;
+      if(S.categoryLetter){ const LET="ABCDEFGHIKLMNOPRSTUW"; const L=LET[Math.floor(Math.random()*LET.length)];
+        html+='<span class="cat-letter"><span class="cat-letter-lbl">'+t("letter_label")+'</span><b>'+L+'</b></span>';
+        say=c+" "+t("with_letter")+" "+L; }
+      cb.innerHTML=html; cb.style.display=""; speak(say); }
     else { cb.style.display="none"; }
     let base = S.durMin + Math.random()*(S.durMax-S.durMin);
     if(S.accelerate){ base = Math.max(3, base*Math.pow(0.85, roundNo-1)); }
