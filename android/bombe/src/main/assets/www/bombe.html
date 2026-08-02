@@ -6,7 +6,6 @@
 <meta name="theme-color" content="#1a1024">
 <title>Bombenspiel 💣</title>
 
-<!-- PWA: gleiche App-Shell wie das Bingo, damit offline nutzbar -->
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="./icons/icon-192.png">
@@ -14,208 +13,194 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Bombenspiel">
 <style>
+  /* ================= Themes (B1) ================= */
   :root{
-    --bg:      #140b1e;
-    --bg2:     #241436;
-    --panel:   #1e1230;
-    --ink:     #f4ecff;
-    --muted:   #b9a9d6;
-    --accent:  #ff5a3c;
-    --accent2: #ffcf3a;
-    --ok:      #46d38a;
-    --line:    rgba(255,255,255,.14);
-    --radius:  20px;
+    --bg:#140b1e; --bg2:#241436; --panel:#1e1230; --ink:#f4ecff; --muted:#b9a9d6;
+    --accent:#ff5a3c; --accent2:#ffcf3a; --ok:#46d38a; --line:rgba(255,255,255,.14);
+    --glow:#3a1c52; --btnink:#241436;
+  }
+  :root[data-theme="neon"]{
+    --bg:#05010f; --bg2:#0a0420; --panel:#120a2a; --ink:#e8f0ff; --muted:#93a6d6;
+    --accent:#ff2e88; --accent2:#22e6c1; --ok:#3ff0a0; --line:rgba(255,255,255,.18);
+    --glow:#132048; --btnink:#04121a;
+  }
+  :root[data-theme="rot"]{
+    --bg:#190606; --bg2:#2a0a0a; --panel:#2a1212; --ink:#ffece6; --muted:#d7a79a;
+    --accent:#ff4d3d; --accent2:#ffb020; --ok:#46d38a; --line:rgba(255,255,255,.14);
+    --glow:#3a1010; --btnink:#2a0a0a;
+  }
+  :root[data-theme="hell"]{
+    --bg:#efe8f6; --bg2:#ffffff; --panel:#ffffff; --ink:#26183a; --muted:#6a5b80;
+    --accent:#e2453a; --accent2:#f2a900; --ok:#1e9e63; --line:rgba(0,0,0,.14);
+    --glow:#e9d8ff; --btnink:#3a2410;
   }
 
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body{ height:100%; margin:0; }
+  html.big{ font-size:19px; }                    /* B3 – große Darstellung */
   body{
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color:var(--ink);
     background:
-      radial-gradient(120% 80% at 50% -10%, #3a1c52 0%, transparent 55%),
+      radial-gradient(120% 80% at 50% -10%, var(--glow) 0%, transparent 55%),
       linear-gradient(180deg, var(--bg2), var(--bg));
-    min-height:100dvh;
-    overflow:hidden;
-    user-select:none;
-    -webkit-user-select:none;
+    min-height:100dvh; overflow:hidden; user-select:none; -webkit-user-select:none;
   }
 
   /* ---------- Screens ---------- */
-  .screen{
-    position:fixed; inset:0;
-    display:none;
-    flex-direction:column;
-    padding:22px;
-    padding-top: max(22px, env(safe-area-inset-top));
-    padding-bottom: max(22px, env(safe-area-inset-bottom));
-  }
+  .screen{ position:fixed; inset:0; display:none; flex-direction:column;
+    padding:22px; padding-top:max(22px,env(safe-area-inset-top)); padding-bottom:max(22px,env(safe-area-inset-bottom)); }
   .screen.active{ display:flex; }
 
   /* ---------- Setup ---------- */
   .wrap{ width:100%; max-width:520px; margin:0 auto; display:flex; flex-direction:column; min-height:0; flex:1; }
   h1{ font-size:2rem; margin:.2em 0 .1em; text-align:center; letter-spacing:.5px; }
-  .sub{ text-align:center; color:var(--muted); margin:0 0 18px; font-size:.98rem; line-height:1.45; }
+  .sub{ text-align:center; color:var(--muted); margin:0 0 14px; font-size:.98rem; line-height:1.45; }
 
   .players{ overflow-y:auto; -webkit-overflow-scrolling:touch; padding:2px; margin-bottom:12px; }
-  .prow{
-    display:flex; align-items:center; gap:10px; margin-bottom:10px;
-    background:var(--panel); border:1px solid var(--line);
-    border-radius:14px; padding:8px 10px;
-  }
-  .swatch{ width:26px; height:26px; border-radius:50%; flex:0 0 auto; box-shadow:0 0 0 2px rgba(0,0,0,.25) inset; }
-  .prow input{
-    flex:1; min-width:0; background:transparent; border:none; outline:none;
-    color:var(--ink); font-size:1.1rem; padding:8px 4px;
-  }
-  .prow input::placeholder{ color:var(--muted); }
-  .del{
-    flex:0 0 auto; width:34px; height:34px; border-radius:10px; border:none; cursor:pointer;
-    background:rgba(255,90,60,.16); color:var(--accent); font-size:1.2rem; line-height:1;
-  }
+  .prow{ display:flex; align-items:center; gap:10px; margin-bottom:10px;
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:8px 10px; }
+  .swatch{ width:30px; height:30px; border-radius:50%; flex:0 0 auto; cursor:pointer;
+    box-shadow:0 0 0 2px rgba(0,0,0,.25) inset; position:relative; }
+  .swatch input{ position:absolute; inset:0; opacity:0; width:100%; height:100%; border:none; cursor:pointer; }
+  .prow input.name{ flex:1; min-width:0; background:transparent; border:none; outline:none; color:var(--ink); font-size:1.1rem; padding:8px 4px; }
+  .prow input.name::placeholder{ color:var(--muted); }
+  .del{ flex:0 0 auto; width:34px; height:34px; border-radius:10px; border:none; cursor:pointer;
+    background:rgba(255,90,60,.16); color:var(--accent); font-size:1.2rem; line-height:1; }
   .del:active{ transform:scale(.92); }
 
   button{ font-family:inherit; }
-  .btn{
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    width:100%; border:none; cursor:pointer; border-radius:16px;
-    padding:16px; font-size:1.15rem; font-weight:700; color:#241436;
-    background:linear-gradient(180deg, var(--accent2), #ffb638);
-    box-shadow:0 8px 22px rgba(255,140,40,.35);
-  }
+  .btn{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; border:none; cursor:pointer;
+    border-radius:16px; padding:16px; font-size:1.15rem; font-weight:700; color:var(--btnink);
+    background:linear-gradient(180deg,var(--accent2),#ffb638); box-shadow:0 8px 22px rgba(255,140,40,.35); }
   .btn:active{ transform:translateY(1px); }
-  .btn.ghost{
-    background:transparent; color:var(--ink);
-    border:1px dashed var(--line); box-shadow:none; font-weight:600; padding:13px;
-  }
-  .btn.start{ background:linear-gradient(180deg,#ff7a4d,var(--accent)); color:#fff;
-              box-shadow:0 10px 26px rgba(255,80,50,.45); }
+  .btn.ghost{ background:transparent; color:var(--ink); border:1px dashed var(--line); box-shadow:none; font-weight:600; padding:13px; }
+  .btn.start{ background:linear-gradient(180deg,#ff7a4d,var(--accent)); color:#fff; box-shadow:0 10px 26px rgba(255,80,50,.45); }
+  .btn.resume{ background:linear-gradient(180deg,var(--ok),#2ea56a); color:#062715; box-shadow:0 8px 22px rgba(40,180,110,.35); }
+  .row2{ display:flex; gap:10px; }
+  .row2 .btn{ flex:1; }
   .footer-btns{ display:flex; flex-direction:column; gap:10px; margin-top:auto; padding-top:10px; }
-  .hint{ text-align:center; color:var(--muted); font-size:.82rem; margin:10px 0 0; }
+  .hint,.set-summary{ text-align:center; color:var(--muted); font-size:.82rem; margin:8px 0 0; }
+  .linkbtn{ background:none; border:none; color:var(--muted); text-decoration:underline; cursor:pointer; font-size:.85rem; }
 
   /* ---------- Game ---------- */
   #game{ cursor:pointer; }
-  .topbar{
-    display:flex; gap:8px; overflow-x:auto; padding:2px 2px 8px;
-    flex:0 0 auto; -webkit-overflow-scrolling:touch;
-  }
-  .chip{
-    flex:0 0 auto; display:flex; align-items:center; gap:7px;
-    background:var(--panel); border:1px solid var(--line);
-    border-radius:999px; padding:6px 12px 6px 8px; font-weight:600; font-size:.95rem;
-    opacity:.55; transition:opacity .15s, transform .15s;
-  }
+  .topbar{ display:flex; gap:8px; overflow-x:auto; padding:2px 2px 8px; flex:0 0 auto; -webkit-overflow-scrolling:touch; }
+  .chip{ flex:0 0 auto; display:flex; align-items:center; gap:7px; background:var(--panel); border:1px solid var(--line);
+    border-radius:999px; padding:6px 12px 6px 8px; font-weight:600; font-size:.95rem; opacity:.55; transition:opacity .15s,transform .15s; }
   .chip.cur{ opacity:1; transform:scale(1.04); border-color:currentColor; }
   .chip .dot{ width:14px; height:14px; border-radius:50%; }
-  .chip .pts{ background:rgba(255,255,255,.12); border-radius:999px; padding:1px 8px; font-size:.85rem; }
+  .chip .pts{ background:rgba(255,255,255,.14); border-radius:999px; padding:1px 8px; font-size:.85rem; }
   .chip .chold{ color:var(--muted); font-size:.8rem; font-variant-numeric:tabular-nums; }
 
-  .stage{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:0; }
-  .turnlabel{ color:var(--muted); text-transform:uppercase; letter-spacing:3px; font-size:.8rem; margin-bottom:14px; }
-  .bomb{ font-size:clamp(6rem,34vw,13rem); line-height:1; filter:drop-shadow(0 10px 20px rgba(0,0,0,.5)); }
-  .curname{
-    font-size:clamp(2.4rem,13vw,4.6rem); font-weight:800; margin-top:6px;
-    line-height:1.05; word-break:break-word; max-width:100%;
-  }
-  .turn-secs{
-    margin-top:14px; font-variant-numeric:tabular-nums;
-    font-weight:700; font-size:1.4rem; color:var(--muted);
-  }
+  .stage{ flex:1; display:flex; flex-direction:column; min-height:0; text-align:center; }
+  .stage-top{ flex:0 0 auto; }
+  .turnlabel{ color:var(--muted); text-transform:uppercase; letter-spacing:3px; font-size:.8rem; margin-bottom:8px; }
+  .curname{ font-size:clamp(2.2rem,12vw,4.2rem); font-weight:800; line-height:1.05; word-break:break-word; }
+  .turn-secs{ margin-top:8px; font-variant-numeric:tabular-nums; font-weight:700; font-size:1.3rem; color:var(--muted); }
   .turn-secs b{ color:var(--ink); }
-  .next-btn{
-    margin-top:22px; border:none; cursor:pointer; border-radius:16px;
-    padding:16px 34px; font-size:1.2rem; font-weight:800; color:#241436;
-    background:linear-gradient(180deg, var(--accent2), #ffb638);
-    box-shadow:0 8px 22px rgba(255,140,40,.35);
-  }
+  .countdown{ display:none; margin-top:6px; font-weight:800; font-size:1.8rem; color:var(--accent2); font-variant-numeric:tabular-nums; }
+  .countdown.on{ display:block; }
+
+  .playfield{ position:relative; flex:1; display:flex; align-items:center; justify-content:center; min-height:0; width:100%; }
+  .bomb{ font-size:clamp(5rem,30vw,11rem); line-height:1; filter:drop-shadow(0 10px 20px rgba(0,0,0,.5)); }
+  .stage.bombfloat .bomb{ position:absolute; margin:0; cursor:pointer; will-change:left,top; }
+  .stage.bombfloat .playfield{ touch-action:none; }
+
+  .stage-bottom{ flex:0 0 auto; }
+  .next-btn{ border:none; cursor:pointer; border-radius:16px; padding:15px 34px; font-size:1.2rem; font-weight:800;
+    color:var(--btnink); background:linear-gradient(180deg,var(--accent2),#ffb638); box-shadow:0 8px 22px rgba(255,140,40,.35); }
   .next-btn:active{ transform:translateY(1px); }
-  .tap-hint{ margin-top:16px; color:var(--muted); font-size:.85rem; animation:pulse 1.6s ease-in-out infinite; }
+  .next-btn.hidden{ display:none; }
+  .tap-hint{ margin-top:14px; color:var(--muted); font-size:.85rem; animation:pulse 1.6s ease-in-out infinite; }
   @keyframes pulse{ 50%{ opacity:.35; } }
 
   .bomb.shake{ animation:shake .28s infinite; }
-  @keyframes shake{
-    0%,100%{ transform:translate(0,0) rotate(0); }
-    25%{ transform:translate(-3px,1px) rotate(-3deg); }
-    75%{ transform:translate(3px,-1px) rotate(3deg); }
-  }
+  @keyframes shake{ 0%,100%{ transform:translate(0,0) rotate(0);} 25%{ transform:translate(-3px,1px) rotate(-3deg);} 75%{ transform:translate(3px,-1px) rotate(3deg);} }
+  .stage.bombfloat .bomb.shake{ animation:shakef .28s infinite; }
+  @keyframes shakef{ 0%,100%{ filter:drop-shadow(0 10px 20px rgba(0,0,0,.5));} 50%{ filter:drop-shadow(0 10px 26px rgba(255,90,60,.7));} }
 
-  /* ---------- Explosion overlay ---------- */
-  #boom{
-    position:fixed; inset:0; display:none; flex-direction:column;
-    align-items:center; justify-content:center; text-align:center; padding:24px;
-    /* deckender Hintergrund: solide Basisfarbe + oranger Glutschein */
-    background:
-      radial-gradient(circle at 50% 42%, rgba(255,170,50,.22), transparent 46%),
-      var(--bg);
-    cursor:pointer; z-index:10;
-  }
-  #boom.show{ display:flex; }
-  .boom-emoji{ font-size:clamp(5rem,26vw,10rem); animation:pop .5s ease-out; }
-  @keyframes pop{ 0%{ transform:scale(.2); opacity:0; } 60%{ transform:scale(1.25); } 100%{ transform:scale(1); opacity:1; } }
-  .boom-title{ font-size:2rem; font-weight:800; margin:4px 0; }
-  .boom-loser{ font-size:clamp(2rem,11vw,3.6rem); font-weight:800; line-height:1.1; }
-  .boom-sub{ color:var(--muted); margin-top:6px; }
-  .board{ margin:22px 0 8px; width:100%; max-width:360px; }
-  .board .r{ display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--panel);
-             border:1px solid var(--line); border-radius:12px; margin-bottom:8px; }
+  /* ---------- Overlays gemeinsam ---------- */
+  .overlay{ position:fixed; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:24px; z-index:10; background:radial-gradient(circle at 50% 42%, rgba(255,170,50,.18), transparent 46%), var(--bg); }
+  .overlay.show{ display:flex; }
+  .board{ margin:20px 0 8px; width:100%; max-width:380px; }
+  .board .r{ display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; margin-bottom:8px; }
   .board .r .dot{ width:16px; height:16px; border-radius:50%; }
   .board .r .nm{ flex:1; text-align:left; font-weight:600; }
-  .board .r .pt{ font-weight:800; font-size:1.2rem; }
+  .board .r .st{ color:var(--muted); font-size:.78rem; }
+  .board .r .pt{ font-weight:800; font-size:1.2rem; min-width:1.4em; }
   .board .r.lead{ box-shadow:0 0 0 2px var(--accent2) inset; }
+  .board .r .crown{ font-size:1.1rem; }
+
+  /* Explosion */
+  .boom-emoji{ font-size:clamp(5rem,26vw,10rem); animation:pop .5s ease-out; }
+  @keyframes pop{ 0%{ transform:scale(.2); opacity:0;} 60%{ transform:scale(1.25);} 100%{ transform:scale(1); opacity:1;} }
+  .boom-title{ font-size:2rem; font-weight:800; margin:4px 0; }
+  .boom-holder{ font-size:1.1rem; color:var(--muted); margin-top:2px; }
+  .boom-holder b{ color:var(--ink); }
+  .boom-winlabel{ color:var(--muted); font-size:.85rem; text-transform:uppercase; letter-spacing:2px; margin-top:14px; }
+  .boom-winners{ font-size:clamp(1.7rem,9vw,3rem); font-weight:800; line-height:1.2; margin-top:6px; word-break:break-word; }
+  .boom-winners .win-time{ font-size:.42em; color:var(--muted); font-weight:600; white-space:nowrap; }
   .boom-hint{ margin-top:14px; color:var(--muted); animation:pulse 1.6s ease-in-out infinite; }
+  .boom-hint.locked{ animation:none; opacity:.5; }
 
-  .flash{ position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:20; }
+  /* Sieger */
+  .win-emoji{ font-size:clamp(4rem,22vw,8rem); }
+  .win-title{ font-size:1.6rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:2px; }
+  .win-name{ font-size:clamp(2.2rem,12vw,4rem); font-weight:800; margin-top:4px; }
+
+  /* Pause / Intro */
+  .big-txt{ font-size:2rem; font-weight:800; }
+
+  .flash{ position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:30; }
   .flash.go{ animation:flash .5s ease-out; }
-  @keyframes flash{ 0%{ opacity:.85; } 100%{ opacity:0; } }
+  @keyframes flash{ 0%{ opacity:.85;} 100%{ opacity:0;} }
 
-  .corner{
-    position:fixed; top:max(10px,env(safe-area-inset-top)); right:12px; z-index:11;
-    background:rgba(0,0,0,.3); border:1px solid var(--line); color:var(--ink);
-    border-radius:10px; padding:7px 11px; font-size:.85rem; cursor:pointer;
-  }
+  .corner{ position:fixed; top:max(10px,env(safe-area-inset-top)); z-index:11; background:rgba(0,0,0,.3);
+    border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:7px 11px; font-size:.85rem; cursor:pointer; }
+  .c-quit{ right:12px; } .c-pause{ right:74px; } .c-board{ right:130px; }
+  :root[data-theme="hell"] .corner{ background:rgba(255,255,255,.6); }
+
+  /* Update-Banner (A1) */
+  #updateBanner{ position:fixed; left:12px; right:12px; bottom:max(12px,env(safe-area-inset-bottom)); z-index:60; display:none;
+    background:var(--accent); color:#fff; border-radius:14px; padding:12px 14px; font-weight:600; text-align:center;
+    box-shadow:0 8px 22px rgba(0,0,0,.4); cursor:pointer; }
+  #updateBanner.show{ display:block; }
+
+  /* Konfetti (H1) */
+  #confetti{ position:fixed; inset:0; pointer-events:none; z-index:20; overflow:hidden; display:none; }
+  #confetti.show{ display:block; }
+  .cpiece{ position:absolute; top:-24px; width:10px; height:14px; border-radius:2px; opacity:.95; animation:fall linear forwards; }
+  @keyframes fall{ to{ transform:translateY(110vh) rotate(760deg); } }
 
   /* ---------- Einstellungs-Seite ---------- */
   .set-page{ overflow-y:auto; -webkit-overflow-scrolling:touch; padding:2px; }
-  .set-block{
-    background:var(--panel); border:1px solid var(--line);
-    border-radius:14px; padding:14px; margin-bottom:14px;
-  }
+  .set-block{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px; }
   .set-label{ display:block; font-weight:700; margin-bottom:12px; }
   .set-hint-sm{ color:var(--muted); font-size:.82rem; font-weight:400; }
-  .dur-inputs{ display:flex; align-items:center; gap:8px; }
-  .dur-inputs input{
-    width:80px; background:var(--bg); border:1px solid var(--line); color:var(--ink);
-    border-radius:10px; padding:10px; font-size:1.1rem; text-align:center;
-  }
+  .dur-inputs{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .dur-inputs input[type=number]{ width:80px; background:var(--bg); border:1px solid var(--line); color:var(--ink);
+    border-radius:10px; padding:10px; font-size:1.1rem; text-align:center; }
   .dur-inputs span{ color:var(--muted); font-size:.95rem; }
   .radios{ display:flex; flex-direction:column; gap:2px; }
-  .radio{
-    display:flex; align-items:center; gap:12px; cursor:pointer;
-    padding:12px 10px; border-radius:12px; border:1px solid transparent;
-  }
+  .radio{ display:flex; align-items:center; gap:12px; cursor:pointer; padding:12px 10px; border-radius:12px; border:1px solid transparent; }
   .radio + .radio{ border-top:1px solid var(--line); border-radius:0; }
   .radio input{ width:20px; height:20px; accent-color:var(--accent2); flex:0 0 auto; }
   .radio span{ line-height:1.3; }
   .radio em{ color:var(--muted); font-style:normal; font-size:.85rem; }
   .radio:has(input:checked){ background:rgba(255,207,58,.10); border-color:var(--accent2); border-radius:12px; }
-  .toggle{
-    display:flex; align-items:center; gap:12px; cursor:pointer;
-    padding:12px 4px; font-weight:500;
-  }
+  .toggle{ display:flex; align-items:center; gap:12px; cursor:pointer; padding:12px 4px; font-weight:500; }
   .toggle + .toggle{ border-top:1px solid var(--line); }
   .toggle input{ width:22px; height:22px; accent-color:var(--accent2); flex:0 0 auto; }
-  .set-summary{ text-align:center; color:var(--muted); font-size:.85rem; margin:8px 0 0; }
-
-  /* ---------- Explosion: mehrere Gewinner ---------- */
-  .boom-holder{ font-size:1.15rem; color:var(--muted); margin-top:2px; }
-  .boom-holder b{ color:var(--ink); }
-  .boom-winners{
-    font-size:clamp(1.8rem,10vw,3.2rem); font-weight:800; line-height:1.2;
-    margin-top:8px; word-break:break-word; max-width:100%;
-  }
-  .boom-winners .win-time{ font-size:.42em; color:var(--muted); font-weight:600; white-space:nowrap; }
-  .boom-winlabel{ color:var(--muted); font-size:.9rem; text-transform:uppercase; letter-spacing:2px; margin-top:14px; }
-  .boom-hint.locked{ animation:none; opacity:.5; }
+  .slider-row{ display:flex; align-items:center; gap:10px; }
+  .slider-row input[type=range]{ flex:1; accent-color:var(--accent2); }
+  .themebtns,.presets{ display:flex; gap:8px; flex-wrap:wrap; }
+  .themebtns button,.presets button{ font-family:inherit; cursor:pointer; border:2px solid var(--line); background:var(--bg);
+    color:var(--ink); border-radius:10px; padding:8px 12px; font-weight:600; font-size:.9rem; }
+  .themebtns button.sel{ border-color:var(--accent2); box-shadow:0 0 0 2px var(--accent2) inset; }
+  .num-inline{ width:70px; background:var(--bg); border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:8px; font-size:1rem; text-align:center; }
 </style>
 </head>
 <body>
@@ -224,18 +209,21 @@
 <section id="setup" class="screen active">
   <div class="wrap">
     <h1>💣 Bombenspiel</h1>
-    <p class="sub">Namen eingeben, dann geht's los.<br>
-       Tippen schaltet zum nächsten Spieler weiter – wer beim <b>Bumm</b> dran ist, bekommt einen Punkt.</p>
+    <p class="sub">Namen eingeben, dann geht's los.<br>Wer beim <b>Bumm</b> dran ist, bekommt einen Punkt.</p>
 
     <div id="players" class="players"></div>
 
-    <button id="addBtn" class="btn ghost" type="button">＋ Spieler hinzufügen</button>
+    <div class="row2">
+      <button id="addBtn" class="btn ghost" type="button">＋ Spieler</button>
+      <button id="shuffleBtn" class="btn ghost" type="button">🎲 Farben</button>
+    </div>
 
     <div class="footer-btns">
-      <button id="startBtn" class="btn start" type="button">▶︎ Spiel starten</button>
+      <button id="resumeBtn" class="btn resume" type="button" style="display:none">▶︎ Fortsetzen</button>
+      <button id="startBtn" class="btn start" type="button">▶︎ Neues Spiel</button>
       <button id="openSettings" class="btn ghost" type="button">⚙️ Einstellungen</button>
-      <button id="cacheBtn" class="btn ghost" type="button">🧹 Cache leeren &amp; neu laden</button>
       <p id="setSummary" class="set-summary">Timer läuft versteckt.</p>
+      <button id="cacheBtn" class="linkbtn" type="button">Cache leeren &amp; neu laden</button>
     </div>
   </div>
 </section>
@@ -244,55 +232,101 @@
 <section id="settingsScreen" class="screen">
   <div class="wrap">
     <h1>⚙️ Einstellungen</h1>
-
     <div class="set-page">
+
       <div class="set-block">
-        <label class="set-label">Bombe läuft
-          <span class="set-hint-sm">(zufällige Dauer, versteckt – zwischen …)</span>
-        </label>
-        <div class="dur-inputs">
-          <input id="minSec" type="number" min="1" max="600" inputmode="numeric" value="10">
-          <span>bis</span>
-          <input id="maxSec" type="number" min="1" max="600" inputmode="numeric" value="60">
-          <span>Sekunden</span>
+        <label class="set-label">Schnellwahl <span class="set-hint-sm">(Vorlagen)</span></label>
+        <div class="presets">
+          <button type="button" data-preset="schnell">⚡ Schnell</button>
+          <button type="button" data-preset="standard">🎯 Standard</button>
+          <button type="button" data-preset="lang">🐢 Lang</button>
+          <button type="button" data-preset="chaos">🔥 Chaos</button>
         </div>
+      </div>
+
+      <div class="set-block">
+        <label class="set-label">Bombe läuft <span class="set-hint-sm">(zufällig zwischen …)</span></label>
+        <div class="dur-inputs">
+          <input id="minSec" type="number" min="1" max="600" inputmode="numeric" value="10"><span>bis</span>
+          <input id="maxSec" type="number" min="1" max="600" inputmode="numeric" value="60"><span>Sekunden</span>
+        </div>
+        <label class="toggle"><input id="setAccel" type="checkbox"><span>⏩ Jede Runde schneller (Sudden Death)</span></label>
+        <label class="toggle"><input id="setWobble" type="checkbox"><span>🫨 Zufälliges Vorwarn-Wackeln</span></label>
+        <label class="toggle"><input id="setVisible" type="checkbox"><span>👁️ Timer sichtbar (kein Geheim-Timer)</span></label>
       </div>
 
       <div class="set-block">
         <label class="set-label">Punkt bekommt …</label>
         <div class="radios">
-          <label class="radio"><input type="radio" name="score" value="explode">
-            <span>Wer die Bombe explodieren lässt <em>(Standard)</em></span></label>
-          <label class="radio"><input type="radio" name="score" value="survivors">
-            <span>Alle außer dem, bei dem sie explodiert</span></label>
-          <label class="radio"><input type="radio" name="score" value="longest">
-            <span>Wer die Bombe am längsten gehalten hat</span></label>
-          <label class="radio"><input type="radio" name="score" value="shortest">
-            <span>Wer die Bombe am kürzesten gehalten hat</span></label>
+          <label class="radio"><input type="radio" name="score" value="explode"><span>Wer die Bombe explodieren lässt <em>(Standard)</em></span></label>
+          <label class="radio"><input type="radio" name="score" value="survivors"><span>Alle außer dem, bei dem sie explodiert</span></label>
+          <label class="radio"><input type="radio" name="score" value="longest"><span>Wer die Bombe am längsten gehalten hat</span></label>
+          <label class="radio"><input type="radio" name="score" value="shortest"><span>Wer die Bombe am kürzesten gehalten hat</span></label>
+        </div>
+      </div>
+
+      <div class="set-block">
+        <label class="set-label">Spielende</label>
+        <div class="dur-inputs">
+          <span>Spiel bis</span><input id="setLimit" type="number" min="0" max="99" inputmode="numeric" value="0" class="num-inline"><span>Punkte <span class="set-hint-sm">(0 = endlos)</span></span>
+        </div>
+        <div class="radios" style="margin-top:8px">
+          <label class="radio"><input type="radio" name="winby" value="fewest"><span>Sieger = <b>wenigste</b> Punkte <em>(Standard)</em></span></label>
+          <label class="radio"><input type="radio" name="winby" value="most"><span>Sieger = <b>meiste</b> Punkte</span></label>
+        </div>
+      </div>
+
+      <div class="set-block">
+        <label class="set-label">Steuerung</label>
+        <div class="radios">
+          <label class="radio"><input type="radio" name="control" value="anywhere"><span>Ganzer Bildschirm oder Knopf <em>(Standard)</em></span></label>
+          <label class="radio"><input type="radio" name="control" value="button"><span>Nur der „Weiter"-Knopf <em>(Fehltipp-Schutz)</em></span></label>
+          <label class="radio"><input type="radio" name="control" value="bombTap"><span>Nur die Bombe antippen – springt nach jedem Tipp</span></label>
+          <label class="radio"><input type="radio" name="control" value="bombCatch"><span>Bombe fangen – sie bewegt sich selbst 🏃</span></label>
         </div>
       </div>
 
       <div class="set-block">
         <label class="set-label">Startspieler</label>
         <div class="radios">
-          <label class="radio"><input type="radio" name="start" value="first">
-            <span>Erster in der Liste <em>(Standard)</em></span></label>
-          <label class="radio"><input type="radio" name="start" value="random">
-            <span>Zufälliger Spieler</span></label>
+          <label class="radio"><input type="radio" name="start" value="first"><span>Erster in der Liste <em>(Standard)</em></span></label>
+          <label class="radio"><input type="radio" name="start" value="random"><span>Zufälliger Spieler</span></label>
         </div>
       </div>
 
       <div class="set-block">
         <label class="set-label">Ton &amp; Effekte</label>
-        <label class="toggle"><input id="setSound" type="checkbox">
-          <span>🔊 Tick-Tack &amp; Explosions-Sound</span></label>
-        <label class="toggle"><input id="setVibrate" type="checkbox">
-          <span>📳 Vibration beim Bumm</span></label>
+        <label class="toggle"><input id="setSound" type="checkbox"><span>🔊 Ton an</span></label>
+        <div class="slider-row" style="margin:8px 0 4px">🔉<input id="setVolume" type="range" min="0" max="100" value="80">🔊</div>
+        <div class="radios">
+          <label class="radio"><input type="radio" name="soundset" value="bombe"><span>💣 Bombe <em>(Standard)</em></span></label>
+          <label class="radio"><input type="radio" name="soundset" value="uhr"><span>⏰ Uhr-Ticken</span></label>
+          <label class="radio"><input type="radio" name="soundset" value="herzschlag"><span>❤️ Herzschlag</span></label>
+        </div>
+        <label class="toggle"><input id="setFinal" type="checkbox"><span>💥 Schneller ticken kurz vor dem Bumm</span></label>
+        <label class="toggle"><input id="setVibrate" type="checkbox"><span>📳 Vibration beim Bumm</span></label>
       </div>
+
+      <div class="set-block">
+        <label class="set-label">Darstellung</label>
+        <div class="themebtns" id="themeBtns">
+          <button type="button" data-theme="lila">🟣 Lila</button>
+          <button type="button" data-theme="neon">🟢 Neon</button>
+          <button type="button" data-theme="rot">🔴 Rot</button>
+          <button type="button" data-theme="hell">⚪ Hell</button>
+        </div>
+        <label class="toggle" style="margin-top:6px"><input id="setBig" type="checkbox"><span>🔎 Große Schrift &amp; Knöpfe</span></label>
+        <label class="toggle"><input id="setIntro" type="checkbox"><span>📢 Runden-Vorschau (Runde &amp; Punktestand)</span></label>
+        <label class="toggle"><input id="setBoard" type="checkbox"><span>🏆 Punktestand-Knopf im Spiel</span></label>
+      </div>
+
     </div>
 
     <div class="footer-btns">
-      <button id="saveSettings" class="btn start" type="button">✓ Speichern</button>
+      <div class="row2">
+        <button id="cancelSettings" class="btn ghost" type="button">✕ Abbrechen</button>
+        <button id="saveSettings" class="btn start" type="button">✓ Speichern</button>
+      </div>
       <button id="resetSettings" class="btn ghost" type="button">↺ Standard wiederherstellen</button>
     </div>
   </div>
@@ -300,20 +334,29 @@
 
 <!-- ============ GAME ============ -->
 <section id="game" class="screen">
-  <button id="quitBtn" class="corner" type="button">✕ Beenden</button>
+  <button id="quitBtn" class="corner c-quit" type="button">✕</button>
+  <button id="pauseBtn" class="corner c-pause" type="button">⏸</button>
+  <button id="boardBtn" class="corner c-board" type="button" style="display:none">🏆</button>
   <div id="topbar" class="topbar"></div>
-  <div class="stage">
-    <div class="turnlabel">Dran ist</div>
-    <div id="bomb" class="bomb">💣</div>
-    <div id="curname" class="curname">–</div>
-    <div id="turnSecs" class="turn-secs"><b>0,0</b> s</div>
-    <button id="nextBtn" class="next-btn" type="button">Weiter →</button>
-    <div class="tap-hint">Knopf drücken oder Bildschirm antippen = nächster Spieler</div>
+  <div class="stage" id="stage">
+    <div class="stage-top">
+      <div class="turnlabel">Dran ist</div>
+      <div id="curname" class="curname">–</div>
+      <div id="turnSecs" class="turn-secs"><b>0,0</b> s</div>
+      <div id="countdown" class="countdown">–</div>
+    </div>
+    <div class="playfield" id="playfield">
+      <div id="bomb" class="bomb">💣</div>
+    </div>
+    <div class="stage-bottom">
+      <button id="nextBtn" class="next-btn" type="button">Weiter →</button>
+      <div id="tapHint" class="tap-hint">Knopf drücken oder Bildschirm antippen</div>
+    </div>
   </div>
 </section>
 
-<!-- ============ EXPLOSION ============ -->
-<div id="boom">
+<!-- ============ OVERLAYS ============ -->
+<div id="boom" class="overlay">
   <div class="boom-emoji">💥</div>
   <div class="boom-title">BUMM!</div>
   <div id="boomHolder" class="boom-holder">–</div>
@@ -323,582 +366,561 @@
   <div id="boomHint" class="boom-hint">👆 Tippen für die nächste Runde</div>
 </div>
 
+<div id="winScreen" class="overlay">
+  <div class="win-emoji">🏆</div>
+  <div class="win-title">Sieger</div>
+  <div id="winName" class="win-name">–</div>
+  <div id="winBoard" class="board"></div>
+  <div class="row2" style="max-width:380px;width:100%">
+    <button id="winContinue" class="btn ghost" type="button">Weiterspielen</button>
+    <button id="winNew" class="btn start" type="button">🔄 Neues Spiel</button>
+  </div>
+</div>
+
+<div id="pauseScreen" class="overlay">
+  <div style="font-size:4rem">⏸️</div>
+  <div class="big-txt">Pause</div>
+  <div id="pauseBoard" class="board"></div>
+  <button id="resumeGameBtn" class="btn start" type="button" style="max-width:280px">▶︎ Weiter</button>
+</div>
+
+<div id="introScreen" class="overlay">
+  <div id="introRound" class="win-title">Runde 1</div>
+  <div class="big-txt" style="margin:6px 0">Bereit?</div>
+  <div id="introBoard" class="board"></div>
+  <div class="boom-hint">👆 Tippen zum Starten</div>
+</div>
+
+<div id="peekScreen" class="overlay">
+  <div class="win-title">Punktestand</div>
+  <div id="peekBoard" class="board"></div>
+  <button id="peekClose" class="btn ghost" type="button" style="max-width:280px">Schließen</button>
+</div>
+
 <div id="flash" class="flash"></div>
+<div id="confetti"></div>
+<div id="updateBanner">🔄 Neue Version verfügbar – jetzt aktualisieren</div>
 
 <script>
 (() => {
   "use strict";
 
-  // ---------- Farbpalette für Spieler ----------
+  const $ = s => document.querySelector(s);
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const fmt = ms => (ms/1000).toFixed(1).replace(".", ",");
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+  // ---------- Farbpalette (D3) ----------
   const COLORS = [
-    "#ff5a3c", "#3d8bdd", "#46d38a", "#ffcf3a",
-    "#c86bff", "#ff7ab6", "#38d6d6", "#ff9b3d",
-    "#8ed14b", "#6f7bff"
+    "#ff5a3c","#3d8bdd","#46d38a","#ffcf3a","#c86bff","#ff7ab6","#38d6d6","#ff9b3d",
+    "#8ed14b","#6f7bff","#e8556d","#00b4a6","#b088ff","#ffd24d","#5ad1ff","#ff6f91"
   ];
+  const randColor = () => COLORS[Math.floor(Math.random()*COLORS.length)];
 
   // ---------- State ----------
-  let players = [];            // { name, color, points }
-  let curIdx = 0;
-  let running = false;         // Timer läuft (Runde aktiv)
-  let explodeAt = 0;           // Zeitpunkt der Explosion (Date.now-Basis)
-  let rafId = null;
-  let wobbleTimer = null;      // Timer für zufällige Wackel-Phasen
-  let turnStart = 0;           // Startzeit des aktuellen Spielers (für Sekundenanzeige)
-  let clickLockUntil = 0;      // Klick-Sperre nach Weiterschalten (0,5s)
-  let boomReadyAt = 0;         // Explosions-Overlay erst nach 3s antippbar
+  let players = [];            // {name,color,points,roundMs,explosions,maxHold,totalHold}
+  let curIdx = 0, roundNo = 0;
+  let running = false, paused = false, gameOver = false, pendingWin = false;
+  let explodeAt = 0, turnStart = 0, lastFrame = 0;
+  let rafId = null, wobbleTimer = null;
+  let clickLockUntil = 0, boomReadyAt = 0, pauseStart = 0;
+  // Bombe-Bewegung
+  let bombX=0, bombY=0, bombVX=0, bombVY=0;
+
+  const CLICK_LOCK_MS = 500, BOOM_LOCK_MS = 3000;
 
   // ---------- Einstellungen ----------
-  let durMin = 10;             // Bombe läuft mindestens (Sek.)
-  let durMax = 60;             // Bombe läuft höchstens (Sek.)
-  let scoreMode = "explode";   // explode | survivors | longest | shortest
-  let startMode = "first";     // first | random – wer beginnt die 1. Runde
-  let soundOn = true;          // Tick-Tack & Explosions-Sound
-  let vibrateOn = true;        // Vibration beim Bumm
+  const DEFAULTS = {
+    durMin:10, durMax:60, scoreMode:"explode", startMode:"first",
+    sound:true, vibrate:true, volume:0.8, soundSet:"bombe", finalTicks:false,
+    theme:"lila", big:false, wobble:true, visibleTimer:false, accelerate:false,
+    pointLimit:0, winBy:"fewest", control:"anywhere", roundIntro:false, showBoard:false
+  };
+  let S = Object.assign({}, DEFAULTS);
 
-  const CLICK_LOCK_MS = 500;   // Timer-Pause + Klick-Sperre nach jedem Weiterschalten
-  const BOOM_LOCK_MS  = 3000;  // Bildschirm-Sperre nach der Explosion
-
-  // ---------- DOM ----------
-  const $ = s => document.querySelector(s);
-  const setupEl   = $("#setup");
-  const gameEl    = $("#game");
-  const playersEl = $("#players");
-  const topbarEl  = $("#topbar");
-  const bombEl    = $("#bomb");
-  const curnameEl = $("#curname");
-  const secsEl    = $("#turnSecs");
-  const nextBtn   = $("#nextBtn");
-  const boomEl    = $("#boom");
-  const boomHolderEl  = $("#boomHolder");
-  const boomWinLabelEl = $("#boomWinLabel");
-  const boomWinnersEl = $("#boomWinners");
-  const boomHintEl    = $("#boomHint");
-  const boardEl   = $("#board");
-  const flashEl   = $("#flash");
-
-  // =======================================================
-  //  Audio (Web Audio API – keine externen Dateien)
-  // =======================================================
-  let actx = null;
-  let tickTimer = null;
-  let tickOn = false;
-
-  function audioInit(){
-    if (!actx){
-      const AC = window.AudioContext || window.webkitAudioContext;
-      actx = new AC();
-    }
-    if (actx.state === "suspended") actx.resume();
-  }
-
-  // Kurzer "Tick"-Klick der Bombe
-  function playTick(high){
-    if (!soundOn || !actx) return;
-    const t = actx.currentTime;
-    const osc = actx.createOscillator();
-    const g = actx.createGain();
-    osc.type = "square";
-    osc.frequency.value = high ? 1400 : 900;
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.16, t + 0.002);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
-    osc.connect(g).connect(actx.destination);
-    osc.start(t); osc.stop(t + 0.06);
-  }
-
-  function startTicking(){
-    stopTicking();
-    if (!soundOn) return;        // Ton aus → kein Ticken
-    tickOn = true;
-    let hi = false;
-    const loop = () => {
-      if (!tickOn) return;
-      playTick(hi);
-      hi = !hi;                       // Tick – Tack Wechsel
-      tickTimer = setTimeout(loop, 500);
-    };
-    loop();
-  }
-  function stopTicking(){
-    tickOn = false;
-    if (tickTimer){ clearTimeout(tickTimer); tickTimer = null; }
-  }
-
-  // Explosions-Sound: Rausch-Knall + tiefer Boom
-  function playExplosion(){
-    if (!soundOn || !actx) return;
-    const t = actx.currentTime;
-
-    // Rauschen
-    const dur = 1.1;
-    const buf = actx.createBuffer(1, actx.sampleRate * dur, actx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < data.length; i++){
-      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2);
-    }
-    const noise = actx.createBufferSource();
-    noise.buffer = buf;
-    const lp = actx.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.setValueAtTime(1800, t);
-    lp.frequency.exponentialRampToValueAtTime(120, t + dur);
-    const ng = actx.createGain();
-    ng.gain.setValueAtTime(0.9, t);
-    ng.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    noise.connect(lp).connect(ng).connect(actx.destination);
-    noise.start(t); noise.stop(t + dur);
-
-    // Tiefer "Boom" (Sinus-Sweep)
-    const osc = actx.createOscillator();
-    const og = actx.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(160, t);
-    osc.frequency.exponentialRampToValueAtTime(35, t + 0.5);
-    og.gain.setValueAtTime(0.9, t);
-    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
-    osc.connect(og).connect(actx.destination);
-    osc.start(t); osc.stop(t + 0.65);
-  }
-
-  // =======================================================
-  //  Setup-Screen
-  // =======================================================
-  function makePlayerRow(name){
-    const idx = playersEl.children.length;
-    const color = COLORS[idx % COLORS.length];
-    const row = document.createElement("div");
-    row.className = "prow";
-    row.innerHTML = `
-      <span class="swatch" style="background:${color}"></span>
-      <input type="text" maxlength="16" placeholder="Spieler ${idx + 1}" value="${name || ""}">
-      <button class="del" type="button" title="Entfernen">✕</button>`;
-    row.querySelector(".del").addEventListener("click", () => {
-      row.remove();
-      recolor();
-    });
-    playersEl.appendChild(row);
-    return row;
-  }
-
-  // Farben & Platzhalter nach Änderungen neu vergeben
-  function recolor(){
-    [...playersEl.children].forEach((row, i) => {
-      row.querySelector(".swatch").style.background = COLORS[i % COLORS.length];
-      const inp = row.querySelector("input");
-      inp.placeholder = "Spieler " + (i + 1);
-    });
-  }
-
-  function addPlayer(name){
-    const row = makePlayerRow(name);
-    row.querySelector("input").focus();
-  }
-
-  // Startzustand: zwei leere Reihen
-  addPlayer(""); addPlayer("");
-
-  $("#addBtn").addEventListener("click", () => { audioInit(); addPlayer(""); });
-
-  // ---------- Einstellungen (eigene Seite) ----------
-  const DEFAULTS = { durMin: 10, durMax: 60, scoreMode: "explode",
-                     startMode: "first", soundOn: true, vibrateOn: true };
   const SCORE_TEXT = {
-    explode:   "Punkt: wer explodieren lässt",
-    survivors: "Punkt: alle außer dem Getroffenen",
-    longest:   "Punkt: längste Haltezeit",
-    shortest:  "Punkt: kürzeste Haltezeit"
+    explode:"Punkt: wer explodieren lässt", survivors:"Punkt: alle außer dem Getroffenen",
+    longest:"Punkt: längste Haltezeit", shortest:"Punkt: kürzeste Haltezeit"
   };
 
-  // Gemerkte Einstellungen in die Variablen laden
-  function loadSettings(){
-    let s = null;
-    try { s = JSON.parse(localStorage.getItem("bombe.settings") || "null"); } catch (e) {}
-    s = s || {};
-    durMin    = s.durMin    || DEFAULTS.durMin;
-    durMax    = s.durMax    || DEFAULTS.durMax;
-    scoreMode = s.scoreMode || DEFAULTS.scoreMode;
-    startMode = s.startMode || DEFAULTS.startMode;
-    soundOn   = s.sound   !== undefined ? !!s.sound   : DEFAULTS.soundOn;
-    vibrateOn = s.vibrate !== undefined ? !!s.vibrate : DEFAULTS.vibrateOn;
-    updateSetSummary();
+  // ---------- DOM ----------
+  const playersEl=$("#players"), topbarEl=$("#topbar"), bombEl=$("#bomb"), stageEl=$("#stage"),
+        playfieldEl=$("#playfield"), curnameEl=$("#curname"), secsEl=$("#turnSecs"), countdownEl=$("#countdown"),
+        nextBtn=$("#nextBtn"), tapHintEl=$("#tapHint"), gameEl=$("#game"),
+        boomEl=$("#boom"), boomHolderEl=$("#boomHolder"), boomWinLabelEl=$("#boomWinLabel"),
+        boomWinnersEl=$("#boomWinners"), boomHintEl=$("#boomHint"), boardEl=$("#board"),
+        flashEl=$("#flash"), confettiEl=$("#confetti"), boardBtn=$("#boardBtn");
+
+  // =======================================================
+  //  Audio (Web Audio API)
+  // =======================================================
+  let actx=null, master=null, tickTimer=null, tickOn=false;
+  function audioInit(){
+    if(!actx){ const AC=window.AudioContext||window.webkitAudioContext; actx=new AC();
+      master=actx.createGain(); master.gain.value=S.volume; master.connect(actx.destination); }
+    if(actx.state==="suspended") actx.resume();
   }
+  function setVolume(v){ if(master) master.gain.value=v; }
 
-  // Einstellungs-Seite mit den aktuellen Werten füllen
-  function fillSettingsForm(){
-    $("#minSec").value = durMin;
-    $("#maxSec").value = durMax;
-    const r = document.querySelector('input[name="score"][value="' + scoreMode + '"]');
-    if (r) r.checked = true;
-    const st = document.querySelector('input[name="start"][value="' + startMode + '"]');
-    if (st) st.checked = true;
-    $("#setSound").checked = soundOn;
-    $("#setVibrate").checked = vibrateOn;
+  function playTick(high){
+    if(!S.sound || !actx) return;
+    const t=actx.currentTime, osc=actx.createOscillator(), g=actx.createGain();
+    let type="square", f=high?1400:900, dur=0.05, peak=0.16;
+    if(S.soundSet==="uhr"){ type="triangle"; f=high?2200:1700; dur=0.03; peak=0.2; }
+    else if(S.soundSet==="herzschlag"){ type="sine"; f=high?120:75; dur=0.13; peak=0.5; }
+    osc.type=type; osc.frequency.value=f;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(peak,t+0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    osc.connect(g).connect(master); osc.start(t); osc.stop(t+dur+0.02);
   }
-
-  // Werte von der Einstellungs-Seite übernehmen, prüfen und merken
-  function saveSettingsFromForm(){
-    let mn = parseInt($("#minSec").value, 10);
-    let mx = parseInt($("#maxSec").value, 10);
-    if (!Number.isFinite(mn) || mn < 1) mn = DEFAULTS.durMin;
-    if (!Number.isFinite(mx) || mx < 1) mx = DEFAULTS.durMax;
-    if (mx < mn){ const t = mn; mn = mx; mx = t; }   // vertauscht? tauschen
-    durMin = mn; durMax = mx;
-    const sel = document.querySelector('input[name="score"]:checked');
-    scoreMode = sel ? sel.value : DEFAULTS.scoreMode;
-    const st = document.querySelector('input[name="start"]:checked');
-    startMode = st ? st.value : DEFAULTS.startMode;
-    soundOn = $("#setSound").checked;
-    vibrateOn = $("#setVibrate").checked;
-    try {
-      localStorage.setItem("bombe.settings",
-        JSON.stringify({ durMin, durMax, scoreMode, startMode,
-                         sound: soundOn, vibrate: vibrateOn }));
-    } catch (e) {}
-    updateSetSummary();
-  }
-
-  // Kurz-Zusammenfassung auf dem Setup-Screen
-  function updateSetSummary(){
-    const el = $("#setSummary");
-    if (!el) return;
-    let t = "Bombe " + durMin + "–" + durMax + " s · " + SCORE_TEXT[scoreMode];
-    if (!soundOn) t += " · 🔇";
-    el.textContent = t;
-  }
-
-  loadSettings();
-
-  $("#openSettings").addEventListener("click", () => {
-    fillSettingsForm();
-    setScreen("settingsScreen");
-  });
-  $("#saveSettings").addEventListener("click", () => {
-    saveSettingsFromForm();
-    setScreen("setup");
-  });
-  $("#resetSettings").addEventListener("click", () => {
-    durMin = DEFAULTS.durMin; durMax = DEFAULTS.durMax; scoreMode = DEFAULTS.scoreMode;
-    startMode = DEFAULTS.startMode; soundOn = DEFAULTS.soundOn; vibrateOn = DEFAULTS.vibrateOn;
-    fillSettingsForm();
-  });
-
-  $("#startBtn").addEventListener("click", () => {
-    audioInit();
-    const rows = [...playersEl.children];
-    players = rows.map((row, i) => {
-      const val = row.querySelector("input").value.trim();
-      return { name: val || ("Spieler " + (i + 1)), color: COLORS[i % COLORS.length], points: 0, roundMs: 0 };
-    });
-    if (players.length < 2){
-      alert("Bitte mindestens 2 Spieler eingeben.");
-      return;
+  function tickInterval(){
+    if(S.finalTicks && running){
+      const rem = explodeAt - Date.now();
+      if(rem < 5000) return clamp(500*rem/5000, 110, 500);
     }
+    return 500;
+  }
+  function startTicking(){ stopTicking(); if(!S.sound) return; tickOn=true; let hi=false;
+    const loop=()=>{ if(!tickOn) return; playTick(hi); hi=!hi; tickTimer=setTimeout(loop, tickInterval()); }; loop(); }
+  function stopTicking(){ tickOn=false; if(tickTimer){ clearTimeout(tickTimer); tickTimer=null; } }
+
+  function playExplosion(){
+    if(!S.sound || !actx) return; const t=actx.currentTime, dur=1.1;
+    const buf=actx.createBuffer(1, actx.sampleRate*dur, actx.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+    const noise=actx.createBufferSource(); noise.buffer=buf;
+    const lp=actx.createBiquadFilter(); lp.type="lowpass";
+    lp.frequency.setValueAtTime(1800,t); lp.frequency.exponentialRampToValueAtTime(120,t+dur);
+    const ng=actx.createGain(); ng.gain.setValueAtTime(0.9,t); ng.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    noise.connect(lp).connect(ng).connect(master); noise.start(t); noise.stop(t+dur);
+    const osc=actx.createOscillator(), og=actx.createGain(); osc.type="sine";
+    osc.frequency.setValueAtTime(160,t); osc.frequency.exponentialRampToValueAtTime(35,t+0.5);
+    og.gain.setValueAtTime(0.9,t); og.gain.exponentialRampToValueAtTime(0.0001,t+0.6);
+    osc.connect(og).connect(master); osc.start(t); osc.stop(t+0.65);
+  }
+
+  // =======================================================
+  //  Setup-Screen (Spieler)
+  // =======================================================
+  function makePlayerRow(name, color){
+    const idx = playersEl.children.length;
+    color = color || COLORS[idx % COLORS.length];
+    const row = document.createElement("div");
+    row.className = "prow"; row.dataset.color = color;
+    row.innerHTML =
+      `<span class="swatch" style="background:${color}"><input type="color" value="${color}"></span>`+
+      `<input class="name" type="text" maxlength="16" placeholder="Spieler ${idx+1}" value="${name?escapeHtml(name):""}">`+
+      `<button class="del" type="button" title="Entfernen">✕</button>`;
+    const swatch=row.querySelector(".swatch"), picker=row.querySelector('input[type=color]');
+    picker.addEventListener("input", ()=>{ row.dataset.color=picker.value; swatch.style.background=picker.value; savePlayers(); });
+    row.querySelector(".name").addEventListener("input", savePlayers);
+    row.querySelector(".del").addEventListener("click", ()=>{ row.remove(); recolor(); savePlayers(); });
+    playersEl.appendChild(row); return row;
+  }
+  function recolor(){ /* Platzhalter neu nummerieren (Farben bleiben) */
+    [...playersEl.children].forEach((row,i)=> row.querySelector(".name").placeholder="Spieler "+(i+1)); }
+  function addPlayer(name,color){ const r=makePlayerRow(name,color); r.querySelector(".name").focus(); }
+  function readRows(){ return [...playersEl.children].map((row,i)=>({
+      name: row.querySelector(".name").value.trim() || ("Spieler "+(i+1)),
+      color: row.dataset.color || COLORS[i%COLORS.length] })); }
+
+  function savePlayers(){ try{ localStorage.setItem("bombe.players", JSON.stringify(
+      [...playersEl.children].map(r=>({ name:r.querySelector(".name").value, color:r.dataset.color })) )); }catch(e){} }
+  function loadPlayers(){
+    let saved=null; try{ saved=JSON.parse(localStorage.getItem("bombe.players")||"null"); }catch(e){}
+    if(saved && saved.length){ saved.forEach(p=>makePlayerRow(p.name||"", p.color)); }
+    else { addPlayer("",""); addPlayer("",""); }
+  }
+
+  $("#addBtn").addEventListener("click", ()=>{ audioInit(); addPlayer("",""); savePlayers(); });
+  $("#shuffleBtn").addEventListener("click", ()=>{
+    const pool=[...COLORS].sort(()=>Math.random()-0.5);
+    [...playersEl.children].forEach((row,i)=>{ const c=pool[i%pool.length]; row.dataset.color=c;
+      row.querySelector(".swatch").style.background=c; row.querySelector('input[type=color]').value=c; });
+    savePlayers();
+  });
+
+  // =======================================================
+  //  Einstellungen laden / speichern / anwenden
+  // =======================================================
+  function loadSettings(){
+    let s=null; try{ s=JSON.parse(localStorage.getItem("bombe.settings")||"null"); }catch(e){}
+    S=Object.assign({}, DEFAULTS, s||{});
+    applyAppearance(); updateSetSummary();
+  }
+  function applyAppearance(){
+    document.documentElement.dataset.theme = S.theme;
+    document.documentElement.classList.toggle("big", !!S.big);
+    setVolume(S.volume);
+  }
+  function fillSettingsForm(){
+    $("#minSec").value=S.durMin; $("#maxSec").value=S.durMax;
+    $("#setAccel").checked=S.accelerate; $("#setWobble").checked=S.wobble; $("#setVisible").checked=S.visibleTimer;
+    checkRadio("score",S.scoreMode); checkRadio("start",S.startMode); checkRadio("control",S.control);
+    checkRadio("winby",S.winBy); checkRadio("soundset",S.soundSet);
+    $("#setLimit").value=S.pointLimit;
+    $("#setSound").checked=S.sound; $("#setVolume").value=Math.round(S.volume*100);
+    $("#setFinal").checked=S.finalTicks; $("#setVibrate").checked=S.vibrate;
+    $("#setBig").checked=S.big; $("#setIntro").checked=S.roundIntro; $("#setBoard").checked=S.showBoard;
+    markTheme(S.theme);
+  }
+  function checkRadio(name,val){ const r=document.querySelector(`input[name="${name}"][value="${val}"]`); if(r) r.checked=true; }
+  function radioVal(name,def){ const el=document.querySelector(`input[name="${name}"]:checked`); return el?el.value:def; }
+  function markTheme(t){ document.querySelectorAll("#themeBtns button").forEach(b=>b.classList.toggle("sel", b.dataset.theme===t)); }
+
+  function readSettingsForm(){
+    let mn=parseInt($("#minSec").value,10), mx=parseInt($("#maxSec").value,10);
+    if(!Number.isFinite(mn)||mn<1) mn=DEFAULTS.durMin;
+    if(!Number.isFinite(mx)||mx<1) mx=DEFAULTS.durMax;
+    if(mx<mn){ const t=mn; mn=mx; mx=t; }
+    let lim=parseInt($("#setLimit").value,10); if(!Number.isFinite(lim)||lim<0) lim=0;
+    S.durMin=mn; S.durMax=mx; S.pointLimit=lim;
+    S.accelerate=$("#setAccel").checked; S.wobble=$("#setWobble").checked; S.visibleTimer=$("#setVisible").checked;
+    S.scoreMode=radioVal("score",DEFAULTS.scoreMode); S.startMode=radioVal("start",DEFAULTS.startMode);
+    S.control=radioVal("control",DEFAULTS.control); S.winBy=radioVal("winby",DEFAULTS.winBy);
+    S.soundSet=radioVal("soundset",DEFAULTS.soundSet);
+    S.sound=$("#setSound").checked; S.volume=clamp(parseInt($("#setVolume").value,10)/100||0,0,1);
+    S.finalTicks=$("#setFinal").checked; S.vibrate=$("#setVibrate").checked;
+    S.big=$("#setBig").checked; S.roundIntro=$("#setIntro").checked; S.showBoard=$("#setBoard").checked;
+    S.theme=currentThemeSel();
+  }
+  let themeSel=DEFAULTS.theme;
+  function currentThemeSel(){ return themeSel; }
+  function updateSetSummary(){
+    const el=$("#setSummary"); if(!el) return;
+    let t="Bombe "+S.durMin+"–"+S.durMax+" s · "+SCORE_TEXT[S.scoreMode];
+    if(S.pointLimit>0) t+=" · bis "+S.pointLimit;
+    if(!S.sound) t+=" · 🔇";
+    el.textContent=t;
+  }
+  function saveSettings(){ try{ localStorage.setItem("bombe.settings", JSON.stringify(S)); }catch(e){} }
+
+  // Theme-Buttons (Live-Vorschau)
+  document.querySelectorAll("#themeBtns button").forEach(b=> b.addEventListener("click", ()=>{
+    themeSel=b.dataset.theme; markTheme(themeSel); document.documentElement.dataset.theme=themeSel; }));
+  // Große-Schrift-Vorschau live
+  $("#setBig").addEventListener("change", e=> document.documentElement.classList.toggle("big", e.target.checked));
+  $("#setVolume").addEventListener("input", e=>{ if(!actx) audioInit(); setVolume(clamp(e.target.value/100,0,1)); });
+
+  // Presets (E3)
+  const PRESETS = {
+    schnell:{durMin:5,durMax:20,accelerate:false},
+    standard:{durMin:10,durMax:60,accelerate:false,pointLimit:0},
+    lang:{durMin:30,durMax:120,accelerate:false},
+    chaos:{durMin:8,durMax:40,accelerate:true,pointLimit:5}
+  };
+  document.querySelectorAll(".presets button").forEach(b=> b.addEventListener("click", ()=>{
+    const p=PRESETS[b.dataset.preset]; if(!p) return;
+    if(p.durMin!==undefined) $("#minSec").value=p.durMin;
+    if(p.durMax!==undefined) $("#maxSec").value=p.durMax;
+    if(p.accelerate!==undefined) $("#setAccel").checked=p.accelerate;
+    if(p.pointLimit!==undefined) $("#setLimit").value=p.pointLimit;
+  }));
+
+  $("#openSettings").addEventListener("click", ()=>{ themeSel=S.theme; fillSettingsForm(); setScreen("settingsScreen"); });
+  $("#cancelSettings").addEventListener("click", ()=>{ applyAppearance(); setScreen("setup"); });   // C1: verwirft
+  $("#saveSettings").addEventListener("click", ()=>{ readSettingsForm(); applyAppearance(); saveSettings(); updateSetSummary(); setScreen("setup"); });
+  $("#resetSettings").addEventListener("click", ()=>{ themeSel=DEFAULTS.theme; S=Object.assign({},DEFAULTS); fillSettingsForm(); document.documentElement.dataset.theme=DEFAULTS.theme; document.documentElement.classList.toggle("big",false); });
+
+  // =======================================================
+  //  Spielstart / Persistenz (F1)
+  // =======================================================
+  function mkPlayer(name,color){ return {name,color,points:0,roundMs:0,explosions:0,maxHold:0,totalHold:0}; }
+
+  $("#startBtn").addEventListener("click", ()=>{
+    audioInit();
+    const rows=readRows();
+    if(rows.length<2){ alert("Bitte mindestens 2 Spieler eingeben."); return; }
+    players = rows.map(r=>mkPlayer(r.name,r.color));
+    curIdx=0; roundNo=0; gameOver=false;
     startGame();
   });
+  $("#resumeBtn").addEventListener("click", ()=>{ audioInit(); if(loadGame()) startGame(); });
 
-  $("#quitBtn").addEventListener("click", (e) => {
-    e.stopPropagation();
-    endGame();
-  });
+  function saveGame(){ try{ localStorage.setItem("bombe.game", JSON.stringify({players,curIdx,roundNo})); }catch(e){}
+    updateResumeBtn(); }
+  function loadGame(){ try{ const g=JSON.parse(localStorage.getItem("bombe.game")||"null");
+    if(g && g.players && g.players.length>=2){ players=g.players; curIdx=g.curIdx||0; roundNo=g.roundNo||0; gameOver=false; return true; } }catch(e){} return false; }
+  function clearGame(){ try{ localStorage.removeItem("bombe.game"); }catch(e){} updateResumeBtn(); }
+  function updateResumeBtn(){
+    let g=null; try{ g=JSON.parse(localStorage.getItem("bombe.game")||"null"); }catch(e){}
+    const btn=$("#resumeBtn");
+    if(g && g.players && g.players.length>=2){
+      const top=[...g.players].sort((a,b)=>b.points-a.points).slice(0,3).map(p=>p.name.split(" ")[0]+" "+p.points).join(" · ");
+      btn.textContent="▶︎ Fortsetzen ("+top+")"; btn.style.display="";
+    } else btn.style.display="none";
+  }
 
-  // =======================================================
-  //  Spiel
-  // =======================================================
   function startGame(){
-    // Startspieler laut Einstellung
-    curIdx = startMode === "random"
-      ? Math.floor(Math.random() * players.length)
-      : 0;
-    renderTopbar();
-    setScreen("game");
-    newRound(true);
+    if(S.startMode==="random" && roundNo===0) curIdx=Math.floor(Math.random()*players.length);
+    applyControlMode(); renderTopbar(); setScreen("game"); newRound(true);
+  }
+  function endGame(){ running=false; paused=false; stopTicking(); clearWobble(); if(rafId) cancelAnimationFrame(rafId);
+    hideAllOverlays(); setScreen("setup"); }
+  function hideAllOverlays(){ ["#boom","#winScreen","#pauseScreen","#introScreen","#peekScreen"].forEach(s=>$(s).classList.remove("show"));
+    confettiEl.classList.remove("show"); confettiEl.innerHTML=""; }
+
+  function setScreen(which){ ["setup","game","settingsScreen"].forEach(id=>document.getElementById(id).classList.toggle("active", id===which)); }
+
+  $("#quitBtn").addEventListener("click", e=>{ e.stopPropagation(); endGame(); });
+
+  // =======================================================
+  //  Steuerungs-Modus (F2 + Bombe-Modi)
+  // =======================================================
+  function bombMode(){ return S.control==="bombTap" || S.control==="bombCatch"; }
+  function applyControlMode(){
+    const bm=bombMode();
+    stageEl.classList.toggle("bombfloat", bm);
+    nextBtn.classList.toggle("hidden", S.control!=="anywhere" && S.control!=="button");
+    boardBtn.style.display = S.showBoard ? "" : "none";
+    tapHintEl.textContent =
+      S.control==="button" ? "Nur der „Weiter“-Knopf schaltet weiter"
+      : S.control==="bombTap" ? "Tippe die Bombe – sie springt weg"
+      : S.control==="bombCatch" ? "Fang die Bombe – sie bewegt sich!"
+      : "Knopf drücken oder Bildschirm antippen";
   }
 
-  function endGame(){
-    running = false;
-    stopTicking();
-    clearWobble();
-    if (rafId) cancelAnimationFrame(rafId);
-    boomEl.classList.remove("show");
-    setScreen("setup");
-  }
-
-  function setScreen(which){
-    ["setup", "game", "settingsScreen"].forEach(id =>
-      document.getElementById(id).classList.toggle("active", id === which));
-  }
-
-  // Neue Runde: versteckten Timer setzen, Haltezeiten & Sperren zurücksetzen
+  // =======================================================
+  //  Runde / Timer
+  // =======================================================
   function newRound(keepCurrent){
-    boomEl.classList.remove("show");
-    // Haltezeit-Akku aller Spieler für die neue Runde zurücksetzen
-    players.forEach(p => p.roundMs = 0);
-    clickLockUntil = 0;
-    running = true;
-    const secs = durMin + Math.random() * (durMax - durMin);   // Dauer aus Einstellungen
-    explodeAt = Date.now() + secs * 1000;
+    hideAllOverlays();
+    players.forEach(p=>p.roundMs=0);
+    clickLockUntil=0; running=false; paused=false;
+    roundNo++;
     updateCurrent();
-    startTicking();
-    scheduleWobble();                          // zufälliges Wackeln, unabhängig vom Timer
-    tickLoop();
+    if(S.roundIntro){ showIntro(); } else { beginRound(); }
+  }
+  function beginRound(){
+    running=true; paused=false;
+    let base = S.durMin + Math.random()*(S.durMax-S.durMin);
+    if(S.accelerate){ base = Math.max(3, base*Math.pow(0.85, roundNo-1)); }
+    explodeAt = Date.now() + base*1000;
+    turnStart = Date.now(); lastFrame = Date.now();
+    countdownEl.classList.toggle("on", S.visibleTimer);
+    if(bombMode()) placeBombStart();
+    startTicking(); scheduleWobble(); loop();
   }
 
-  // Hauptschleife – prüft NUR den versteckten Timer (kein Wackeln hier,
-  // damit das Wackeln nichts über die Restzeit verrät)
-  function tickLoop(){
-    if (!running) return;
+  function loop(){
+    if(!running || paused) return;
+    const now=Date.now(), dt=(now-lastFrame)/1000; lastFrame=now;
+    if(S.control==="bombCatch") moveBomb(dt);
     updateSecs();
-    if (Date.now() >= explodeAt){
-      explode();
-      return;
-    }
-    rafId = requestAnimationFrame(tickLoop);
+    if(S.visibleTimer){ const rem=Math.max(0,(explodeAt-now)/1000); countdownEl.textContent="⏱ "+rem.toFixed(1).replace(".",",")+" s"; }
+    if(now>=explodeAt){ explode(); return; }
+    rafId=requestAnimationFrame(loop);
   }
 
-  // Sekundenanzeige: aktueller Zug (groß) + Gesamt-Haltezeit je Spieler (Chips)
   function updateSecs(){
-    const now = Date.now();
-    const s = (now - turnStart) / 1000;
-    secsEl.innerHTML = "<b>" + s.toFixed(1).replace(".", ",") + "</b> s";
-    const chips = topbarEl.children;
-    for (let i = 0; i < players.length; i++){
-      const el = chips[i] && chips[i].querySelector(".chold");
-      if (!el) continue;
-      const ms = players[i].roundMs + (i === curIdx && running ? now - turnStart : 0);
-      el.textContent = (ms / 1000).toFixed(1).replace(".", ",") + "s";
-    }
+    const now=Date.now();
+    secsEl.innerHTML="<b>"+fmt(now-turnStart)+"</b> s";
+    const chips=topbarEl.children;
+    for(let i=0;i<players.length;i++){ const el=chips[i]&&chips[i].querySelector(".chold"); if(!el) continue;
+      const ms=players[i].roundMs+(i===curIdx&&running&&!paused?now-turnStart:0); el.textContent=fmt(ms)+"s"; }
   }
 
-  // Bombe wackelt zu zufälligen Zeitpunkten – bewusst NICHT an die
-  // Explosionszeit gekoppelt, damit man nicht vorhersehen kann, wann es knallt.
-  function scheduleWobble(){
-    clearWobble();
-    const burst = () => {
-      if (!running) return;
-      bombEl.classList.add("shake");
-      const onDur = 300 + Math.random() * 900;         // 0,3–1,2s wackeln
-      wobbleTimer = setTimeout(() => {
-        if (!running) return;
-        bombEl.classList.remove("shake");
-        const offDur = 700 + Math.random() * 4500;     // 0,7–5,2s Pause
-        wobbleTimer = setTimeout(burst, offDur);
-      }, onDur);
-    };
-    // erste Wackelphase nach zufälliger Wartezeit
-    wobbleTimer = setTimeout(burst, 800 + Math.random() * 4000);
+  // ---------- Wackeln (E2) ----------
+  function scheduleWobble(){ clearWobble(); if(!S.wobble) return;
+    const burst=()=>{ if(!running||paused) return; bombEl.classList.add("shake");
+      wobbleTimer=setTimeout(()=>{ if(!running||paused) return; bombEl.classList.remove("shake");
+        wobbleTimer=setTimeout(burst, 700+Math.random()*4500); }, 300+Math.random()*900); };
+    wobbleTimer=setTimeout(burst, 800+Math.random()*4000);
   }
+  function clearWobble(){ if(wobbleTimer){ clearTimeout(wobbleTimer); wobbleTimer=null; } bombEl.classList.remove("shake"); }
 
-  function clearWobble(){
-    if (wobbleTimer){ clearTimeout(wobbleTimer); wobbleTimer = null; }
-    bombEl.classList.remove("shake");
+  // ---------- Bombe bewegen ----------
+  function fieldSize(){ return { w:playfieldEl.clientWidth, h:playfieldEl.clientHeight,
+      bw:bombEl.offsetWidth||120, bh:bombEl.offsetHeight||120 }; }
+  function placeBombStart(){
+    const {w,h,bw,bh}=fieldSize();
+    bombX=(w-bw)/2; bombY=(h-bh)/2;
+    const ang=Math.random()*Math.PI*2, sp=Math.max(w,h)*0.35;   // px/s
+    bombVX=Math.cos(ang)*sp; bombVY=Math.sin(ang)*sp;
+    drawBomb();
   }
+  function repositionBomb(){ const {w,h,bw,bh}=fieldSize(); bombX=Math.random()*(w-bw); bombY=Math.random()*(h-bh); drawBomb(); }
+  function moveBomb(dt){
+    const {w,h,bw,bh}=fieldSize(); dt=Math.min(dt,0.05);
+    bombX+=bombVX*dt; bombY+=bombVY*dt;
+    if(bombX<0){ bombX=0; bombVX=Math.abs(bombVX); } else if(bombX>w-bw){ bombX=w-bw; bombVX=-Math.abs(bombVX); }
+    if(bombY<0){ bombY=0; bombVY=Math.abs(bombVY); } else if(bombY>h-bh){ bombY=h-bh; bombVY=-Math.abs(bombVY); }
+    drawBomb();
+  }
+  function drawBomb(){ if(bombMode()){ bombEl.style.left=bombX+"px"; bombEl.style.top=bombY+"px"; } }
 
   function updateCurrent(){
-    const p = players[curIdx];
-    curnameEl.textContent = p.name;
-    curnameEl.style.color = p.color;
-    [...topbarEl.children].forEach((c, i) => c.classList.toggle("cur", i === curIdx));
-    turnStart = Date.now();     // Sekundenzähler für neuen Spieler zurücksetzen
-    updateSecs();
+    const p=players[curIdx]; curnameEl.textContent=p.name; curnameEl.style.color=p.color;
+    [...topbarEl.children].forEach((c,i)=>c.classList.toggle("cur", i===curIdx));
+    turnStart=Date.now(); updateSecs();
   }
+  function commitHold(){ const p=players[curIdx]; if(!p) return;
+    const seg=Date.now()-turnStart; p.roundMs+=seg; p.totalHold+=seg; if(seg>p.maxHold) p.maxHold=seg; }
 
-  // Bisher gehaltene Zeit des aktuellen Spielers verbuchen
-  function commitHold(){
-    if (players[curIdx]) players[curIdx].roundMs += Date.now() - turnStart;
-  }
+  function nextPlayer(){ commitHold(); curIdx=(curIdx+1)%players.length; updateCurrent(); playTick(true);
+    if(S.control==="bombCatch"){ const ang=Math.random()*Math.PI*2, {w,h}=fieldSize(), sp=Math.max(w,h)*(0.35+roundNo*0.02);
+      bombVX=Math.cos(ang)*sp; bombVY=Math.sin(ang)*sp; } }
 
-  function nextPlayer(){
-    commitHold();                              // Haltezeit des abgebenden Spielers sichern
-    curIdx = (curIdx + 1) % players.length;
-    updateCurrent();
-    playTick(true);            // kleines Feedback beim Weiterschalten
-  }
-
+  // ---------- Explosion ----------
   function explode(){
-    running = false;
-    stopTicking();
-    clearWobble();
-    commitHold();                 // letzte Haltezeit des aktuellen Spielers verbuchen
+    running=false; stopTicking(); clearWobble(); commitHold();
     playExplosion();
+    flashEl.classList.remove("go"); void flashEl.offsetWidth; flashEl.classList.add("go");
+    if(S.vibrate && navigator.vibrate) navigator.vibrate([80,60,200]);
 
-    // Blitz
-    flashEl.classList.remove("go");
-    void flashEl.offsetWidth;
-    flashEl.classList.add("go");
+    const holder=players[curIdx]; holder.explosions++;
+    const winners=pickWinners(); winners.forEach(p=>p.points++);
 
-    // Vibration (falls aktiviert & unterstützt)
-    if (vibrateOn && navigator.vibrate) navigator.vibrate([80, 60, 200]);
+    boomHolderEl.innerHTML="💣 <b>"+escapeHtml(holder.name)+"</b> ließ die Bombe explodieren · hielt sie "+fmt(holder.roundMs)+" s";
+    boomWinLabelEl.textContent = S.scoreMode==="survivors" ? "Punkte für"
+      : S.scoreMode==="longest" ? "Längste Haltezeit → Punkt"
+      : S.scoreMode==="shortest" ? "Kürzeste Haltezeit → Punkt" : "Punkt für";
+    boomWinnersEl.innerHTML=winners.map(p=>`<span style="color:${p.color}">${escapeHtml(p.name)}</span><span class="win-time"> · hielt ${fmt(p.roundMs)} s</span>`).join("<br>");
+    renderBoard(boardEl);
 
-    const holder = players[curIdx];           // bei wem ist sie explodiert
-    const winners = pickWinners();            // wer bekommt den Punkt (Modus)
-    winners.forEach(p => p.points += 1);
+    // Spielende? (E1)
+    pendingWin = S.pointLimit>0 && players.some(p=>p.points>=S.pointLimit);
+    saveGame();
 
-    // Holder-Zeile
-    const held = (holder.roundMs / 1000).toFixed(1).replace(".", ",");
-    boomHolderEl.innerHTML =
-      "💣 <b>" + escapeHtml(holder.name) + "</b> ließ die Bombe explodieren · hielt sie " + held + " s";
-
-    // Label je nach Modus
-    boomWinLabelEl.textContent =
-      scoreMode === "survivors" ? "Punkte für"
-      : scoreMode === "longest" ? "Längste Haltezeit → Punkt"
-      : scoreMode === "shortest" ? "Kürzeste Haltezeit → Punkt"
-      : "Punkt für";
-
-    // Gewinner-Namen (farbig) inkl. eigener Haltezeit
-    boomWinnersEl.innerHTML = winners.map(p => {
-      const secs = (p.roundMs / 1000).toFixed(1).replace(".", ",");
-      return `<span style="color:${p.color}">${escapeHtml(p.name)}</span>` +
-             `<span class="win-time"> · hielt ${secs} s</span>`;
-    }).join("<br>");
-
-    renderBoard();
-
-    // Bildschirm 3s sperren, damit das Ende nicht versehentlich übersprungen wird
-    boomReadyAt = Date.now() + BOOM_LOCK_MS;
+    boomReadyAt=Date.now()+BOOM_LOCK_MS;
     boomHintEl.classList.add("locked");
-    boomHintEl.textContent = "… kurz warten …";
+    boomHintEl.textContent = pendingWin ? "… kurz warten …" : "… kurz warten …";
     boomEl.classList.add("show");
-    setTimeout(() => {
-      boomHintEl.classList.remove("locked");
-      boomHintEl.textContent = "👆 Tippen für die nächste Runde";
-    }, BOOM_LOCK_MS);
+    setTimeout(()=>{ boomHintEl.classList.remove("locked");
+      boomHintEl.textContent = pendingWin ? "👆 Tippen zum Sieger" : "👆 Tippen für die nächste Runde"; }, BOOM_LOCK_MS);
   }
 
-  // Bestimmt anhand des Einstellungs-Modus, wer den Punkt bekommt
   function pickWinners(){
-    if (scoreMode === "survivors"){
-      return players.filter((_, i) => i !== curIdx);
+    if(S.scoreMode==="survivors") return players.filter((_,i)=>i!==curIdx);
+    if(S.scoreMode==="longest"||S.scoreMode==="shortest"){
+      const held=players.filter(p=>p.roundMs>0), pool=held.length?held:players;
+      const best=pool.reduce((a,p)=> S.scoreMode==="longest"?Math.max(a,p.roundMs):Math.min(a,p.roundMs), S.scoreMode==="longest"?-Infinity:Infinity);
+      return pool.filter(p=>p.roundMs===best);
     }
-    if (scoreMode === "longest" || scoreMode === "shortest"){
-      // nur Spieler berücksichtigen, die die Bombe überhaupt gehalten haben
-      const held = players.filter(p => p.roundMs > 0);
-      const pool = held.length ? held : players;
-      const best = pool.reduce((acc, p) =>
-        scoreMode === "longest" ? Math.max(acc, p.roundMs) : Math.min(acc, p.roundMs),
-        scoreMode === "longest" ? -Infinity : Infinity);
-      return pool.filter(p => p.roundMs === best);      // bei Gleichstand: alle
-    }
-    // "explode" (Standard): der Spieler, bei dem sie hochging
     return [players[curIdx]];
   }
+
+  // =======================================================
+  //  Sieger-Screen (E1/H1)
+  // =======================================================
+  function showWinner(){
+    gameOver=true;
+    const sorted=[...players].sort((a,b)=> S.winBy==="most" ? b.points-a.points : a.points-b.points);
+    const best=sorted[0].points, winners=sorted.filter(p=>p.points===best);
+    $("#winName").innerHTML=winners.map(p=>`<span style="color:${p.color}">${escapeHtml(p.name)}</span>`).join(" & ");
+    renderBoard($("#winBoard"), true, new Set(winners));
+    $("#winScreen").classList.add("show");
+    launchConfetti();
+  }
+  function launchConfetti(){
+    confettiEl.innerHTML=""; confettiEl.classList.add("show");
+    for(let i=0;i<70;i++){ const s=document.createElement("div"); s.className="cpiece";
+      s.style.left=Math.random()*100+"vw"; s.style.background=randColor();
+      s.style.animationDuration=(2+Math.random()*2.5)+"s"; s.style.animationDelay=(Math.random()*0.8)+"s";
+      s.style.width=(6+Math.random()*8)+"px"; s.style.height=(8+Math.random()*10)+"px";
+      confettiEl.appendChild(s); }
+    setTimeout(()=>{ confettiEl.classList.remove("show"); confettiEl.innerHTML=""; }, 5000);
+  }
+  $("#winNew").addEventListener("click", ()=>{ clearGame(); hideAllOverlays(); setScreen("setup"); });
+  $("#winContinue").addEventListener("click", ()=>{ pendingWin=false; gameOver=false; hideAllOverlays();
+    curIdx=(curIdx+1)%players.length; newRound(false); });
+
+  // =======================================================
+  //  Pause (C2), Runden-Vorschau (C3), Punktestand (H3)
+  // =======================================================
+  $("#pauseBtn").addEventListener("click", e=>{ e.stopPropagation(); if(!running) return;
+    if(paused) resumeGame(); else pauseGame(); });
+  $("#resumeGameBtn").addEventListener("click", e=>{ e.stopPropagation(); resumeGame(); });
+  function pauseGame(){ if(paused||!running) return; paused=true; pauseStart=Date.now();
+    stopTicking(); clearWobble(); if(rafId) cancelAnimationFrame(rafId);
+    renderBoard($("#pauseBoard")); $("#pauseScreen").classList.add("show"); }
+  function resumeGame(){ if(!paused) return; const d=Date.now()-pauseStart; explodeAt+=d; turnStart+=d; lastFrame=Date.now();
+    paused=false; $("#pauseScreen").classList.remove("show"); startTicking(); scheduleWobble(); loop(); }
+
+  function showIntro(){
+    $("#introRound").textContent="Runde "+roundNo;
+    renderBoard($("#introBoard"));
+    $("#introScreen").classList.add("show");
+  }
+  $("#introScreen").addEventListener("click", ()=>{ $("#introScreen").classList.remove("show"); beginRound(); });
+
+  $("#boardBtn").addEventListener("click", e=>{ e.stopPropagation(); renderBoard($("#peekBoard")); $("#peekScreen").classList.add("show"); });
+  $("#peekClose").addEventListener("click", e=>{ e.stopPropagation(); $("#peekScreen").classList.remove("show"); });
 
   // =======================================================
   //  Rendering
   // =======================================================
   function renderTopbar(){
-    topbarEl.innerHTML = "";
-    players.forEach((p, i) => {
-      const chip = document.createElement("div");
-      chip.className = "chip" + (i === curIdx ? " cur" : "");
-      chip.style.color = p.color;
-      chip.innerHTML = `<span class="dot" style="background:${p.color}"></span>
-                        <span style="color:var(--ink)">${escapeHtml(p.name)}</span>
-                        <span class="chold" title="Gesamt-Haltezeit diese Runde">0,0s</span>
-                        <span class="pts">${p.points}</span>`;
-      topbarEl.appendChild(chip);
-    });
+    topbarEl.innerHTML="";
+    players.forEach((p,i)=>{ const chip=document.createElement("div");
+      chip.className="chip"+(i===curIdx?" cur":""); chip.style.color=p.color;
+      chip.innerHTML=`<span class="dot" style="background:${p.color}"></span>`+
+        `<span style="color:var(--ink)">${escapeHtml(p.name)}</span>`+
+        `<span class="chold">0,0s</span><span class="pts">${p.points}</span>`;
+      topbarEl.appendChild(chip); });
   }
-
-  function refreshTopbarPoints(){
-    [...topbarEl.children].forEach((chip, i) => {
-      chip.querySelector(".pts").textContent = players[i].points;
-    });
-  }
-
-  function renderBoard(){
-    refreshTopbarPoints();
-    const max = Math.max(...players.map(p => p.points));
-    const sorted = [...players].sort((a, b) => b.points - a.points);
-    boardEl.innerHTML = "";
-    sorted.forEach(p => {
-      const r = document.createElement("div");
-      r.className = "r" + (p.points === max && max > 0 ? " lead" : "");
-      r.innerHTML = `<span class="dot" style="background:${p.color}"></span>
-                     <span class="nm">${escapeHtml(p.name)}</span>
-                     <span class="pt">${p.points}</span>`;
-      boardEl.appendChild(r);
-    });
-  }
-
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c =>
-      ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  function renderBoard(el, showStats, winSet){
+    const max=Math.max(...players.map(p=>p.points));
+    const sorted=[...players].sort((a,b)=>b.points-a.points);
+    el.innerHTML="";
+    sorted.forEach(p=>{ const r=document.createElement("div");
+      const lead = winSet ? winSet.has(p) : (p.points===max && max>0);
+      r.className="r"+(lead?" lead":"");
+      let stat = showStats ? `<span class="st">💥${p.explosions} · ⌀${fmt(p.totalHold)}s</span>` : "";
+      r.innerHTML=`<span class="dot" style="background:${p.color}"></span>`+
+        `<span class="nm">${escapeHtml(p.name)}${lead&&winSet?' <span class="crown">👑</span>':''}</span>`+
+        stat+`<span class="pt">${p.points}</span>`;
+      el.appendChild(r); });
   }
 
   // =======================================================
-  //  Eingaben (Tippen)
+  //  Eingaben
   // =======================================================
-  // Weiterschalten mit Doppelklick-Schutz: nach jedem Klick 0,5s gesperrt,
-  // in dieser Zeit wird der versteckte Timer ebenfalls pausiert.
   function tryAdvance(){
-    if (!running) return;
-    const now = Date.now();
-    if (now < clickLockUntil){
-      // Noch gesperrt: schnelles Weitertippen hält die Sperre aufrecht,
-      // damit man nicht durch Mehrfach-Tippen doch früher weiterschaltet.
-      clickLockUntil = now + CLICK_LOCK_MS;
-      return;
-    }
-    clickLockUntil = now + CLICK_LOCK_MS;
-    explodeAt += CLICK_LOCK_MS;                 // Timer 0,5s anhalten (Pause)
-    nextPlayer();
+    if(!running||paused) return;
+    const now=Date.now();
+    if(now<clickLockUntil){ clickLockUntil=now+CLICK_LOCK_MS; return; }
+    clickLockUntil=now+CLICK_LOCK_MS; explodeAt+=CLICK_LOCK_MS; nextPlayer();
   }
+  nextBtn.addEventListener("click", e=>{ e.stopPropagation(); tryAdvance(); });
+  gameEl.addEventListener("click", e=>{ if(e.target.closest(".corner")) return; if(S.control==="anywhere") tryAdvance(); });
+  bombEl.addEventListener("click", e=>{ if(!bombMode()) return; e.stopPropagation();
+    if(S.control==="bombTap") repositionBomb(); tryAdvance(); });
 
-  // Weiter-Knopf = nächster Spieler
-  nextBtn.addEventListener("click", (e) => {
-    e.stopPropagation();                       // kein doppeltes Weiterschalten
-    tryAdvance();
-  });
+  boomEl.addEventListener("click", ()=>{ if(Date.now()<boomReadyAt) return; audioInit();
+    if(pendingWin){ showWinner(); return; }
+    curIdx=(curIdx+1)%players.length; newRound(false); });
 
-  // Tippen auf das Spielfeld = ebenfalls nächster Spieler
-  gameEl.addEventListener("click", (e) => {
-    if (e.target.closest(".corner")) return;   // Beenden-Button ignorieren
-    tryAdvance();
-  });
-
-  // Tippen auf Explosions-Overlay = nächste Runde starten (erst nach 3s-Sperre)
-  boomEl.addEventListener("click", () => {
-    if (Date.now() < boomReadyAt) return;      // Bildschirm noch gesperrt
-    audioInit();
-    // Rotation läuft weiter: nächster Spieler beginnt die neue Runde
-    curIdx = (curIdx + 1) % players.length;
-    newRound(false);
-  });
-
-  // ---------- PWA / Offline ----------
-  // In der Android-APK (appassets-Host) kein Service-Worker nötig.
-  if ("serviceWorker" in navigator && location.hostname !== "appassets.androidplatform.net"){
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js").catch(() => {});
+  // =======================================================
+  //  PWA / Cache / Auto-Update (A1)
+  // =======================================================
+  const isApp = location.hostname==="appassets.androidplatform.net";
+  if("serviceWorker" in navigator && !isApp){
+    let reloaded=false;
+    navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(reloaded) return; reloaded=true; location.reload(); });
+    window.addEventListener("load", ()=>{
+      navigator.serviceWorker.register("./sw.js").then(reg=>{
+        reg.addEventListener("updatefound", ()=>{ const nw=reg.installing; if(!nw) return;
+          nw.addEventListener("statechange", ()=>{ if(nw.state==="installed" && navigator.serviceWorker.controller) $("#updateBanner").classList.add("show"); }); });
+      }).catch(()=>{});
     });
   }
+  $("#updateBanner").addEventListener("click", ()=>{ location.reload(); });
 
-  // ---------- Cache leeren & neu laden ----------
-  // Service-Worker abmelden + alle Caches löschen, dann frisch neu laden.
-  // localStorage (Einstellungen) bleibt erhalten.
-  async function clearCacheAndReload(btn){
-    try {
-      if ("serviceWorker" in navigator){
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map(r => r.unregister()));
-      }
-      if (window.caches){
-        const keys = await caches.keys();
-        await Promise.all(keys.map(k => caches.delete(k)));
-      }
-    } catch (e) { /* egal – trotzdem neu laden */ }
-    const u = new URL(location.href);
-    u.searchParams.set("nc", Date.now().toString());   // Browser-HTTP-Cache umgehen
-    location.replace(u.toString());
+  async function clearCacheAndReload(){
+    try{ if("serviceWorker" in navigator){ const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r=>r.unregister())); }
+      if(window.caches){ const keys=await caches.keys(); await Promise.all(keys.map(k=>caches.delete(k))); } }catch(e){}
+    const u=new URL(location.href); u.searchParams.set("nc", Date.now().toString()); location.replace(u.toString());
   }
-  {
-    const b = $("#cacheBtn");
-    if (b) b.addEventListener("click", () => {
-      b.disabled = true; b.textContent = "🧹 leere …";
-      clearCacheAndReload(b);
-    });
-  }
+  $("#cacheBtn").addEventListener("click", ()=>{ const b=$("#cacheBtn"); b.disabled=true; b.textContent="leere …"; clearCacheAndReload(); });
+
+  // =======================================================
+  //  Init
+  // =======================================================
+  loadSettings();
+  loadPlayers();
+  updateResumeBtn();
 
 })();
 </script>
