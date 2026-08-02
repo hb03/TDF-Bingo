@@ -183,6 +183,18 @@
     z-index:70; background:var(--ok); color:#062715; font-weight:700; padding:10px 16px; border-radius:12px;
     box-shadow:0 8px 22px rgba(0,0,0,.4); transition:transform .35s ease; max-width:90vw; text-align:center; }
   .ach-toast.show{ transform:translateX(-50%) translateY(0); }
+  /* Kategorien-Editor */
+  .cat-add{ display:flex; gap:8px; width:100%; max-width:440px; margin-bottom:8px; }
+  .cat-add input{ flex:1; min-width:0; background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:12px; padding:12px; font-size:1rem; font-family:inherit; }
+  .cat-add button{ flex:0 0 auto; width:52px; border:none; border-radius:12px; background:var(--accent2); color:var(--btnink); font-size:1.5rem; font-weight:800; cursor:pointer; }
+  .cat-toolbar{ display:flex; align-items:center; justify-content:space-between; width:100%; max-width:440px; margin-bottom:6px; gap:8px; flex-wrap:wrap; }
+  .cat-toolbar button{ font-family:inherit; cursor:pointer; border:2px solid var(--line); background:var(--bg); color:var(--ink); border-radius:10px; padding:6px 10px; font-weight:600; font-size:.82rem; margin-left:6px; }
+  .cat-list{ width:100%; max-width:440px; overflow-y:auto; -webkit-overflow-scrolling:touch; flex:1; min-height:100px; border-top:1px solid var(--line); }
+  .cat-row{ display:flex; align-items:center; gap:12px; padding:11px 4px; border-bottom:1px solid var(--line); }
+  .cat-row input[type=checkbox]{ width:24px; height:24px; accent-color:var(--ok); flex:0 0 auto; }
+  .cat-row .cn{ flex:1; font-weight:600; }
+  .cat-row.off .cn{ opacity:.42; text-decoration:line-through; }
+  .cat-row .cdel{ flex:0 0 auto; width:36px; height:36px; border:none; border-radius:9px; background:rgba(255,90,60,.16); color:var(--accent); font-size:1.1rem; cursor:pointer; }
   .board .r .team{ font-size:.72rem; color:var(--muted); background:rgba(255,255,255,.1); border-radius:6px; padding:1px 6px; }
   .board .r.head{ background:transparent; border:none; font-weight:800; opacity:.7; padding-bottom:0; margin-bottom:2px; }
 
@@ -458,10 +470,18 @@
 <!-- Kategorien-Editor -->
 <div id="catEditor" class="overlay" style="justify-content:flex-start; padding-top:40px">
   <h2 data-i18n="cats_title" style="margin:0 0 6px">🗂️ Kategorien</h2>
-  <p class="set-hint-sm" data-i18n="cats_hint" style="max-width:420px">Eine Kategorie pro Zeile. Im Kategorien-Modus muss man vor dem Weitergeben ein passendes Wort nennen.</p>
-  <textarea id="catText" style="width:100%;max-width:440px;height:44vh;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:1rem;font-family:inherit"></textarea>
+  <p class="set-hint-sm" data-i18n="cats_hint2" style="max-width:440px;margin:0 0 10px">Häkchen = aktiv. Deaktivierte bleiben in der Liste, kommen aber nicht dran. Löschen mit ✕.</p>
+  <div class="cat-add">
+    <input id="catNew" type="text" maxlength="40" placeholder="Neue Kategorie …" autocomplete="off">
+    <button id="catAdd" type="button" title="Hinzufügen">＋</button>
+  </div>
+  <div class="cat-toolbar">
+    <span class="set-hint-sm"><b id="catCount">–</b></span>
+    <span><button id="catAll" type="button" data-i18n="all">Alle</button><button id="catNone" type="button" data-i18n="none">Keine</button><button id="catDefault" type="button" data-i18n="cats_addstd">↺ Standard ergänzen</button></span>
+  </div>
+  <div id="catList" class="cat-list"></div>
   <div class="row2" style="max-width:440px;width:100%;margin-top:10px">
-    <button id="catReset" class="btn ghost" type="button" data-i18n="cats_reset">↺ Standard</button>
+    <button id="catCancel" class="btn ghost" type="button" data-i18n="cancel">✕ Abbrechen</button>
     <button id="catSave" class="btn start" type="button" data-i18n="save">✓ Speichern</button>
   </div>
 </div>
@@ -510,7 +530,9 @@
       set_skin:"Bomben-Symbol", set_lang:"Sprache / Language", set_modes:"Spielmodi",
       set_category:"🗂️ Kategorien-Modus (Wort nennen & weitergeben)", set_editcats:"Kategorien bearbeiten",
       set_teams:"Teams", off:"Aus", teams_hint:"Spieler werden abwechselnd auf die Teams verteilt; gewertet wird pro Team.",
-      cats_title:"🗂️ Kategorien", cats_hint:"Eine Kategorie pro Zeile. Im Kategorien-Modus muss man vor dem Weitergeben ein passendes Wort nennen.", cats_reset:"↺ Standard",
+      cats_title:"🗂️ Kategorien",
+      cats_hint2:"Häkchen = aktiv. Deaktivierte bleiben in der Liste, kommen aber nicht dran. Löschen mit ✕.",
+      all:"Alle", none:"Keine", cats_addstd:"↺ Standard ergänzen", active_label:"aktiv", cat_new_ph:"Neue Kategorie …",
       stats_title:"📊 Statistik", stats_clear:"🗑️ Verlauf löschen", ach_title:"🏅 Erfolge",
       update_banner:"🔄 Neue Version verfügbar – jetzt aktualisieren",
       hint_anywhere:"Knopf drücken oder Bildschirm antippen", hint_button:"Nur der „Weiter“-Knopf schaltet weiter",
@@ -533,7 +555,9 @@
       set_skin:"Bomb symbol", set_lang:"Language / Sprache", set_modes:"Game modes",
       set_category:"🗂️ Category mode (say a word & pass)", set_editcats:"Edit categories",
       set_teams:"Teams", off:"Off", teams_hint:"Players are split across teams alternately; scoring is per team.",
-      cats_title:"🗂️ Categories", cats_hint:"One category per line. In category mode you must say a matching word before passing.", cats_reset:"↺ Default",
+      cats_title:"🗂️ Categories",
+      cats_hint2:"Checkmark = active. Disabled ones stay in the list but won't appear. Delete with ✕.",
+      all:"All", none:"None", cats_addstd:"↺ Add defaults", active_label:"active", cat_new_ph:"New category …",
       stats_title:"📊 Stats", stats_clear:"🗑️ Clear history", ach_title:"🏅 Achievements",
       update_banner:"🔄 New version available – update now",
       hint_anywhere:"Tap the button or the screen", hint_button:"Only the “Next” button passes",
@@ -611,8 +635,14 @@
     "berühmte Person","Erfinder","historische Figur","König oder Königin",
     "Feiertag","Monat","Wochentag","etwas im Weltall","Dinosaurier"
   ];
-  function loadCats(){ try{ const c=JSON.parse(localStorage.getItem("bombe.categories")||"null"); if(Array.isArray(c)&&c.length) return c; }catch(e){} return DEFAULT_CATS.slice(); }
-  function saveCats(c){ try{ localStorage.setItem("bombe.categories", JSON.stringify(c)); }catch(e){} }
+  // Kategorien als {name, on} – deaktivierte bleiben erhalten (nicht vergessen)
+  function normCats(arr){ return arr.map(x=> typeof x==="string" ? {name:x.trim(), on:true}
+      : {name:String((x&&x.name)||"").trim(), on:!(x&&x.on===false)} ).filter(c=>c.name); }
+  function loadCats(){ try{ const c=JSON.parse(localStorage.getItem("bombe.categories")||"null");
+      if(Array.isArray(c)&&c.length) return normCats(c); }catch(e){}
+      return DEFAULT_CATS.map(n=>({name:n, on:true})); }
+  function saveCats(){ try{ localStorage.setItem("bombe.categories", JSON.stringify(categories)); }catch(e){} }
+  function activeCats(){ const a=categories.filter(c=>c.on).map(c=>c.name); return a.length ? a : categories.map(c=>c.name); }
   let categories = loadCats();
 
   function loadHistory(){ try{ return JSON.parse(localStorage.getItem("bombe.history")||"[]")||[]; }catch(e){ return []; } }
@@ -960,7 +990,8 @@
     bombEl.textContent = S.bombSkin || "💣";
     // Kategorien-Modus: zufällige Kategorie zeigen & ansagen
     const cb=$("#catBanner");
-    if(S.categoryMode && categories.length){ const c=categories[Math.floor(Math.random()*categories.length)];
+    const catPool = activeCats();
+    if(S.categoryMode && catPool.length){ const c=catPool[Math.floor(Math.random()*catPool.length)];
       let html='<span class="cat-lbl">'+t("category_label")+'</span>'+escapeHtml(c); let say=c;
       if(S.categoryLetter){ const LET="ABCDEFGHIKLMNOPRSTUW"; const L=LET[Math.floor(Math.random()*LET.length)];
         html+='<span class="cat-letter"><span class="cat-letter-lbl">'+t("letter_label")+'</span><b>'+L+'</b></span>';
@@ -1213,10 +1244,28 @@
   // =======================================================
   //  Kategorien-Editor
   // =======================================================
-  $("#editCats").addEventListener("click", ()=>{ $("#catText").value=categories.join("\n"); $("#catEditor").classList.add("show"); });
-  $("#catSave").addEventListener("click", ()=>{ const list=$("#catText").value.split("\n").map(s=>s.trim()).filter(Boolean);
-    categories = list.length?list:DEFAULT_CATS.slice(); saveCats(categories); $("#catEditor").classList.remove("show"); });
-  $("#catReset").addEventListener("click", ()=>{ $("#catText").value=DEFAULT_CATS.join("\n"); });
+  let catDraft=[];
+  function updateCatCount(){ const on=catDraft.filter(c=>c.on).length; $("#catCount").textContent = on+" / "+catDraft.length+" "+t("active_label"); }
+  function renderCatList(){
+    const el=$("#catList"); el.innerHTML="";
+    catDraft.forEach((c,i)=>{ const r=document.createElement("div"); r.className="cat-row"+(c.on?"":" off");
+      r.innerHTML=`<input type="checkbox" ${c.on?"checked":""}><span class="cn">${escapeHtml(c.name)}</span><button class="cdel" type="button" title="✕">✕</button>`;
+      r.querySelector("input").addEventListener("change", e=>{ c.on=e.target.checked; r.classList.toggle("off",!c.on); updateCatCount(); });
+      r.querySelector(".cdel").addEventListener("click", ()=>{ catDraft.splice(i,1); renderCatList(); });
+      el.appendChild(r); });
+    updateCatCount();
+  }
+  function addCat(){ const inp=$("#catNew"); const v=inp.value.trim(); if(!v) return;
+    if(!catDraft.some(c=>c.name.toLowerCase()===v.toLowerCase())) catDraft.unshift({name:v, on:true});
+    inp.value=""; renderCatList(); inp.focus(); }
+  $("#editCats").addEventListener("click", ()=>{ catDraft=categories.map(c=>({...c})); $("#catNew").placeholder=t("cat_new_ph"); renderCatList(); $("#catEditor").classList.add("show"); });
+  $("#catAdd").addEventListener("click", addCat);
+  $("#catNew").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addCat(); } });
+  $("#catAll").addEventListener("click", ()=>{ catDraft.forEach(c=>c.on=true); renderCatList(); });
+  $("#catNone").addEventListener("click", ()=>{ catDraft.forEach(c=>c.on=false); renderCatList(); });
+  $("#catDefault").addEventListener("click", ()=>{ DEFAULT_CATS.forEach(n=>{ if(!catDraft.some(c=>c.name.toLowerCase()===n.toLowerCase())) catDraft.push({name:n, on:true}); }); renderCatList(); });
+  $("#catSave").addEventListener("click", ()=>{ categories = catDraft.length?catDraft:DEFAULT_CATS.map(n=>({name:n,on:true})); saveCats(); $("#catEditor").classList.remove("show"); });
+  $("#catCancel").addEventListener("click", ()=>{ $("#catEditor").classList.remove("show"); });
 
   // =======================================================
   //  Rendering
