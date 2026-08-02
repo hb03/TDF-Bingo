@@ -284,6 +284,12 @@
           <label class="radio"><input type="radio" name="control" value="bombTap"><span>Nur die Bombe antippen – springt nach jedem Tipp</span></label>
           <label class="radio"><input type="radio" name="control" value="bombCatch"><span>Bombe fangen – sie bewegt sich selbst 🏃</span></label>
         </div>
+        <div id="catchOpts" style="margin-top:10px; border-top:1px solid var(--line); padding-top:10px">
+          <label class="set-label" style="margin-bottom:8px">Tempo beim „Bombe fangen"
+            <span class="set-hint-sm">(nur für diesen Modus)</span></label>
+          <div class="slider-row">🐢<input id="setCatchSpeed" type="range" min="1" max="12" value="5"><span id="catchSpeedVal" style="min-width:2.4em;text-align:right;font-variant-numeric:tabular-nums">5</span>🐇</div>
+          <label class="toggle"><input id="setCatchRandom" type="checkbox"><span>🎲 Zufalls-Tempo – die Bombe wechselt laufend die Geschwindigkeit</span></label>
+        </div>
       </div>
 
       <div class="set-block">
@@ -425,7 +431,7 @@
   let rafId = null, wobbleTimer = null;
   let clickLockUntil = 0, boomReadyAt = 0, pauseStart = 0;
   // Bombe-Bewegung
-  let bombX=0, bombY=0, bombVX=0, bombVY=0;
+  let bombX=0, bombY=0, bombVX=0, bombVY=0, nextSpeedChange=0;
 
   const CLICK_LOCK_MS = 500, BOOM_LOCK_MS = 3000;
 
@@ -434,7 +440,8 @@
     durMin:10, durMax:60, scoreMode:"explode", startMode:"first",
     sound:true, vibrate:true, volume:0.8, soundSet:"bombe", finalTicks:false,
     theme:"lila", big:false, wobble:true, visibleTimer:false, accelerate:false,
-    pointLimit:0, winBy:"fewest", control:"anywhere", roundIntro:false, showBoard:false
+    pointLimit:0, winBy:"fewest", control:"anywhere", roundIntro:false, showBoard:false,
+    catchSpeed:5, catchRandom:false
   };
   let S = Object.assign({}, DEFAULTS);
 
@@ -563,6 +570,7 @@
     $("#setSound").checked=S.sound; $("#setVolume").value=Math.round(S.volume*100);
     $("#setFinal").checked=S.finalTicks; $("#setVibrate").checked=S.vibrate;
     $("#setBig").checked=S.big; $("#setIntro").checked=S.roundIntro; $("#setBoard").checked=S.showBoard;
+    $("#setCatchSpeed").value=S.catchSpeed; $("#catchSpeedVal").textContent=S.catchSpeed; $("#setCatchRandom").checked=S.catchRandom;
     markTheme(S.theme);
   }
   function checkRadio(name,val){ const r=document.querySelector(`input[name="${name}"][value="${val}"]`); if(r) r.checked=true; }
@@ -583,6 +591,7 @@
     S.sound=$("#setSound").checked; S.volume=clamp(parseInt($("#setVolume").value,10)/100||0,0,1);
     S.finalTicks=$("#setFinal").checked; S.vibrate=$("#setVibrate").checked;
     S.big=$("#setBig").checked; S.roundIntro=$("#setIntro").checked; S.showBoard=$("#setBoard").checked;
+    S.catchSpeed=clamp(parseInt($("#setCatchSpeed").value,10)||5,1,12); S.catchRandom=$("#setCatchRandom").checked;
     S.theme=currentThemeSel();
   }
   let themeSel=DEFAULTS.theme;
@@ -602,6 +611,7 @@
   // Große-Schrift-Vorschau live
   $("#setBig").addEventListener("change", e=> document.documentElement.classList.toggle("big", e.target.checked));
   $("#setVolume").addEventListener("input", e=>{ if(!actx) audioInit(); setVolume(clamp(e.target.value/100,0,1)); });
+  $("#setCatchSpeed").addEventListener("input", e=>{ $("#catchSpeedVal").textContent=e.target.value; });
 
   // Presets (E3)
   const PRESETS = {
@@ -733,16 +743,27 @@
   // ---------- Bombe bewegen ----------
   function fieldSize(){ return { w:playfieldEl.clientWidth, h:playfieldEl.clientHeight,
       bw:bombEl.offsetWidth||120, bh:bombEl.offsetHeight||120 }; }
+  // Grund-Tempo (px/s) aus dem Regler; Level 1 (langsam) … 12 (sehr schnell)
+  function bombBaseSpeed(){ const {w,h}=fieldSize(); return Math.max(w,h) * 0.11 * (S.catchSpeed||5); }
+  // Neue Richtung + Tempo setzen (bei Zufalls-Tempo mit zufälligem Faktor)
+  function setBombVel(keepDir){
+    const sp = bombBaseSpeed() * (S.catchRandom ? (0.45 + Math.random()*1.55) : 1);
+    const ang = (keepDir && (bombVX||bombVY)) ? Math.atan2(bombVY,bombVX) : Math.random()*Math.PI*2;
+    bombVX=Math.cos(ang)*sp; bombVY=Math.sin(ang)*sp;
+    scheduleSpeedChange();
+  }
+  function scheduleSpeedChange(){ nextSpeedChange = Date.now() + 500 + Math.random()*1300; }
   function placeBombStart(){
     const {w,h,bw,bh}=fieldSize();
     bombX=(w-bw)/2; bombY=(h-bh)/2;
-    const ang=Math.random()*Math.PI*2, sp=Math.max(w,h)*0.35;   // px/s
-    bombVX=Math.cos(ang)*sp; bombVY=Math.sin(ang)*sp;
+    setBombVel(false);
     drawBomb();
   }
   function repositionBomb(){ const {w,h,bw,bh}=fieldSize(); bombX=Math.random()*(w-bw); bombY=Math.random()*(h-bh); drawBomb(); }
   function moveBomb(dt){
     const {w,h,bw,bh}=fieldSize(); dt=Math.min(dt,0.05);
+    // Zufalls-Tempo: laufend Geschwindigkeit (und ab und zu Richtung) neu würfeln
+    if(S.catchRandom && Date.now()>nextSpeedChange) setBombVel(Math.random()<0.6);
     bombX+=bombVX*dt; bombY+=bombVY*dt;
     if(bombX<0){ bombX=0; bombVX=Math.abs(bombVX); } else if(bombX>w-bw){ bombX=w-bw; bombVX=-Math.abs(bombVX); }
     if(bombY<0){ bombY=0; bombVY=Math.abs(bombVY); } else if(bombY>h-bh){ bombY=h-bh; bombVY=-Math.abs(bombVY); }
@@ -759,8 +780,7 @@
     const seg=Date.now()-turnStart; p.roundMs+=seg; p.totalHold+=seg; if(seg>p.maxHold) p.maxHold=seg; }
 
   function nextPlayer(){ commitHold(); curIdx=(curIdx+1)%players.length; updateCurrent(); playTick(true);
-    if(S.control==="bombCatch"){ const ang=Math.random()*Math.PI*2, {w,h}=fieldSize(), sp=Math.max(w,h)*(0.35+roundNo*0.02);
-      bombVX=Math.cos(ang)*sp; bombVY=Math.sin(ang)*sp; } }
+    if(S.control==="bombCatch") setBombVel(false); }   // beim Weitergeben neue Richtung/Tempo
 
   // ---------- Explosion ----------
   function explode(){
