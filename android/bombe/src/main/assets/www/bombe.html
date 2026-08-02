@@ -175,6 +175,9 @@
     border-radius:16px; padding:14px 18px; font-weight:800; line-height:1.15;
     font-size:clamp(1.5rem, 7vw, 2.4rem); box-shadow:0 6px 18px rgba(255,160,40,.35); }
   .cat-banner .cat-lbl{ display:block; font-size:.5em; font-weight:700; opacity:.8; text-transform:uppercase; letter-spacing:2px; margin-bottom:2px; }
+  .cat-letter{ display:flex; align-items:center; justify-content:center; gap:.45em; margin-top:8px; font-size:.5em; }
+  .cat-letter-lbl{ text-transform:uppercase; letter-spacing:2px; opacity:.85; }
+  .cat-letter b{ font-size:2.1em; line-height:1; background:var(--btnink); color:var(--accent2); border-radius:12px; padding:.02em .34em; box-shadow:0 3px 10px rgba(0,0,0,.3); }
   /* Erfolgs-Toast */
   .ach-toast{ position:fixed; left:50%; transform:translateX(-50%) translateY(-120%); top:max(12px,env(safe-area-inset-top));
     z-index:70; background:var(--ok); color:#062715; font-weight:700; padding:10px 16px; border-radius:12px;
@@ -518,7 +521,8 @@
       winner:"Sieger", ready:"Bereit?", tap_start:"👆 Tippen zum Starten", pause:"Pause", resume:"▶︎ Weiter",
       standings:"Punktestand", round:"Runde", new_game:"🔄 Neues Spiel", keep_playing:"Weiterspielen",
       no_games:"Noch keine Spiele gespielt.", king:"👑 Bomben-König", best_hold:"⏱ Längste Haltezeit",
-      boom:"Bumm", team:"Team", won:"Siege", tts_test:"🔊 Ansage testen", category_label:"Kategorie"
+      boom:"Bumm", team:"Team", won:"Siege", tts_test:"🔊 Ansage testen", category_label:"Kategorie",
+      letter_label:"Buchstabe", with_letter:"mit"
     },
     en:{
       sub:"Enter names and go. Whoever holds it at the boom gets a point.",
@@ -540,7 +544,8 @@
       winner:"Winner", ready:"Ready?", tap_start:"👆 Tap to start", pause:"Pause", resume:"▶︎ Continue",
       standings:"Standings", round:"Round", new_game:"🔄 New game", keep_playing:"Keep playing",
       no_games:"No games played yet.", king:"👑 Bomb king", best_hold:"⏱ Longest hold",
-      boom:"Boom", team:"Team", won:"wins", tts_test:"🔊 Test announcement", category_label:"Category"
+      boom:"Boom", team:"Team", won:"wins", tts_test:"🔊 Test announcement", category_label:"Category",
+      letter_label:"Letter", with_letter:"with"
     }
   };
   function t(key, vars){ let s=(I18N[LANG]&&I18N[LANG][key]); if(s==null) s=I18N.de[key]; if(s==null) s=key;
@@ -903,6 +908,11 @@
     try{ const u=new SpeechSynthesisUtterance(" "); u.volume=0; window.speechSynthesis.speak(u); ttsReady=true; loadVoices(); }catch(e){}
   }
   function speakNow(text, langOverride){
+    const lang = (langOverride||S.lang)==="en" ? "en" : "de";
+    // Native Android-TTS-Bruecke (in der APK) – WebViews koennen kein speechSynthesis
+    if(window.AndroidTTS && typeof window.AndroidTTS.speak==="function"){
+      try{ window.AndroidTTS.speak(String(text), lang); return; }catch(e){}
+    }
     if(!("speechSynthesis" in window)) return;
     try{
       const synth=window.speechSynthesis;
@@ -934,7 +944,11 @@
     // Kategorien-Modus: zufällige Kategorie zeigen & ansagen
     const cb=$("#catBanner");
     if(S.categoryMode && categories.length){ const c=categories[Math.floor(Math.random()*categories.length)];
-      cb.innerHTML='<span class="cat-lbl">'+t("category_label")+'</span>🗂️ '+escapeHtml(c); cb.style.display=""; speak(c); } else { cb.style.display="none"; }
+      const LET="ABCDEFGHIKLMNOPRSTUW"; const L=LET[Math.floor(Math.random()*LET.length)];
+      cb.innerHTML='<span class="cat-lbl">'+t("category_label")+'</span>'+escapeHtml(c)+
+        '<span class="cat-letter"><span class="cat-letter-lbl">'+t("letter_label")+'</span><b>'+L+'</b></span>';
+      cb.style.display=""; speak(c+" "+t("with_letter")+" "+L); }
+    else { cb.style.display="none"; }
     let base = S.durMin + Math.random()*(S.durMax-S.durMin);
     if(S.accelerate){ base = Math.max(3, base*Math.pow(0.85, roundNo-1)); }
     explodeAt = Date.now() + base*1000;
