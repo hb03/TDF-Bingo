@@ -192,9 +192,11 @@
   .cat-list{ width:100%; max-width:440px; overflow-y:auto; -webkit-overflow-scrolling:touch; flex:1; min-height:100px; border-top:1px solid var(--line); }
   .cat-row{ display:flex; align-items:center; gap:12px; padding:11px 4px; border-bottom:1px solid var(--line); }
   .cat-row input[type=checkbox]{ width:24px; height:24px; accent-color:var(--ok); flex:0 0 auto; }
-  .cat-row .cn{ flex:1; font-weight:600; }
+  .cat-row .cn{ flex:1; min-width:0; font-weight:600; }
   .cat-row.off .cn{ opacity:.42; text-decoration:line-through; }
-  .cat-row .cdel{ flex:0 0 auto; width:36px; height:36px; border:none; border-radius:9px; background:rgba(255,90,60,.16); color:var(--accent); font-size:1.1rem; cursor:pointer; }
+  .cat-row .cflag{ flex:0 0 auto; width:34px; height:34px; border:none; border-radius:9px; background:rgba(255,255,255,.06); font-size:1rem; cursor:pointer; opacity:.32; filter:grayscale(1); }
+  .cat-row .cflag.on{ opacity:1; filter:none; background:rgba(70,211,138,.18); box-shadow:0 0 0 1px var(--ok) inset; }
+  .cat-row .cdel{ flex:0 0 auto; width:34px; height:34px; border:none; border-radius:9px; background:rgba(255,90,60,.16); color:var(--accent); font-size:1.05rem; cursor:pointer; }
   .board .r .team{ font-size:.72rem; color:var(--muted); background:rgba(255,255,255,.1); border-radius:6px; padding:1px 6px; }
   .board .r.head{ background:transparent; border:none; font-weight:800; opacity:.7; padding-bottom:0; margin-bottom:2px; }
 
@@ -378,6 +380,7 @@
         <label class="set-label" data-i18n="set_modes">Spielmodi</label>
         <label class="toggle"><input id="setCategory" type="checkbox"><span data-i18n="set_category">🗂️ Kategorien-Modus (Wort nennen &amp; weitergeben)</span></label>
         <label class="toggle"><input id="setCatLetter" type="checkbox"><span data-i18n="set_catletter">🔤 … zusätzlich mit Buchstabe (z.&nbsp;B. „Tier mit A")</span></label>
+        <label class="toggle"><input id="setKids" type="checkbox"><span data-i18n="set_kids">🧒 Kinder-Modus (nur kindgerechte Kategorien)</span></label>
         <div class="set-hint-sm" style="margin-top:8px" data-i18n="set_chg_hint">Nach jedem Spieler neu würfeln:</div>
         <label class="toggle"><input id="setCatChgCat" type="checkbox"><span data-i18n="set_chg_cat">🔄 Kategorie wechseln</span></label>
         <label class="toggle"><input id="setCatChgLetter" type="checkbox"><span data-i18n="set_chg_letter">🔄 Buchstabe wechseln</span></label>
@@ -537,8 +540,9 @@
       set_category:"🗂️ Kategorien-Modus (Wort nennen & weitergeben)", set_editcats:"Kategorien bearbeiten",
       set_teams:"Teams", off:"Aus", teams_hint:"Spieler werden abwechselnd auf die Teams verteilt; gewertet wird pro Team.",
       cats_title:"🗂️ Kategorien",
-      cats_hint2:"Häkchen = aktiv. Deaktivierte bleiben in der Liste, kommen aber nicht dran. Löschen mit ✕.",
+      cats_hint2:"Häkchen = aktiv. 🧒 = kindgerecht · 🔤 = mit Buchstabe spielbar. Antippen zum Umschalten, ✕ = löschen.",
       all:"Alle", none:"Keine", cats_addstd:"↺ Standard ergänzen", active_label:"aktiv", cat_new_ph:"Neue Kategorie …",
+      set_kids:"🧒 Kinder-Modus (nur kindgerechte Kategorien)", flag_kids:"kindgerecht", flag_letter:"mit Buchstabe möglich", delete:"löschen",
       stats_title:"📊 Statistik", stats_clear:"🗑️ Verlauf löschen", ach_title:"🏅 Erfolge",
       update_banner:"🔄 Neue Version verfügbar – jetzt aktualisieren",
       hint_anywhere:"Knopf drücken oder Bildschirm antippen", hint_button:"Nur der „Weiter“-Knopf schaltet weiter",
@@ -564,8 +568,9 @@
       set_category:"🗂️ Category mode (say a word & pass)", set_editcats:"Edit categories",
       set_teams:"Teams", off:"Off", teams_hint:"Players are split across teams alternately; scoring is per team.",
       cats_title:"🗂️ Categories",
-      cats_hint2:"Checkmark = active. Disabled ones stay in the list but won't appear. Delete with ✕.",
+      cats_hint2:"Checkmark = active. 🧒 = kid-friendly · 🔤 = works with a letter. Tap to toggle, ✕ = delete.",
       all:"All", none:"None", cats_addstd:"↺ Add defaults", active_label:"active", cat_new_ph:"New category …",
+      set_kids:"🧒 Kids mode (kid-friendly categories only)", flag_kids:"kid-friendly", flag_letter:"works with a letter", delete:"delete",
       stats_title:"📊 Stats", stats_clear:"🗑️ Clear history", ach_title:"🏅 Achievements",
       update_banner:"🔄 New version available – update now",
       hint_anywhere:"Tap the button or the screen", hint_button:"Only the “Next” button passes",
@@ -618,7 +623,7 @@
     pointLimit:0, winBy:"fewest", control:"anywhere", roundIntro:false, showBoard:false,
     catchSpeed:5, catchRandom:false,
     bombSkin:"💣", tts:false, categoryMode:false, categoryLetter:true, teams:0, lang:"de",
-    catChgCat:false, catChgLetter:false, ttsCat:true, ttsLetter:true
+    catChgCat:false, catChgLetter:false, ttsCat:true, ttsLetter:true, kidsMode:false
   };
   let S = Object.assign({}, DEFAULTS);
   let skinSel="💣", teamsSel=0;
@@ -627,35 +632,85 @@
   const LETTERS="ABCDEFGHIKLMNOPRSTUW";
 
   // ---------- Persistente Zusatzdaten ----------
+  // Jede Kategorie: {name, on, kids, letterOk}
+  //   on       = aktiv (deaktivierte bleiben in der Liste erhalten)
+  //   kids     = kindgerecht  (Kinder-Modus zeigt nur diese)
+  //   letterOk = mit Buchstabe spielbar (im Buchstaben-Modus werden Kategorien
+  //              ohne diese Eigenschaft ausgeschlossen)
+  function C(name, o){ return Object.assign({name, on:true, kids:true, letterOk:true}, o||{}); }
   const DEFAULT_CATS = [
-    "Tier","Automarke","Land","Stadt","Vorname","Obst oder Gemüse","Beruf","Farbe",
-    "Fußballverein","Filmtitel","Getränk","Körperteil","etwas Rotes","Musikinstrument",
-    "Superheld","Brettspiel","Werkzeug","etwas in der Küche","Fluss","Süßigkeit",
-    "Nachname","Comicfigur","Serie","Sänger oder Band","Sportart","Kleidungsstück",
-    "Blume oder Pflanze","Vogel","Meerestier","Insekt","Hunderasse","Gebäude",
-    "Möbelstück","Spielzeug","Schulfach","Sprache","Kontinent","Insel","Gebirge","See",
-    "Planet oder Stern","Märchen","Zeichentrickfilm","Videospiel","Brettspiel-Figur",
-    "etwas Blaues","etwas Rundes","etwas Kaltes","etwas Süßes","etwas im Bad",
-    "etwas im Garten","etwas am Strand","etwas im Zoo","etwas in der Schule",
-    "Werkzeug oder Gerät","Küchengerät","Backzutat","Gewürz","Käsesorte","Pizzabelag",
-    "Eissorte","Cocktail","Frühstück","Gemüse","Nuss","Beere",
-    "Wintersport","Ballsport","Musikrichtung","Tanz","Instrument im Orchester",
-    "Beruf im Krankenhaus","Beruf auf dem Bauernhof","Werkzeug beim Bauen",
-    "Fabelwesen","griechischer Gott","Sternzeichen","Edelstein","Metall",
-    "Automarke aus Deutschland","Hauptstadt","US-Bundesstaat","deutsche Stadt",
-    "Fluss in Europa","Wüste","Naturphänomen","Wetter-Wort",
-    "Emoji-Bedeutung","App auf dem Handy","Marke","Cerealie","Fast-Food-Kette",
-    "berühmte Person","Erfinder","historische Figur","König oder Königin",
-    "Feiertag","Monat","Wochentag","etwas im Weltall","Dinosaurier"
+    // Tiere & Natur
+    C("Tier"), C("Haustier"), C("Wildtier"), C("Zootier"), C("Bauernhoftier"),
+    C("Vogel"), C("Fisch"), C("Meerestier"), C("Insekt"), C("Reptil"),
+    C("Hunderasse"), C("Dinosaurier"), C("Fabelwesen"),
+    C("Blume oder Pflanze"), C("Baum"), C("Obst oder Gemüse"), C("Gemüse"),
+    C("Beere"), C("Nuss"), C("Pilz"),
+    // Essen & Trinken
+    C("Süßigkeit"), C("Eissorte"), C("Schokoriegel"), C("Kuchen"), C("Plätzchen"),
+    C("Getränk"), C("Teesorte"), C("Saft"), C("Frühstück"), C("Pizzabelag"),
+    C("Nudelgericht"), C("Suppe"), C("Käsesorte"), C("Gewürz", {kids:false}),
+    C("Backzutat"), C("Küchengerät"), C("Fast-Food-Kette", {kids:false}),
+    C("Cocktail", {kids:false}), C("Cerealie"),
+    // Kinderwelt / Spielen
+    C("Spielzeug"), C("Comicfigur"), C("Zeichentrickfilm"), C("Zeichentrickserie"),
+    C("Disney-Film"), C("Märchen"), C("Superheld"), C("Videospiel"), C("Spielkonsole"),
+    C("Brettspiel"), C("Kartenspiel"), C("Star-Wars-Figur"), C("Harry-Potter-Figur"),
+    // Menschen / Namen
+    C("Vorname"), C("Nachname"), C("berühmte Person", {kids:false}),
+    C("Erfinder", {kids:false}), C("historische Figur", {kids:false}),
+    C("König oder Königin", {kids:false}), C("Sänger oder Band", {kids:false}),
+    C("Fußballspieler"),
+    // Sport / Bewegung
+    C("Sportart"), C("Ballsport"), C("Wintersport"), C("Olympische Sportart"),
+    C("Tanz"), C("Fußballverein"),
+    // Körper / Kleidung
+    C("Körperteil"), C("Kleidungsstück"), C("Schuh"), C("Kopfbedeckung"),
+    // Zuhause / Schule
+    C("Möbelstück"), C("Werkzeug"), C("Gartengerät"), C("Schulfach"),
+    C("etwas in der Küche", {letterOk:false}), C("etwas im Bad", {letterOk:false}),
+    C("etwas im Garten", {letterOk:false}), C("etwas im Klassenzimmer", {letterOk:false}),
+    // Musik
+    C("Musikinstrument"), C("Instrument im Orchester", {kids:false}), C("Musikrichtung", {kids:false}),
+    // Geografie
+    C("Land"), C("Stadt"), C("deutsche Stadt"), C("Hauptstadt"), C("Kontinent"),
+    C("Insel"), C("Gebirge"), C("Fluss"), C("See"), C("Vulkan"),
+    C("US-Bundesstaat", {kids:false}), C("Fluss in Europa", {kids:false}),
+    C("Wüste", {kids:false}), C("Weltwunder", {kids:false}),
+    // Fahrzeuge
+    C("Automarke"), C("Automarke aus Deutschland", {kids:false}), C("Automodell", {kids:false}),
+    C("Motorradmarke", {kids:false}), C("Fahrzeug"),
+    // Wissen / Sonstiges
+    C("Beruf"), C("Beruf im Krankenhaus", {kids:false}), C("Beruf auf dem Bauernhof"),
+    C("Sprache"), C("Filmtitel"), C("Serie", {kids:false}), C("App auf dem Handy", {kids:false}),
+    C("Marke", {kids:false}), C("Planet oder Stern"), C("Sternzeichen", {kids:false}),
+    C("griechischer Gott", {kids:false}), C("Edelstein", {kids:false}), C("Metall", {kids:false}),
+    C("Feiertag"), C("Monat"), C("Wochentag"), C("Farbe"),
+    C("Naturphänomen", {kids:false}), C("Wetter-Wort"),
+    // Beschreibungen – ohne Buchstabe spielen
+    C("etwas Rotes", {letterOk:false}), C("etwas Blaues", {letterOk:false}),
+    C("etwas Grünes", {letterOk:false}), C("etwas Rundes", {letterOk:false}),
+    C("etwas Kaltes", {letterOk:false}), C("etwas Süßes", {letterOk:false}),
+    C("etwas Weiches", {letterOk:false}), C("etwas am Strand", {letterOk:false}),
+    C("etwas im Zoo", {letterOk:false}), C("etwas im Weltall", {letterOk:false}),
+    C("Emoji-Bedeutung", {kids:false, letterOk:false})
   ];
-  // Kategorien als {name, on} – deaktivierte bleiben erhalten (nicht vergessen)
-  function normCats(arr){ return arr.map(x=> typeof x==="string" ? {name:x.trim(), on:true}
-      : {name:String((x&&x.name)||"").trim(), on:!(x&&x.on===false)} ).filter(c=>c.name); }
+  function normCats(arr){ return arr.map(x=>{
+      if(typeof x==="string") return {name:x.trim(), on:true, kids:true, letterOk:true};
+      return { name:String((x&&x.name)||"").trim(), on:!(x&&x.on===false),
+               kids:!(x&&x.kids===false), letterOk:!(x&&x.letterOk===false) };
+    }).filter(c=>c.name); }
   function loadCats(){ try{ const c=JSON.parse(localStorage.getItem("bombe.categories")||"null");
       if(Array.isArray(c)&&c.length) return normCats(c); }catch(e){}
-      return DEFAULT_CATS.map(n=>({name:n, on:true})); }
+      return DEFAULT_CATS.map(c=>({...c})); }
   function saveCats(){ try{ localStorage.setItem("bombe.categories", JSON.stringify(categories)); }catch(e){} }
-  function activeCats(){ const a=categories.filter(c=>c.on).map(c=>c.name); return a.length ? a : categories.map(c=>c.name); }
+  // Aktive Kategorien fürs Spiel: filtert nach Kinder-Modus und (bei Buchstaben) nach Buchstaben-Tauglichkeit
+  function activeCats(){
+    const list=categories.filter(c=>c.on); let f=list;
+    if(S.kidsMode) f=f.filter(c=>c.kids);
+    if(S.categoryMode && S.categoryLetter) f=f.filter(c=>c.letterOk!==false);
+    const names=(f.length?f:list).map(c=>c.name);
+    return names.length ? names : categories.map(c=>c.name);
+  }
   let categories = loadCats();
 
   function loadHistory(){ try{ return JSON.parse(localStorage.getItem("bombe.history")||"[]")||[]; }catch(e){ return []; } }
@@ -803,6 +858,7 @@
     $("#setTts").checked=S.tts; $("#setCategory").checked=S.categoryMode; $("#setCatLetter").checked=S.categoryLetter;
     $("#setCatChgCat").checked=S.catChgCat; $("#setCatChgLetter").checked=S.catChgLetter;
     $("#setTtsCat").checked=S.ttsCat; $("#setTtsLetter").checked=S.ttsLetter;
+    $("#setKids").checked=S.kidsMode;
     skinSel=S.bombSkin; markGroup("#skinBtns","skin",skinSel);
     teamsSel=S.teams; markGroup("#teamBtns","teams",String(teamsSel));
     langSel=S.lang; markGroup("#langBtns","lang",S.lang);
@@ -830,6 +886,7 @@
     S.tts=$("#setTts").checked; S.categoryMode=$("#setCategory").checked; S.categoryLetter=$("#setCatLetter").checked;
     S.catChgCat=$("#setCatChgCat").checked; S.catChgLetter=$("#setCatChgLetter").checked;
     S.ttsCat=$("#setTtsCat").checked; S.ttsLetter=$("#setTtsLetter").checked;
+    S.kidsMode=$("#setKids").checked;
     S.bombSkin=skinSel; S.teams=teamsSel; S.lang=langSel;
     S.theme=currentThemeSel();
   }
@@ -1288,21 +1345,27 @@
   function renderCatList(){
     const el=$("#catList"); el.innerHTML="";
     catDraft.forEach((c,i)=>{ const r=document.createElement("div"); r.className="cat-row"+(c.on?"":" off");
-      r.innerHTML=`<input type="checkbox" ${c.on?"checked":""}><span class="cn">${escapeHtml(c.name)}</span><button class="cdel" type="button" title="✕">✕</button>`;
+      r.innerHTML=`<input type="checkbox" ${c.on?"checked":""}>`+
+        `<span class="cn">${escapeHtml(c.name)}</span>`+
+        `<button class="cflag fkids${c.kids?" on":""}" type="button" title="${t("flag_kids")}">🧒</button>`+
+        `<button class="cflag flet${c.letterOk?" on":""}" type="button" title="${t("flag_letter")}">🔤</button>`+
+        `<button class="cdel" type="button" title="${t("delete")}">✕</button>`;
       r.querySelector("input").addEventListener("change", e=>{ c.on=e.target.checked; r.classList.toggle("off",!c.on); updateCatCount(); });
+      r.querySelector(".fkids").addEventListener("click", ev=>{ c.kids=!c.kids; ev.currentTarget.classList.toggle("on",c.kids); });
+      r.querySelector(".flet").addEventListener("click", ev=>{ c.letterOk=!c.letterOk; ev.currentTarget.classList.toggle("on",c.letterOk); });
       r.querySelector(".cdel").addEventListener("click", ()=>{ catDraft.splice(i,1); renderCatList(); });
       el.appendChild(r); });
     updateCatCount();
   }
   function addCat(){ const inp=$("#catNew"); const v=inp.value.trim(); if(!v) return;
-    if(!catDraft.some(c=>c.name.toLowerCase()===v.toLowerCase())) catDraft.unshift({name:v, on:true});
+    if(!catDraft.some(c=>c.name.toLowerCase()===v.toLowerCase())) catDraft.unshift({name:v, on:true, kids:true, letterOk:true});
     inp.value=""; renderCatList(); inp.focus(); }
   $("#editCats").addEventListener("click", ()=>{ catDraft=categories.map(c=>({...c})); $("#catNew").placeholder=t("cat_new_ph"); renderCatList(); $("#catEditor").classList.add("show"); });
   $("#catAdd").addEventListener("click", addCat);
   $("#catNew").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addCat(); } });
   $("#catAll").addEventListener("click", ()=>{ catDraft.forEach(c=>c.on=true); renderCatList(); });
   $("#catNone").addEventListener("click", ()=>{ catDraft.forEach(c=>c.on=false); renderCatList(); });
-  $("#catDefault").addEventListener("click", ()=>{ DEFAULT_CATS.forEach(n=>{ if(!catDraft.some(c=>c.name.toLowerCase()===n.toLowerCase())) catDraft.push({name:n, on:true}); }); renderCatList(); });
+  $("#catDefault").addEventListener("click", ()=>{ DEFAULT_CATS.forEach(dc=>{ if(!catDraft.some(c=>c.name.toLowerCase()===dc.name.toLowerCase())) catDraft.push({...dc}); }); renderCatList(); });
   $("#catSave").addEventListener("click", ()=>{ categories = catDraft.length?catDraft:DEFAULT_CATS.map(n=>({name:n,on:true})); saveCats(); $("#catEditor").classList.remove("show"); });
   $("#catCancel").addEventListener("click", ()=>{ $("#catEditor").classList.remove("show"); });
 
