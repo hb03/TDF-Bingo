@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1a1024">
 <title>Bombenspiel 💣</title>
 
@@ -378,6 +378,12 @@
         <label class="set-label" data-i18n="set_modes">Spielmodi</label>
         <label class="toggle"><input id="setCategory" type="checkbox"><span data-i18n="set_category">🗂️ Kategorien-Modus (Wort nennen &amp; weitergeben)</span></label>
         <label class="toggle"><input id="setCatLetter" type="checkbox"><span data-i18n="set_catletter">🔤 … zusätzlich mit Buchstabe (z.&nbsp;B. „Tier mit A")</span></label>
+        <div class="set-hint-sm" style="margin-top:8px" data-i18n="set_chg_hint">Nach jedem Spieler neu würfeln:</div>
+        <label class="toggle"><input id="setCatChgCat" type="checkbox"><span data-i18n="set_chg_cat">🔄 Kategorie wechseln</span></label>
+        <label class="toggle"><input id="setCatChgLetter" type="checkbox"><span data-i18n="set_chg_letter">🔄 Buchstabe wechseln</span></label>
+        <div class="set-hint-sm" style="margin-top:8px" data-i18n="set_ann_hint">Per Sprache ansagen (wenn Ton-Ansagen an):</div>
+        <label class="toggle"><input id="setTtsCat" type="checkbox"><span data-i18n="set_ann_cat">🗣️ Kategorie ansagen</span></label>
+        <label class="toggle"><input id="setTtsLetter" type="checkbox"><span data-i18n="set_ann_letter">🗣️ Buchstabe ansagen</span></label>
         <button id="editCats" class="btn ghost" type="button" style="margin-top:8px" data-i18n="set_editcats">Kategorien bearbeiten</button>
         <label class="set-label" style="margin-top:14px" data-i18n="set_teams">Teams</label>
         <div class="themebtns" id="teamBtns">
@@ -545,7 +551,9 @@
       standings:"Punktestand", round:"Runde", new_game:"🔄 Neues Spiel", keep_playing:"Weiterspielen",
       no_games:"Noch keine Spiele gespielt.", king:"👑 Bomben-König", best_hold:"⏱ Längste Haltezeit",
       boom:"Bumm", team:"Team", won:"Siege", tts_test:"🔊 Ansage testen", category_label:"Kategorie",
-      letter_label:"Buchstabe", with_letter:"mit", set_catletter:"🔤 … zusätzlich mit Buchstabe (z. B. „Tier mit A“)"
+      letter_label:"Buchstabe", with_letter:"mit", set_catletter:"🔤 … zusätzlich mit Buchstabe (z. B. „Tier mit A“)",
+      set_chg_hint:"Nach jedem Spieler neu würfeln:", set_chg_cat:"🔄 Kategorie wechseln", set_chg_letter:"🔄 Buchstabe wechseln",
+      set_ann_hint:"Per Sprache ansagen (wenn Ton-Ansagen an):", set_ann_cat:"🗣️ Kategorie ansagen", set_ann_letter:"🗣️ Buchstabe ansagen"
     },
     en:{
       sub:"Enter names and go. Whoever holds it at the boom gets a point.",
@@ -570,7 +578,9 @@
       standings:"Standings", round:"Round", new_game:"🔄 New game", keep_playing:"Keep playing",
       no_games:"No games played yet.", king:"👑 Bomb king", best_hold:"⏱ Longest hold",
       boom:"Boom", team:"Team", won:"wins", tts_test:"🔊 Test announcement", category_label:"Category",
-      letter_label:"Letter", with_letter:"with", set_catletter:"🔤 … also with a letter (e.g. “Animal with A”)"
+      letter_label:"Letter", with_letter:"with", set_catletter:"🔤 … also with a letter (e.g. “Animal with A”)",
+      set_chg_hint:"Re-roll after each player:", set_chg_cat:"🔄 Change category", set_chg_letter:"🔄 Change letter",
+      set_ann_hint:"Announce by voice (when voice announcements on):", set_ann_cat:"🗣️ Announce category", set_ann_letter:"🗣️ Announce letter"
     }
   };
   function t(key, vars){ let s=(I18N[LANG]&&I18N[LANG][key]); if(s==null) s=I18N.de[key]; if(s==null) s=key;
@@ -607,11 +617,14 @@
     theme:"lila", big:false, wobble:true, visibleTimer:false, accelerate:false,
     pointLimit:0, winBy:"fewest", control:"anywhere", roundIntro:false, showBoard:false,
     catchSpeed:5, catchRandom:false,
-    bombSkin:"💣", tts:false, categoryMode:false, categoryLetter:true, teams:0, lang:"de"
+    bombSkin:"💣", tts:false, categoryMode:false, categoryLetter:true, teams:0, lang:"de",
+    catChgCat:false, catChgLetter:false, ttsCat:true, ttsLetter:true
   };
   let S = Object.assign({}, DEFAULTS);
   let skinSel="💣", teamsSel=0;
   let passesThisRound=0;
+  let curCat="", curLetter="";
+  const LETTERS="ABCDEFGHIKLMNOPRSTUW";
 
   // ---------- Persistente Zusatzdaten ----------
   const DEFAULT_CATS = [
@@ -788,6 +801,8 @@
     $("#setBig").checked=S.big; $("#setIntro").checked=S.roundIntro; $("#setBoard").checked=S.showBoard;
     $("#setCatchSpeed").value=S.catchSpeed; $("#catchSpeedVal").textContent=S.catchSpeed; $("#setCatchRandom").checked=S.catchRandom;
     $("#setTts").checked=S.tts; $("#setCategory").checked=S.categoryMode; $("#setCatLetter").checked=S.categoryLetter;
+    $("#setCatChgCat").checked=S.catChgCat; $("#setCatChgLetter").checked=S.catChgLetter;
+    $("#setTtsCat").checked=S.ttsCat; $("#setTtsLetter").checked=S.ttsLetter;
     skinSel=S.bombSkin; markGroup("#skinBtns","skin",skinSel);
     teamsSel=S.teams; markGroup("#teamBtns","teams",String(teamsSel));
     langSel=S.lang; markGroup("#langBtns","lang",S.lang);
@@ -813,6 +828,8 @@
     S.big=$("#setBig").checked; S.roundIntro=$("#setIntro").checked; S.showBoard=$("#setBoard").checked;
     S.catchSpeed=clamp(parseInt($("#setCatchSpeed").value,10)||5,1,12); S.catchRandom=$("#setCatchRandom").checked;
     S.tts=$("#setTts").checked; S.categoryMode=$("#setCategory").checked; S.categoryLetter=$("#setCatLetter").checked;
+    S.catChgCat=$("#setCatChgCat").checked; S.catChgLetter=$("#setCatChgLetter").checked;
+    S.ttsCat=$("#setTtsCat").checked; S.ttsLetter=$("#setTtsLetter").checked;
     S.bombSkin=skinSel; S.teams=teamsSel; S.lang=langSel;
     S.theme=currentThemeSel();
   }
@@ -985,26 +1002,41 @@
     updateCurrent();
     if(S.roundIntro){ showIntro(); } else { beginRound(); }
   }
+  // ---------- Kategorien-Modus: Auswahl, Banner, Ansage ----------
+  function pickCat(){ const pool=activeCats(); return pool.length ? pool[Math.floor(Math.random()*pool.length)] : ""; }
+  function pickLetter(){ return LETTERS[Math.floor(Math.random()*LETTERS.length)]; }
+  function showCatBanner(){
+    const cb=$("#catBanner");
+    if(!S.categoryMode || !curCat){ cb.style.display="none"; return; }
+    let html='<span class="cat-lbl">'+t("category_label")+'</span>'+escapeHtml(curCat);
+    if(S.categoryLetter && curLetter)
+      html+='<span class="cat-letter"><span class="cat-letter-lbl">'+t("letter_label")+'</span><b>'+escapeHtml(curLetter)+'</b></span>';
+    cb.innerHTML=html; cb.style.display="";
+  }
+  // Ansage: Spielername + (optional) Kategorie und/oder Buchstabe
+  function announceTurn(){
+    let a=players[curIdx].name;
+    if(S.categoryMode && curCat){
+      const wantCat=S.ttsCat, wantLet=S.ttsLetter && S.categoryLetter && curLetter;
+      if(wantCat && wantLet) a+=". "+curCat+" "+t("with_letter")+" "+curLetter;
+      else if(wantCat)       a+=". "+curCat;
+      else if(wantLet)       a+=". "+t("letter_label")+" "+curLetter;
+    }
+    speak(a);
+  }
+
   function beginRound(){
     running=true; paused=false; passesThisRound=0;
     bombEl.textContent = S.bombSkin || "💣";
-    // Kategorien-Modus: zufällige Kategorie zeigen & ansagen
-    const cb=$("#catBanner");
-    const catPool = activeCats();
-    if(S.categoryMode && catPool.length){ const c=catPool[Math.floor(Math.random()*catPool.length)];
-      let html='<span class="cat-lbl">'+t("category_label")+'</span>'+escapeHtml(c); let say=c;
-      if(S.categoryLetter){ const LET="ABCDEFGHIKLMNOPRSTUW"; const L=LET[Math.floor(Math.random()*LET.length)];
-        html+='<span class="cat-letter"><span class="cat-letter-lbl">'+t("letter_label")+'</span><b>'+L+'</b></span>';
-        say=c+" "+t("with_letter")+" "+L; }
-      cb.innerHTML=html; cb.style.display=""; speak(say); }
-    else { cb.style.display="none"; }
+    if(S.categoryMode){ curCat=pickCat(); curLetter = S.categoryLetter ? pickLetter() : ""; showCatBanner(); }
+    else { $("#catBanner").style.display="none"; }
     let base = S.durMin + Math.random()*(S.durMax-S.durMin);
     if(S.accelerate){ base = Math.max(3, base*Math.pow(0.85, roundNo-1)); }
     explodeAt = Date.now() + base*1000;
     turnStart = Date.now(); lastFrame = Date.now();
     countdownEl.classList.toggle("on", S.visibleTimer);
     if(bombMode()) placeBombStart();
-    speak(players[curIdx].name);
+    announceTurn();
     // Marathon-Erfolg
     ach.rounds=(ach.rounds||0)+1; saveAch(ach); if(ach.rounds>=50) unlockAch("marathon");
     startTicking(); scheduleWobble(); loop();
@@ -1081,7 +1113,14 @@
     commitHold();
     if(seg<400) unlockAch("blitz");                    // Blitzreflex
     passesThisRound++; if(passesThisRound>=15) unlockAch("hot_potato");
-    curIdx=(curIdx+1)%players.length; updateCurrent(); playTick(true); speak(players[curIdx].name);
+    curIdx=(curIdx+1)%players.length; updateCurrent(); playTick(true);
+    // Kategorie/Buchstabe optional nach jedem Spieler wechseln
+    if(S.categoryMode && (S.catChgCat || S.catChgLetter)){
+      if(S.catChgCat) curCat=pickCat();
+      if(S.catChgLetter && S.categoryLetter) curLetter=pickLetter();
+      showCatBanner();
+    }
+    announceTurn();
     if(S.control==="bombCatch") setBombVel(false);
   }
 
