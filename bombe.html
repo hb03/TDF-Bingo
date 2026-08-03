@@ -252,6 +252,13 @@
     color:var(--ink); border-radius:10px; padding:8px 12px; font-weight:600; font-size:.9rem; }
   .themebtns button.sel{ border-color:var(--accent2); box-shadow:0 0 0 2px var(--accent2) inset; }
   .num-inline{ width:70px; background:var(--bg); border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:8px; font-size:1rem; text-align:center; }
+  .mode-sub{ margin-top:10px; padding:10px 12px; border-radius:12px; background:rgba(255,255,255,.04); border:1px solid var(--line); }
+  :root[data-theme="hell"] .mode-sub{ background:rgba(0,0,0,.03); }
+  /* Schwierigkeit-Knopf nur zeigen, wenn Rechen-Modus aktiv */
+  .prow .diff{ flex:0 0 auto; width:34px; height:34px; border-radius:10px; border:1px solid var(--line); cursor:pointer;
+    background:rgba(255,255,255,.06); font-size:1.05rem; line-height:1; display:none; }
+  .players.mathon .prow .diff{ display:block; }
+  :root[data-theme="hell"] .prow .diff{ background:rgba(0,0,0,.05); }
 </style>
 </head>
 <body>
@@ -397,18 +404,30 @@
       </div>
 
       <div class="set-block">
-        <label class="set-label" data-i18n="set_modes">Spielmodi</label>
-        <label class="toggle"><input id="setCategory" type="checkbox"><span data-i18n="set_category">🗂️ Kategorien-Modus (Wort nennen &amp; weitergeben)</span></label>
-        <label class="toggle"><input id="setCatLetter" type="checkbox"><span data-i18n="set_catletter">🔤 … zusätzlich mit Buchstabe (z.&nbsp;B. „Tier mit A")</span></label>
-        <label class="toggle"><input id="setKids" type="checkbox"><span data-i18n="set_kids">🧒 Kinder-Modus (nur kindgerechte Kategorien)</span></label>
-        <div class="set-hint-sm" style="margin-top:8px" data-i18n="set_chg_hint">Nach jedem Spieler neu würfeln:</div>
-        <label class="toggle"><input id="setCatChgCat" type="checkbox"><span data-i18n="set_chg_cat">🔄 Kategorie wechseln</span></label>
-        <label class="toggle"><input id="setCatChgLetter" type="checkbox"><span data-i18n="set_chg_letter">🔄 Buchstabe wechseln</span></label>
-        <div class="set-hint-sm" style="margin-top:8px" data-i18n="set_ann_hint">Per Sprache ansagen (wenn Ton-Ansagen an):</div>
-        <label class="toggle"><input id="setTtsCat" type="checkbox"><span data-i18n="set_ann_cat">🗣️ Kategorie ansagen</span></label>
-        <label class="toggle"><input id="setTtsLetter" type="checkbox"><span data-i18n="set_ann_letter">🗣️ Buchstabe ansagen</span></label>
-        <button id="editCats" class="btn ghost" type="button" style="margin-top:8px" data-i18n="set_editcats">Kategorien bearbeiten</button>
-        <label class="set-label" style="margin-top:14px" data-i18n="set_teams">Teams</label>
+        <label class="set-label" data-i18n="set_mode">Spielmodus <span class="set-hint-sm" data-i18n="set_mode_hint">(bestimmt, was auf jeden zukommt)</span></label>
+        <div class="radios">
+          <label class="radio"><input type="radio" name="gamemode" value="normal"><span data-i18n="mode_normal">💣 Normal <em>– einfach die Bombe weitergeben</em></span></label>
+          <label class="radio"><input type="radio" name="gamemode" value="category"><span data-i18n="mode_category">🗂️ Kategorien <em>– Wort nennen &amp; weitergeben</em></span></label>
+          <label class="radio"><input type="radio" name="gamemode" value="math"><span data-i18n="mode_math">➗ Rechnen <em>– richtige Antwort antippen</em></span></label>
+        </div>
+
+        <div id="catSettings" class="mode-sub" style="display:none">
+          <label class="toggle"><input id="setCatLetter" type="checkbox"><span data-i18n="set_catletter">🔤 … zusätzlich mit Buchstabe (z.&nbsp;B. „Tier mit A")</span></label>
+          <label class="toggle"><input id="setKids" type="checkbox"><span data-i18n="set_kids">🧒 Kinder-Modus (nur kindgerechte Kategorien)</span></label>
+          <div class="set-hint-sm" style="margin-top:8px" data-i18n="set_chg_hint">Nach jedem Spieler neu würfeln:</div>
+          <label class="toggle"><input id="setCatChgCat" type="checkbox"><span data-i18n="set_chg_cat">🔄 Kategorie wechseln</span></label>
+          <label class="toggle"><input id="setCatChgLetter" type="checkbox"><span data-i18n="set_chg_letter">🔄 Buchstabe wechseln</span></label>
+          <div class="set-hint-sm" style="margin-top:8px" data-i18n="set_ann_hint">Per Sprache ansagen (wenn Ton-Ansagen an):</div>
+          <label class="toggle"><input id="setTtsCat" type="checkbox"><span data-i18n="set_ann_cat">🗣️ Kategorie ansagen</span></label>
+          <label class="toggle"><input id="setTtsLetter" type="checkbox"><span data-i18n="set_ann_letter">🗣️ Buchstabe ansagen</span></label>
+          <button id="editCats" class="btn ghost" type="button" style="margin-top:8px" data-i18n="set_editcats">Kategorien bearbeiten</button>
+        </div>
+
+        <div id="mathSettings" class="mode-sub" style="display:none">
+          <p class="set-hint-sm" style="margin:4px 0 0" data-i18n="set_math_hint">Schwierigkeit pro Spieler mit dem Knopf neben dem Namen: 🟢 leicht · 🟡 mittel · 🔴 schwer.</p>
+        </div>
+
+        <label class="set-label" style="margin-top:16px" data-i18n="set_teams">Teams</label>
         <div class="themebtns" id="teamBtns">
           <button type="button" data-teams="0" data-i18n="off">Aus</button>
           <button type="button" data-teams="2">2</button>
@@ -426,8 +445,7 @@
         <div class="dur-inputs" style="margin:2px 0 2px 34px"><input id="setMinHoldSec" type="number" min="1" max="30" inputmode="numeric" value="2" class="num-inline"><span data-i18n="seconds">Sekunden</span></div>
         <label class="set-label" style="margin-top:12px" data-i18n="set_jokers">🃏 Joker pro Spieler &amp; Runde</label>
         <div class="dur-inputs"><input id="setJokers" type="number" min="0" max="9" inputmode="numeric" value="0" class="num-inline"><span data-i18n="set_jokers_hint">× ohne Antwort weitergeben (0 = aus)</span></div>
-        <label class="toggle" style="margin-top:12px"><input id="setMath" type="checkbox"><span data-i18n="set_math">➗ Rechen-Modus (richtige Antwort tippen; falsch = Bumm)</span></label>
-        <p class="set-hint-sm" style="margin:6px 0 0" data-i18n="set_math_hint">Schwierigkeit pro Spieler mit dem Knopf neben dem Namen: 🟢 leicht · 🟡 mittel · 🔴 schwer.</p>
+        <p class="set-hint-sm" style="margin:8px 0 0" data-i18n="set_jokers_note">Joker gelten im Kategorien- und im Rechen-Modus.</p>
       </div>
 
     </div>
@@ -605,7 +623,10 @@
       set_math_hint:"Schwierigkeit pro Spieler mit dem Knopf neben dem Namen: 🟢 leicht · 🟡 mittel · 🔴 schwer.",
       unsolvable:"🚫 nicht lösbar", hint_math:"Richtige Antwort antippen", min_hold_wait:"⏳ noch {s} s halten",
       eliminated:"Rausgeflogen", flag_bad:"nicht lösbare Buchstaben",
-      bad_prompt:"Nicht lösbare Buchstaben (durch Leerzeichen getrennt):"
+      bad_prompt:"Nicht lösbare Buchstaben (durch Leerzeichen getrennt):",
+      set_mode:"Spielmodus", set_mode_hint:"(bestimmt, was auf jeden zukommt)",
+      mode_normal:"💣 Normal – einfach die Bombe weitergeben", mode_category:"🗂️ Kategorien – Wort nennen & weitergeben",
+      mode_math:"➗ Rechnen – richtige Antwort antippen", set_jokers_note:"Joker gelten im Kategorien- und im Rechen-Modus."
     },
     en:{
       sub:"Enter names and go. Whoever holds it at the boom gets a point.",
@@ -641,7 +662,10 @@
       set_math_hint:"Difficulty per player via the button next to the name: 🟢 easy · 🟡 medium · 🔴 hard.",
       unsolvable:"🚫 unsolvable", hint_math:"Tap the correct answer", min_hold_wait:"⏳ hold {s} s more",
       eliminated:"Eliminated", flag_bad:"unsolvable letters",
-      bad_prompt:"Unsolvable letters (separated by spaces):"
+      bad_prompt:"Unsolvable letters (separated by spaces):",
+      set_mode:"Game mode", set_mode_hint:"(sets what each player faces)",
+      mode_normal:"💣 Normal – just pass the bomb", mode_category:"🗂️ Categories – say a word & pass",
+      mode_math:"➗ Math – tap the correct answer", set_jokers_note:"Jokers apply in category and math mode."
     }
   };
   function t(key, vars){ let s=(I18N[LANG]&&I18N[LANG][key]); if(s==null) s=I18N.de[key]; if(s==null) s=key;
@@ -680,7 +704,8 @@
     catchSpeed:5, catchRandom:false,
     bombSkin:"💣", tts:false, categoryMode:false, categoryLetter:true, teams:0, lang:"de",
     catChgCat:false, catChgLetter:false, ttsCat:true, ttsLetter:true, kidsMode:false,
-    eliminate:false, countdown:false, minHold:false, minHoldSec:2, jokers:0, mathMode:false
+    eliminate:false, countdown:false, minHold:false, minHoldSec:2, jokers:0, mathMode:false,
+    gameMode:"normal"
   };
   let S = Object.assign({}, DEFAULTS);
   let skinSel="💣", teamsSel=0;
@@ -905,11 +930,17 @@
   function loadSettings(){
     let s=null; try{ s=JSON.parse(localStorage.getItem("bombe.settings")||"null"); }catch(e){}
     S=Object.assign({}, DEFAULTS, s||{});
+    // Spielmodus ist die einzige Quelle der Wahrheit. Alte Einstellungen (ohne
+    // gameMode, aber mit categoryMode/mathMode) werden einmalig übernommen.
+    if(s && s.gameMode===undefined) S.gameMode = s.mathMode ? "math" : (s.categoryMode ? "category" : "normal");
+    S.categoryMode = S.gameMode==="category";
+    S.mathMode = S.gameMode==="math";
     applyAppearance(); updateSetSummary();
   }
   function applyAppearance(){
     document.documentElement.dataset.theme = S.theme;
     document.documentElement.classList.toggle("big", !!S.big);
+    if(playersEl) playersEl.classList.toggle("mathon", !!S.mathMode);   // Schwierigkeit-Knöpfe nur im Rechen-Modus
     setVolume(S.volume);
     langSel=S.lang; applyLang(S.lang);
   }
@@ -923,13 +954,14 @@
     $("#setFinal").checked=S.finalTicks; $("#setVibrate").checked=S.vibrate;
     $("#setBig").checked=S.big; $("#setIntro").checked=S.roundIntro; $("#setBoard").checked=S.showBoard;
     $("#setCatchSpeed").value=S.catchSpeed; $("#catchSpeedVal").textContent=S.catchSpeed; $("#setCatchRandom").checked=S.catchRandom;
-    $("#setTts").checked=S.tts; $("#setCategory").checked=S.categoryMode; $("#setCatLetter").checked=S.categoryLetter;
+    $("#setTts").checked=S.tts; $("#setCatLetter").checked=S.categoryLetter;
+    checkRadio("gamemode", S.gameMode||"normal"); updateModeUI();
     $("#setCatChgCat").checked=S.catChgCat; $("#setCatChgLetter").checked=S.catChgLetter;
     $("#setTtsCat").checked=S.ttsCat; $("#setTtsLetter").checked=S.ttsLetter;
     $("#setKids").checked=S.kidsMode;
     $("#setEliminate").checked=S.eliminate; $("#setCountdown").checked=S.countdown;
     $("#setMinHold").checked=S.minHold; $("#setMinHoldSec").value=S.minHoldSec;
-    $("#setJokers").value=S.jokers; $("#setMath").checked=S.mathMode;
+    $("#setJokers").value=S.jokers;
     skinSel=S.bombSkin; markGroup("#skinBtns","skin",skinSel);
     teamsSel=S.teams; markGroup("#teamBtns","teams",String(teamsSel));
     langSel=S.lang; markGroup("#langBtns","lang",S.lang);
@@ -954,7 +986,10 @@
     S.finalTicks=$("#setFinal").checked; S.vibrate=$("#setVibrate").checked;
     S.big=$("#setBig").checked; S.roundIntro=$("#setIntro").checked; S.showBoard=$("#setBoard").checked;
     S.catchSpeed=clamp(parseInt($("#setCatchSpeed").value,10)||5,1,12); S.catchRandom=$("#setCatchRandom").checked;
-    S.tts=$("#setTts").checked; S.categoryMode=$("#setCategory").checked; S.categoryLetter=$("#setCatLetter").checked;
+    S.tts=$("#setTts").checked; S.categoryLetter=$("#setCatLetter").checked;
+    S.gameMode=radioVal("gamemode",DEFAULTS.gameMode);
+    S.categoryMode = S.gameMode==="category";
+    S.mathMode = S.gameMode==="math";
     S.catChgCat=$("#setCatChgCat").checked; S.catChgLetter=$("#setCatChgLetter").checked;
     S.ttsCat=$("#setTtsCat").checked; S.ttsLetter=$("#setTtsLetter").checked;
     S.kidsMode=$("#setKids").checked;
@@ -962,7 +997,6 @@
     S.minHold=$("#setMinHold").checked;
     let mh=parseInt($("#setMinHoldSec").value,10); if(!Number.isFinite(mh)||mh<1) mh=DEFAULTS.minHoldSec; S.minHoldSec=clamp(mh,1,30);
     let jk=parseInt($("#setJokers").value,10); if(!Number.isFinite(jk)||jk<0) jk=0; S.jokers=clamp(jk,0,9);
-    S.mathMode=$("#setMath").checked;
     S.bombSkin=skinSel; S.teams=teamsSel; S.lang=langSel;
     S.theme=currentThemeSel();
   }
@@ -970,9 +1004,19 @@
   function currentThemeSel(){ return themeSel; }
   // Markiert den aktiven Knopf einer Button-Gruppe (data-<attr>)
   function markGroup(sel, attr, val){ document.querySelectorAll(sel+" button").forEach(b=>b.classList.toggle("sel", b.dataset[attr]===val)); }
+  // Blendet je nach gewähltem Spielmodus die passenden Unter-Einstellungen ein
+  function updateModeUI(){
+    const m=radioVal("gamemode", S.gameMode||"normal");
+    $("#catSettings").style.display  = m==="category" ? "" : "none";
+    $("#mathSettings").style.display = m==="math"     ? "" : "none";
+  }
+  document.querySelectorAll('input[name="gamemode"]').forEach(r=> r.addEventListener("change", updateModeUI));
   function updateSetSummary(){
     const el=$("#setSummary"); if(!el) return;
     let t="Bombe "+S.durMin+"–"+S.durMax+" s · "+SCORE_TEXT[S.scoreMode];
+    if(S.gameMode==="category") t+=" · 🗂️"+(S.categoryLetter?"🔤":"");
+    else if(S.gameMode==="math") t+=" · ➗";
+    if(S.eliminate) t+=" · 🚪";
     if(S.pointLimit>0) t+=" · bis "+S.pointLimit;
     if(!S.sound) t+=" · 🔇";
     el.textContent=t;
