@@ -1588,6 +1588,330 @@ const POOL_FUSSBALL = [
     <path d="M28 44 q4 3 8 0" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round"/>`}
 ];
 
+/* ---- Formel-1-Icon-Bausteine ---- */
+function rennwagen(col){
+  return `<rect x="8" y="34" width="48" height="8" rx="3" fill="${col}" stroke="${INK}" stroke-width="2.4"/>`+
+    `<path d="M22 34 q10 -12 20 0 Z" fill="${col}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>`+
+    `<rect x="28" y="24" width="9" height="6" rx="2" fill="#bfe0ff" stroke="${INK}" stroke-width="1.6"/>`+
+    `<path d="M4 42 h10 v-4 h-10 Z" fill="${col}" stroke="${INK}" stroke-width="2"/>`+
+    `<path d="M54 30 h6 v12 h-6 Z" fill="${col}" stroke="${INK}" stroke-width="2"/>`+
+    `<circle cx="18" cy="44" r="7" fill="${INK}"/><circle cx="46" cy="44" r="7" fill="${INK}"/>`+
+    `<circle cx="18" cy="44" r="2.6" fill="#9aa6ad"/><circle cx="46" cy="44" r="2.6" fill="#9aa6ad"/>`;
+}
+function reifen(){ return `<circle cx="32" cy="32" r="18" fill="${INK}"/><circle cx="32" cy="32" r="8" fill="#c7ccd0" stroke="${INK}" stroke-width="2"/>`; }
+function flagge(fill, inner=''){
+  return `<path d="M16 8 V56" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`+
+    `<path d="M18 10 h30 v20 h-30 Z" fill="${fill}" stroke="${INK}" stroke-width="2"/>${inner}`;
+}
+function helm(col){
+  return `<path d="M14 34 a18 16 0 0 1 36 0 v4 a4 4 0 0 1 -4 4 H18 a4 4 0 0 1 -4 -4 Z" fill="${col}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>`+
+    `<path d="M20 34 q12 -8 26 0 l0 4 h-26 Z" fill="#bfe0ff" stroke="${INK}" stroke-width="1.8"/>`+
+    `<path d="M14 40 h36" stroke="${INK}" stroke-width="2"/>`;
+}
+
+/* Feld-Pool für das Thema „Formel 1" – was man beim Rennen im Fernsehen sieht */
+const POOL_F1 = [
+  { t:"Startampel", s:`
+    <rect x="14" y="10" width="36" height="18" rx="3" fill="${INK}"/>
+    ${[0,1,2,3,4].map(i=>`<circle cx="${20+i*6}" cy="19" r="2.6" fill="${ROT}"/>`).join('')}
+    <rect x="28" y="28" width="8" height="24" fill="${INK}"/>`},
+
+  { t:"Zielflagge", s:`
+    <path d="M16 8 V56" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <g fill="${INK}">${[0,1,2,3,4].flatMap(r=>[0,1,2,3,4].filter(c=>(r+c)%2===0).map(c=>`<rect x="${18+c*6}" y="${10+r*5}" width="6" height="5"/>`)).join('')}</g>
+    <rect x="18" y="10" width="30" height="25" fill="none" stroke="${INK}" stroke-width="1.6"/>`},
+
+  { t:"Gelbe Flagge", s:`${flagge(GELB)}`},
+  { t:"Rote Flagge", s:`${flagge(ROT)}`},
+  { t:"Blaue Flagge", s:`${flagge(BLAU)}`},
+  { t:"Grüne Flagge", s:`${flagge(GRUEN)}`},
+
+  { t:"Boxenstopp", s:`
+    <g transform="translate(0,2)">${rennwagen(ROT)}</g>
+    <circle cx="9" cy="16" r="5" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <circle cx="55" cy="16" r="5" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M9 22 V30 M55 22 V30" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Reifenwechsel", s:`
+    ${reifen()}
+    <path d="M32 6 V14 M32 50 V58 M6 32 H14 M50 32 H58" stroke="${ROT}" stroke-width="3" stroke-linecap="round"/>
+    <rect x="44" y="40" width="16" height="5" rx="2" fill="${INK}" transform="rotate(35 52 42)"/>`},
+
+  { t:"Safety Car", s:`
+    <path d="M8 42 l6 -12 h12 l4 -6 h14 l6 6 h6 v12 Z" fill="#fff" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="24" y="14" width="16" height="6" rx="2" fill="${GELB}" stroke="${INK}" stroke-width="1.8"/>
+    <circle cx="18" cy="44" r="6" fill="${INK}"/><circle cx="46" cy="44" r="6" fill="${INK}"/>
+    <text x="32" y="38" font-size="7" font-weight="800" text-anchor="middle" fill="${INK}" font-family="sans-serif">SC</text>`},
+
+  { t:"DRS offen", s:`
+    <rect x="14" y="34" width="36" height="6" fill="${INK}"/>
+    <path d="M18 34 V20 h6 V34 M40 34 V20 h6 V34" fill="none" stroke="${ROT}" stroke-width="3"/>
+    <path d="M24 22 h16" stroke="${GRUEN}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M26 46 h12 M22 52 h20" stroke="${INK}" stroke-width="2.4" stroke-linecap="round" opacity="0.5"/>`},
+
+  { t:"Überholen", s:`
+    <g transform="translate(0,-6) scale(0.8)">${rennwagen(ROT)}</g>
+    <g transform="translate(8,16) scale(0.8)">${rennwagen(BLAU)}</g>`},
+
+  { t:"Rad an Rad", s:`
+    <g transform="translate(-8,2) scale(0.78)">${rennwagen(ROT)}</g>
+    <g transform="translate(16,2) scale(0.78)">${rennwagen(BLAU)}</g>`},
+
+  { t:"Crash", s:`
+    <g transform="rotate(-12 32 40)">${rennwagen(BLAU)}</g>
+    <path d="M42 10 l3 7 7 -3 -3 7 7 3 -7 2 2 7 -6 -4 -3 7 -3 -7 -6 3 3 -6 -6 -3 7 -2 Z" fill="${GELB}" stroke="${INK}" stroke-width="1.4" stroke-linejoin="round"/>`},
+
+  { t:"Reifenschaden", s:`
+    ${reifen()}
+    <path d="M14 30 l-8 -3 l6 6 l-8 1 l7 4" fill="none" stroke="${ROT}" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M46 44 l6 6 M50 40 l6 3" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Team-Funk", s:`
+    ${helm(ROT)}
+    <path d="M50 30 q10 -2 8 10" fill="none" stroke="${BLAU}" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M54 24 q14 0 12 16" fill="none" stroke="${BLAU}" stroke-width="2.6" stroke-linecap="round"/>`},
+
+  { t:"Regenrennen", s:`
+    <g transform="translate(0,4) scale(0.9)">${rennwagen(GRUEN)}</g>
+    <path d="M14 10 l-3 8 M26 8 l-3 8 M38 10 l-3 8 M50 8 l-3 8" stroke="${BLAU}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Regenreifen", s:`
+    ${reifen()}
+    <path d="M22 20 q4 6 -2 10 M32 16 q4 8 -2 12 M42 20 q4 6 -2 10" fill="none" stroke="${BLAU}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Slick-Reifen", s:`${reifen()}<path d="M32 14 V22 M32 42 V50" stroke="${ROT}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"F1-Podium", s:`
+    <rect x="24" y="22" width="16" height="32" fill="${GELB}" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="8" y="32" width="16" height="22" fill="#c7ccd0" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="40" y="38" width="16" height="16" fill="#cd7f32" stroke="${INK}" stroke-width="2.2"/>
+    <text x="32" y="42" font-size="11" font-weight="800" text-anchor="middle" fill="${INK}" font-family="sans-serif">1</text>`},
+
+  { t:"Champagner-Dusche", s:`
+    <path d="M26 26 h12 l-2 20 h-8 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="29" y="16" width="6" height="10" fill="${INK}"/>
+    <path d="M34 20 q10 -6 18 -2 M34 24 q12 -2 20 4 M34 28 q10 2 16 8" fill="none" stroke="${GELB}" stroke-width="2.2" stroke-linecap="round"/>`},
+
+  { t:"Siegerpokal", s:`
+    <path d="M20 12 h24 v8 a12 12 0 0 1 -24 0 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M20 14 q-8 0 -8 8 q0 6 8 6 M44 14 q8 0 8 8 q0 6 -8 6" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M32 32 V42 M28 42 h8 v6 h-8 Z M24 48 h16 v5 h-16 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`},
+
+  { t:"Startaufstellung", s:`
+    <path d="M18 54 L24 12 M32 54 L34 12 M46 54 L44 12" stroke="${INK}" stroke-width="2" opacity="0.4"/>
+    ${[[16,40],[38,40],[22,24],[42,24]].map(([x,y])=>`<rect x="${x}" y="${y}" width="10" height="6" rx="1.5" fill="${ROT}" stroke="${INK}" stroke-width="1.6"/>`).join('')}`},
+
+  { t:"Pole Position", s:`
+    <rect x="16" y="14" width="32" height="30" rx="3" fill="${INK}"/>
+    <text x="32" y="34" font-size="13" font-weight="800" text-anchor="middle" fill="${GELB}" font-family="sans-serif">P1</text>
+    <rect x="24" y="48" width="16" height="6" fill="${INK}"/>`},
+
+  { t:"Rundenzeit", s:`
+    <circle cx="32" cy="35" r="17" fill="#fff" stroke="${INK}" stroke-width="2.6"/>
+    <rect x="28" y="6" width="8" height="6" rx="2" fill="${INK}"/>
+    <path d="M32 35 V23 M32 35 L42 40" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Bestzeit (lila)", s:`
+    <rect x="10" y="22" width="44" height="20" rx="3" fill="#8a2be2" stroke="${INK}" stroke-width="2.4"/>
+    <text x="32" y="37" font-size="12" font-weight="800" text-anchor="middle" fill="#fff" font-family="sans-serif">1:23</text>`},
+
+  { t:"Sektor-Zeiten", s:`
+    <rect x="8" y="26" width="14" height="12" rx="2" fill="${GELB}" stroke="${INK}" stroke-width="1.8"/>
+    <rect x="25" y="26" width="14" height="12" rx="2" fill="${GRUEN}" stroke="${INK}" stroke-width="1.8"/>
+    <rect x="42" y="26" width="14" height="12" rx="2" fill="#8a2be2" stroke="${INK}" stroke-width="1.8"/>
+    <text x="15" y="35" font-size="7" text-anchor="middle" fill="${INK}" font-family="sans-serif">S1</text>
+    <text x="32" y="35" font-size="7" text-anchor="middle" fill="#fff" font-family="sans-serif">S2</text>
+    <text x="49" y="35" font-size="7" text-anchor="middle" fill="#fff" font-family="sans-serif">S3</text>`},
+
+  { t:"Boxengasse", s:`
+    <path d="M6 44 h52 M6 20 h52" stroke="${INK}" stroke-width="3"/>
+    <path d="M10 32 h8 M24 32 h8 M38 32 h8 M52 32 h4" stroke="${GELB}" stroke-width="3" stroke-linecap="round"/>
+    <rect x="14" y="8" width="10" height="10" rx="2" fill="${ROT}" stroke="${INK}" stroke-width="1.8"/>`},
+
+  { t:"Kommandostand", s:`
+    <rect x="10" y="20" width="44" height="24" rx="3" fill="${INK}"/>
+    ${[14,24,34,44].map(x=>`<rect x="${x}" y="24" width="8" height="6" rx="1" fill="${BLAU}"/>`).join('')}
+    <circle cx="18" cy="16" r="4" fill="#f3c6a0" stroke="${INK}" stroke-width="1.6"/>
+    <circle cx="32" cy="16" r="4" fill="#f3c6a0" stroke="${INK}" stroke-width="1.6"/>
+    <circle cx="46" cy="16" r="4" fill="#f3c6a0" stroke="${INK}" stroke-width="1.6"/>
+    <rect x="12" y="44" width="40" height="6" fill="#c7ccd0" stroke="${INK}" stroke-width="1.6"/>`},
+
+  { t:"Renn-Ingenieur", s:`
+    <circle cx="32" cy="22" r="10" fill="#f3c6a0" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M22 22 a10 10 0 0 1 20 0" fill="none" stroke="${INK}" stroke-width="3"/>
+    <rect x="20" y="22" width="4" height="6" rx="2" fill="${INK}"/><rect x="40" y="22" width="4" height="6" rx="2" fill="${INK}"/>
+    <path d="M22 26 q-4 6 6 8" fill="none" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M16 52 V40 q0 -6 16 -6 t16 6 v12 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`},
+
+  { t:"F1-Lenkrad", s:`
+    <rect x="10" y="20" width="44" height="24" rx="6" fill="${INK}"/>
+    <rect x="16" y="26" width="32" height="10" rx="2" fill="${BLAU}"/>
+    <circle cx="18" cy="41" r="3" fill="${ROT}"/><circle cx="46" cy="41" r="3" fill="${GELB}"/>
+    <circle cx="26" cy="41" r="2.4" fill="${GRUEN}"/><circle cx="38" cy="41" r="2.4" fill="#fff"/>`},
+
+  { t:"Rennhelm", s:`${helm(ROT)}`},
+
+  { t:"Rennanzug", s:`
+    <circle cx="32" cy="12" r="6" fill="#fff" stroke="${INK}" stroke-width="2"/>
+    ${jersey(ROT, `<path d="M28 30 h8 M28 36 h8" stroke="#fff" stroke-width="1.6"/>`)}`},
+
+  { t:"Kiesbett", s:`
+    <path d="M6 22 h52" stroke="${INK}" stroke-width="2"/>
+    <g fill="#cdbf9a">${Array.from({length:26},(_,i)=>`<circle cx="${8+(i*9)%48}" cy="${26+((i*13)%20)}" r="2.4"/>`).join('')}</g>
+    <g transform="translate(14,28) scale(0.6)">${rennwagen(BLAU)}</g>`},
+
+  { t:"Reifenstapel", s:`
+    ${[[18,44],[46,44],[18,28],[46,28],[32,36],[32,20]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="10" fill="${INK}"/><circle cx="${x}" cy="${y}" r="4" fill="#c7ccd0"/>`).join('')}`},
+
+  { t:"Randstein (Kerb)", s:`
+    ${[0,1,2,3,4,5].map(i=>`<rect x="${(6+i*8.6).toFixed(1)}" y="24" width="8.6" height="14" fill="${i%2?ROT:'#fff'}" stroke="${INK}" stroke-width="1.2"/>`).join('')}
+    <path d="M6 42 h52" stroke="${GRUEN}" stroke-width="4"/>`},
+
+  { t:"Funkenflug", s:`
+    <g transform="translate(0,-4)">${rennwagen(ROT)}</g>
+    <g stroke="${GELB}" stroke-width="2.2" stroke-linecap="round"><path d="M20 52 l-6 6 M28 52 l-4 8 M36 52 l-6 6 M44 52 l-4 7"/></g>`},
+
+  { t:"Windschatten", s:`
+    <g transform="translate(8,0)">${rennwagen(BLAU)}</g>
+    <path d="M2 30 h10 M0 38 h10 M4 46 h8" stroke="${INK}" stroke-width="2.4" stroke-linecap="round" opacity="0.6"/>`},
+
+  { t:"Bremsplatte (Lockup)", s:`
+    ${reifen()}
+    <path d="M12 18 q-8 -4 -2 -10 M20 12 q-4 -8 4 -8" fill="none" stroke="#9aa6ad" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="8" cy="10" r="4" fill="#c7ccd0"/><circle cx="22" cy="6" r="3" fill="#c7ccd0"/>`},
+
+  { t:"Dreher", s:`
+    <g transform="rotate(30 32 34)">${rennwagen(GRUEN)}</g>
+    <path d="M46 14 a20 20 0 1 1 -28 -2" fill="none" stroke="${INK}" stroke-width="2.4" stroke-dasharray="3 4"/>
+    <path d="M18 10 l0 8 l8 -2" fill="none" stroke="${INK}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`},
+
+  { t:"Ausfall (DNF)", s:`
+    <g transform="translate(0,6)">${rennwagen(BLAU)}</g>
+    <path d="M22 8 q-4 -6 0 -10 M32 8 q-4 -6 0 -10" fill="none" stroke="#9aa6ad" stroke-width="3" stroke-linecap="round"/>
+    <text x="40" y="14" font-size="9" font-weight="800" fill="${ROT}" font-family="sans-serif">DNF</text>`},
+
+  { t:"Strafzeit (+5s)", s:`
+    <rect x="28" y="8" width="8" height="6" rx="2" fill="${INK}"/>
+    <circle cx="32" cy="34" r="18" fill="${ROT}" stroke="${INK}" stroke-width="2.6"/>
+    <text x="32" y="39" font-size="13" font-weight="800" text-anchor="middle" fill="#fff" font-family="sans-serif">+5s</text>`},
+
+  { t:"Durchfahrtsstrafe", s:`
+    <path d="M6 44 h52 M6 24 h52" stroke="${INK}" stroke-width="3"/>
+    <path d="M12 34 h34" stroke="${ROT}" stroke-width="4" stroke-linecap="round" stroke-dasharray="6 6"/>
+    <path d="M44 28 l8 6 l-8 6" fill="none" stroke="${ROT}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`},
+
+  { t:"Boxenschild", s:`
+    <rect x="18" y="10" width="28" height="30" rx="2" fill="#fff" stroke="${INK}" stroke-width="2.4"/>
+    <text x="32" y="24" font-size="9" font-weight="800" text-anchor="middle" fill="${INK}" font-family="sans-serif">P2</text>
+    <text x="32" y="35" font-size="8" font-weight="700" text-anchor="middle" fill="${ROT}" font-family="sans-serif">+2.4</text>
+    <rect x="30" y="40" width="4" height="14" fill="${INK}"/>`},
+
+  { t:"Bergungskran", s:`
+    <path d="M10 52 h20 v-6 h-20 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="15" cy="54" r="3" fill="${INK}"/><circle cx="25" cy="54" r="3" fill="${INK}"/>
+    <path d="M20 46 V20 L52 12" stroke="${INK}" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M50 12 V24" stroke="${INK}" stroke-width="2"/>
+    <g transform="translate(40,24) scale(0.4)">${rennwagen(BLAU)}</g>`},
+
+  { t:"Streckenposten", s:`
+    <circle cx="24" cy="16" r="6" fill="#fff" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M18 48 V26 h12 v22 Z" fill="${GELB}" stroke="${INK}" stroke-width="2"/>
+    <path d="M30 30 L48 20" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M46 12 h12 v10 h-12 Z" fill="${GELB}" stroke="${INK}" stroke-width="2"/>`},
+
+  { t:"Onboard-Kamera", s:`
+    <g transform="translate(0,6)">${rennwagen(ROT)}</g>
+    <rect x="28" y="10" width="8" height="8" rx="2" fill="${INK}"/>
+    <circle cx="32" cy="14" r="2.4" fill="${BLAU}"/>
+    <rect x="30" y="18" width="4" height="6" fill="${INK}"/>`},
+
+  { t:"Timing-Grafik", s:`
+    <rect x="14" y="10" width="24" height="44" rx="2" fill="${INK}"/>
+    ${[0,1,2,3,4,5].map(i=>`<rect x="17" y="${13+i*7}" width="18" height="5" fill="${i===0?ROT:'#3a4a57'}"/>`).join('')}
+    <path d="M40 16 h12 M40 24 h10 M40 32 h12" stroke="${INK}" stroke-width="2" stroke-linecap="round" opacity="0.5"/>`},
+
+  { t:"Wetterradar", s:`
+    <circle cx="32" cy="32" r="20" fill="#eef2f4" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="32" cy="32" r="12" fill="none" stroke="${INK}" stroke-width="1" opacity="0.5"/>
+    <path d="M28 24 q8 -2 10 6 q-2 8 -10 6 q-6 -6 0 -12 Z" fill="${BLAU}" opacity="0.7"/>
+    <path d="M32 32 L48 20" stroke="${GRUEN}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Reifen-Heizdecke", s:`
+    <circle cx="32" cy="32" r="18" fill="${ROT}" stroke="${INK}" stroke-width="2.6"/>
+    <circle cx="32" cy="32" r="8" fill="#c7ccd0" stroke="${INK}" stroke-width="2"/>
+    <path d="M20 22 l-4 -4 M44 22 l4 -4 M20 42 l-4 4 M44 42 l4 4" stroke="${GELB}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Frontflügel-Wechsel", s:`
+    <path d="M10 30 h44 v6 h-44 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M14 30 V22 h6 V30 M44 30 V22 h6 V30" fill="none" stroke="${INK}" stroke-width="2"/>
+    <path d="M8 44 l6 -4 M50 44 l6 -4" stroke="#9aa6ad" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="18" cy="48" r="3" fill="#f3c6a0" stroke="${INK}" stroke-width="1.4"/>
+    <circle cx="46" cy="48" r="3" fill="#f3c6a0" stroke="${INK}" stroke-width="1.4"/>`},
+
+  { t:"Einführungsrunde", s:`
+    <g transform="translate(4,0) scale(0.8)">${rennwagen(BLAU)}</g>
+    <path d="M4 52 q14 -8 28 0 t28 0" fill="none" stroke="${INK}" stroke-width="2" stroke-dasharray="3 4"/>`},
+
+  { t:"Parc Fermé", s:`
+    <g transform="translate(0,4)">${rennwagen(GRUEN)}</g>
+    <path d="M12 8 V24 h8 V16 a4 4 0 0 1 8 0 v8 h8 V8" fill="none" stroke="${INK}" stroke-width="2.6"/>
+    <rect x="18" y="16" width="12" height="10" rx="1.5" fill="${GELB}" stroke="${INK}" stroke-width="2"/>
+    <circle cx="24" cy="20" r="1.6" fill="${INK}"/>`},
+
+  { t:"Volle Tribüne", s:`
+    <path d="M8 46 l6 -30 h36 l6 30 Z" fill="#c7ccd0" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <g fill="${ROT}">${[0,1,2].flatMap(r=>Array.from({length:9-r},(_,i)=>`<circle cx="${16+r*3+i*4}" cy="${40-r*8}" r="1.8"/>`)).join('')}</g>`},
+
+  { t:"Fans mit Fahnen", s:`
+    <path d="M14 10 V52 M46 10 V52" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M16 12 q10 -4 16 2 q-6 6 0 12 q-10 -4 -16 0 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M48 14 q-10 -4 -16 2 q6 6 0 12 q10 -4 16 0 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>`},
+
+  { t:"TV-Hubschrauber", s:`
+    <ellipse cx="30" cy="38" rx="18" ry="10" fill="${BLAU}" stroke="${INK}" stroke-width="2.6"/>
+    <path d="M44 34 L58 30 L54 42 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="26" y="30" width="10" height="8" rx="2" fill="#bfe0ff" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M8 18 H52 M30 18 V26" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Sieger-Interview", s:`
+    <circle cx="26" cy="20" r="8" fill="#f3c6a0" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M16 48 V34 q0 -4 10 -4 t10 4 v14 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="40" y="24" width="8" height="16" rx="4" fill="${INK}"/>
+    <rect x="41" y="20" width="6" height="6" rx="3" fill="#9aa6ad"/>`},
+
+  { t:"Feuerwerk", s:`
+    <g stroke="${GELB}" stroke-width="2.4" stroke-linecap="round"><path d="M32 32 V16 M32 32 V48 M16 32 H48 M20 20 l24 24 M44 20 L20 44"/></g>
+    <circle cx="32" cy="32" r="3" fill="${ROT}"/>
+    <g fill="${ROT}"><circle cx="32" cy="14" r="2"/><circle cx="14" cy="32" r="2"/><circle cx="50" cy="32" r="2"/><circle cx="32" cy="50" r="2"/></g>`},
+
+  { t:"Rennwagen", s:`${rennwagen(ROT)}`},
+
+  { t:"Motor", s:`
+    <rect x="16" y="22" width="28" height="22" rx="3" fill="#9aa6ad" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M20 22 V14 h4 v8 M30 22 V12 h4 v10 M40 22 V14 h4 v8" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M20 30 h20 M20 36 h20" stroke="${INK}" stroke-width="2"/>
+    <circle cx="48" cy="40" r="4" fill="${ROT}" stroke="${INK}" stroke-width="1.6"/>`},
+
+  { t:"Glühende Bremse", s:`
+    <circle cx="32" cy="32" r="16" fill="none" stroke="${ROT}" stroke-width="5"/>
+    <circle cx="32" cy="32" r="16" fill="none" stroke="${GELB}" stroke-width="2"/>
+    <circle cx="32" cy="32" r="6" fill="#c7ccd0" stroke="${INK}" stroke-width="2"/>
+    <g stroke="${INK}" stroke-width="1">${Array.from({length:12},(_,i)=>{const a=i/12*6.283;return `<path d="M${(32+10*Math.cos(a)).toFixed(1)} ${(32+10*Math.sin(a)).toFixed(1)} L${(32+15*Math.cos(a)).toFixed(1)} ${(32+15*Math.sin(a)).toFixed(1)}"/>`}).join('')}</g>`},
+
+  { t:"Startnummer", s:`
+    <circle cx="32" cy="32" r="18" fill="#fff" stroke="${INK}" stroke-width="2.6"/>
+    <text x="32" y="40" font-size="22" font-weight="800" text-anchor="middle" fill="${ROT}" font-family="sans-serif">1</text>`},
+
+  { t:"Streckenkarte", s:`
+    <path d="M12 46 q-4 -20 12 -22 q16 -2 10 -14 q-4 -8 12 -6 q14 2 6 18 q-6 12 -18 10 q-14 -2 -8 12 q4 8 -10 8 q-12 0 -6 -8 Z" fill="none" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="12" cy="46" r="3" fill="${ROT}"/>`},
+
+  { t:"Reifenqualm", s:`
+    <g transform="translate(2,2)">${rennwagen(BLAU)}</g>
+    <path d="M50 44 q10 -2 8 -12 M52 48 q14 0 12 -14" fill="none" stroke="#9aa6ad" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="58" cy="30" r="4" fill="#c7ccd0"/><circle cx="60" cy="40" r="3" fill="#c7ccd0"/>`}
+];
+
 /* -------------------------------------------------------------------------
    THEMEN – jedes Thema hat einen eigenen Feld-Pool. „POOL" zeigt immer auf
    das aktuell gewählte Thema (wird von setzeThema umgehängt).
@@ -1604,7 +1928,11 @@ const THEMES = [
   { id:'fussball', name:'Fußball (TV)', title:'Fußball Bingo',
     subtitle:"Tippe an, was du im Spiel siehst! ⚽", themeColor:'#35a35f',
     headerIcon:`<svg viewBox="0 0 64 64">${fussball(32,32,22)}</svg>`,
-    pool:POOL_FUSSBALL }
+    pool:POOL_FUSSBALL },
+  { id:'f1', name:'Formel 1', title:'Formel-1 Bingo',
+    subtitle:"Tippe an, was du im Rennen siehst! 🏎️", themeColor:'#e23b45',
+    headerIcon:`<svg viewBox="0 0 64 64">${rennwagen(ROT)}</svg>`,
+    pool:POOL_F1 }
 ];
 let aktivesThema = 'tdf';
 let POOL = POOL_TDF;
