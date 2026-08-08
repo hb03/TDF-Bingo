@@ -609,7 +609,15 @@
    Beispiel: "https://deinprojekt-default-rtdb.europe-west1.firebasedatabase.app"
    (OHNE Schrägstrich am Ende).  Anleitung: siehe LIVE-SETUP.md
    ========================================================================= */
-const FIREBASE_DB_URL = "";
+const FIREBASE_DB_URL = "";   // (nicht mehr genutzt – Live läuft über Cloudflare)
+
+/* Live-Mehrspieler über den Cloudflare Worker.
+   Nach dem Deploy die wss://…-Adresse hier eintragen, z. B.
+   "wss://bingo-live.DEINSUBDOMAIN.workers.dev".  Leer = Mehrspieler aus.
+   Zum Testen kann die Adresse auch per localStorage['bingo.liveWsUrl'] gesetzt
+   werden, ohne die Datei zu ändern. */
+let LIVE_WS_URL = "";
+try { const _o = localStorage.getItem('bingo.liveWsUrl'); if (_o) LIVE_WS_URL = _o; } catch (e) {}
 
 /* -------------------------------------------------------------------------
    1) Kleine SVG-Bausteine, die mehrere Icons gemeinsam nutzen
@@ -4649,14 +4657,12 @@ document.getElementById('btnSpielerMinus').onclick = ()=>{
    ------------------------------------------------------------------------- */
 const LIVE = {
   id: 'p_' + Math.random().toString(36).slice(2, 10),  // eindeutige Client-ID
-  url: (FIREBASE_DB_URL || '').replace(/\/+$/, ''),      // ohne Schrägstrich am Ende
   room: null,
   name: '',
-  es: null,
+  ws: null,
   connected: false,
-  baselineDone: false,   // erster Snapshot verarbeitet?
-  seen: new Set(),       // bereits getoastete Event-IDs
-  data: {}               // lokale Spiegelung des Raums
+  wantOpen: false,       // soll die Verbindung offen bleiben? (für Reconnect)
+  reconnect: 0
 };
 
 const liveEls = {
@@ -4673,7 +4679,8 @@ const liveEls = {
   toasts:  document.getElementById('toasts')
 };
 
-function liveKonfiguriert(){ return !!LIVE.url; }
+function liveWsBase(){ return (LIVE_WS_URL || '').replace(/\/+$/, ''); }
+function liveKonfiguriert(){ return !!liveWsBase(); }
 
 // Toast-Meldung unten einblenden (verschwindet von selbst)
 function toast(html, art=''){
@@ -4694,47 +4701,17 @@ liveEls.toggle.onclick = ()=>{
   liveEls.toggle.setAttribute('aria-expanded', String(auf));
   if(auf && !liveKonfiguriert()){
     liveStatus(`<div class="live-hinweis">Live-Spiel ist noch nicht eingerichtet.<br>
-      Trage in <code>index.html</code> deine Firebase-Datenbank-URL bei
-      <code>FIREBASE_DB_URL</code> ein.<br>Anleitung: <code>LIVE-SETUP.md</code></div>`);
+      Trage in <code>index.html</code> die Adresse deines Cloudflare-Workers bei
+      <code>LIVE_WS_URL</code> ein (z.&nbsp;B. <code>wss://bingo-live.…workers.dev</code>).<br>
+      Anleitung: <code>LIVE-SETUP-cloudflare.md</code></div>`);
     liveEls.joinRow.style.display = 'none';
   }
 };
 
-// Pfad-Helfer: setzt/löscht einen Wert im lokalen Spiegel unter "/a/b/c"
-function livePfadSetzen(obj, pfad, wert){
-  const teile = pfad.split('/').filter(Boolean);
-  if(teile.length === 0){ return; }
-  let o = obj;
-  for(let k=0; k<teile.length-1; k++){
-    if(typeof o[teile[k]] !== 'object' || o[teile[k]] === null) o[teile[k]] = {};
-    o = o[teile[k]];
-  }
-  const last = teile[teile.length-1];
-  if(wert === null) delete o[last]; else o[last] = wert;
-}
-
-// Wendet ein put/patch an und toastet neue Events
-function liveAnwenden(pfad, wert){
-  if(pfad === '/' || pfad === ''){ LIVE.data = (wert && typeof wert==='object') ? wert : {}; }
-  else { livePfadSetzen(LIVE.data, pfad, wert); }
-
-  // neue Events erkennen
-  const evs = LIVE.data.events || {};
-  Object.keys(evs).forEach(id=>{
-    if(!LIVE.seen.has(id)){
-      LIVE.seen.add(id);
-      if(LIVE.baselineDone) liveToastEvent(evs[id]);   // Alt-Events beim Beitritt NICHT toasten
-    }
-  });
-  if(!LIVE.baselineDone && (pfad === '/' || pfad === '')) LIVE.baselineDone = true;
-
-  liveRenderPlayers();
-}
-
 function liveToastEvent(ev){
   if(!ev || ev.by === LIVE.id) return;                 // eigene Meldungen ignorieren
   const wer = `<span class="wer">${escapeHtml(ev.name || 'Jemand')}</span>`;
-  if(ev.type === 'bingo'){
+  if(ev.kind === 'bingo'){
     toast(`🎉 ${wer} hat BINGO!`, 'bingo');
   }else{
     toast(`${wer} hat „${escapeHtml(ev.motiv || '?')}" gefunden`);
@@ -4746,38 +4723,67 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 }
 
-function liveRenderPlayers(){
-  const players = LIVE.data.players || {};
-  const liste = Object.entries(players)
-    .map(([id, p]) => ({ id, name: (p && p.name) || '?', count: (p && p.count) || 0 }))
+// Spielerliste (vom Server) rendern
+function liveRenderPlayers(players){
+  const liste = (players || []).slice()
+    .map(p => ({ id: p.id, name: p.name || '?', count: p.count || 0 }))
     .sort((a,b)=> b.count - a.count);
   liveEls.players.innerHTML = liste.map(p =>
     `<span class="sp${p.id===LIVE.id?' ich':''}">${escapeHtml(p.name)} <b>${p.count}</b></span>`
   ).join('');
 }
 
-// Präsenz (Name + gefundene Felder) in den Raum schreiben
+// Nachricht an den Worker senden (nur wenn Socket offen)
+function liveSend(obj){
+  try{ if(LIVE.ws && LIVE.ws.readyState === 1) LIVE.ws.send(JSON.stringify(obj)); }catch(_){}
+}
+
+// Präsenz (Name + gefundene Felder) melden
 function livePresenz(count){
   if(!LIVE.connected) return;
-  fetch(`${LIVE.url}/rooms/${LIVE.room}/players/${LIVE.id}.json`, {
-    method:'PUT',
-    body: JSON.stringify({ name: LIVE.name, count: count|0, ts: {'.sv':'timestamp'} })
-  }).catch(()=>{});
+  liveSend({ t:'presence', id:LIVE.id, name:LIVE.name, count: count|0 });
 }
-
-// Ein Ereignis in den Raum melden (found / bingo)
+// Ein Ereignis melden (found / bingo)
 function liveMelden(ev){
   if(!LIVE.connected) return;
-  fetch(`${LIVE.url}/rooms/${LIVE.room}/events.json`, {
-    method:'POST',
-    body: JSON.stringify(Object.assign({ by: LIVE.id, name: LIVE.name, ts: {'.sv':'timestamp'} }, ev))
-  }).catch(()=>{});
+  liveSend(Object.assign({ t:'event', id:LIVE.id, name:LIVE.name }, ev));
 }
-
 // Öffentliche Helfer, die vom Spiel aufgerufen werden:
-function liveFundMelden(motiv, count){ liveMelden({ type:'found', motiv }); livePresenz(count); }
-function liveBingoMelden(){ liveMelden({ type:'bingo' }); }
+function liveFundMelden(motiv, count){ liveMelden({ kind:'found', motiv }); livePresenz(count); }
+function liveBingoMelden(){ liveMelden({ kind:'bingo' }); }
 function liveCountAktualisieren(count){ livePresenz(count); }
+
+// WebSocket zum Raum öffnen (mit automatischem Reconnect)
+function liveOpenSocket(){
+  const url = liveWsBase() + '/room/' + LIVE.room;
+  let ws;
+  try{ ws = new WebSocket(url); }
+  catch(e){ liveStatus('Verbindung nicht möglich – Worker-Adresse prüfen.'); return; }
+  LIVE.ws = ws;
+
+  ws.onopen = ()=>{
+    LIVE.connected = true; LIVE.reconnect = 0;
+    liveSend({ t:'join', id:LIVE.id, name:LIVE.name, count: zellenMarkiert(aktiverSpieler().blatt) });
+    liveStatus(`Verbunden · Raum <span class="code">${LIVE.room}</span> · teile diesen Code!`);
+    liveEls.toggle.classList.add('verbunden');
+    liveEls.join.hidden = true; liveEls.leave.hidden = false;
+    liveEls.name.disabled = true; liveEls.code.disabled = true;
+  };
+  ws.onmessage = (e)=>{
+    let m; try{ m = JSON.parse(e.data); }catch(_){ return; }
+    if(m.t === 'players') liveRenderPlayers(m.players);
+    else if(m.t === 'event') liveToastEvent(m);
+  };
+  ws.onerror = ()=>{ if(!LIVE.connected) liveStatus('Verbindung fehlgeschlagen – Worker-Adresse prüfen.'); };
+  ws.onclose = ()=>{
+    LIVE.ws = null;
+    if(!LIVE.wantOpen) return;                          // absichtlich verlassen
+    LIVE.connected = false;
+    liveStatus(`Verbindung unterbrochen … neuer Versuch · Raum <span class="code">${LIVE.room}</span>`);
+    LIVE.reconnect = Math.min(LIVE.reconnect + 1, 6);
+    setTimeout(()=>{ if(LIVE.wantOpen) liveOpenSocket(); }, 500 * Math.pow(2, LIVE.reconnect - 1));
+  };
+}
 
 // Raum beitreten
 function liveJoin(){
@@ -4789,48 +4795,15 @@ function liveJoin(){
     code = Array.from({length:4}, ()=> 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
     liveEls.code.value = code;
   }
-  LIVE.name = name; LIVE.room = code;
-  LIVE.baselineDone = false; LIVE.seen = new Set(); LIVE.data = {};
-
-  // Stream öffnen (Server-Sent-Events der RTDB)
-  try{
-    LIVE.es = new EventSource(`${LIVE.url}/rooms/${code}.json`);
-  }catch(e){
-    liveStatus('Verbindung nicht möglich – URL prüfen.');
-    return;
-  }
-  LIVE.es.addEventListener('put', (e)=>{
-    try{ const m = JSON.parse(e.data); liveAnwenden(m.path, m.data); }catch(_){}
-  });
-  LIVE.es.addEventListener('patch', (e)=>{
-    try{
-      const m = JSON.parse(e.data);
-      Object.keys(m.data||{}).forEach(k=>{
-        const p = (m.path === '/' ? '' : m.path) + '/' + k;
-        liveAnwenden(p, m.data[k]);
-      });
-    }catch(_){}
-  });
-  LIVE.es.onopen = ()=>{
-    LIVE.connected = true;
-    livePresenz(zellenMarkiert(aktiverSpieler().blatt));   // eigenen Stand eintragen
-    liveStatus(`Verbunden · Raum <span class="code">${code}</span> · teile diesen Code!`);
-    liveEls.toggle.classList.add('verbunden');
-    liveEls.join.hidden = true; liveEls.leave.hidden = false;
-    liveEls.name.disabled = true; liveEls.code.disabled = true;
-  };
-  LIVE.es.onerror = ()=>{
-    if(!LIVE.connected) liveStatus('Verbindung fehlgeschlagen – URL/Regeln prüfen.');
-    else liveStatus(`Verbindung unterbrochen … neuer Versuch · Raum <span class="code">${LIVE.room}</span>`);
-  };
+  LIVE.name = name; LIVE.room = code; LIVE.wantOpen = true; LIVE.reconnect = 0;
+  liveOpenSocket();
 }
 
 // Raum verlassen
 function liveLeave(){
-  if(LIVE.es){ LIVE.es.close(); LIVE.es = null; }
-  if(LIVE.connected){
-    fetch(`${LIVE.url}/rooms/${LIVE.room}/players/${LIVE.id}.json`, { method:'DELETE' }).catch(()=>{});
-  }
+  LIVE.wantOpen = false;
+  if(LIVE.ws){ try{ liveSend({ t:'leave', id:LIVE.id }); }catch(_){}
+    try{ LIVE.ws.close(1000); }catch(_){} LIVE.ws = null; }
   LIVE.connected = false; LIVE.room = null;
   liveEls.toggle.classList.remove('verbunden');
   liveEls.join.hidden = false; liveEls.leave.hidden = true;
