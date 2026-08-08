@@ -66,15 +66,9 @@
     line-height:1;
     margin:4px 0 2px;
   }
-  .titel .tri{ display:flex; gap:3px; }
-  /* Vier kleine "Trikots" als Akzent: Gelb, Bergtrikot (weiß mit roten Punkten), Grün, Weiß */
-  .titel .tri span{ width:12px; height:22px; border-radius:3px; display:block; border:1.5px solid var(--ink); }
-  .titel .tri .punkte{
-    background:#fff;
-    background-image:radial-gradient(var(--rot) 1.5px, transparent 1.8px);
-    background-size:5px 5px;
-    background-position:1px 1px;
-  }
+  /* Themen-Icon oben (passt sich dem gewählten Thema an) */
+  .titelIcon{ width:38px; height:38px; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; }
+  .titelIcon svg{ width:100%; height:100%; display:block; }
   .subtitel{ font-size:14px; font-weight:500; opacity:.75; margin:0 0 8px; }
   .spiel-link{
     display:inline-flex; align-items:center; gap:6px;
@@ -463,7 +457,7 @@
 
   <header>
     <div class="titel">
-      <span class="tri" aria-hidden="true"><span style="background:var(--gelb)"></span><span class="punkte"></span><span style="background:var(--gruen)"></span><span style="background:#fff"></span></span>
+      <span id="titelIcon" class="titelIcon" aria-hidden="true"></span>
       <span id="titelText">Tour-de-France Bingo</span>
     </div>
     <p class="subtitel" id="subtitel">Tippe an, was du im Rennen siehst! 🚴</p>
@@ -1603,8 +1597,14 @@ const POOL_FUSSBALL = [
    Beim Anlegen/Erweitern eines Themas diese Untergrenze einhalten.
    ------------------------------------------------------------------------- */
 const THEMES = [
-  { id:'tdf',      name:'Tour de France', title:'Tour-de-France Bingo', subtitle:"Tippe an, was du im Rennen siehst! 🚴", pool:POOL_TDF },
-  { id:'fussball', name:'Fußball (TV)',   title:'Fußball Bingo',        subtitle:"Tippe an, was du im Spiel siehst! ⚽", pool:POOL_FUSSBALL }
+  { id:'tdf', name:'Tour de France', title:'Tour-de-France Bingo',
+    subtitle:"Tippe an, was du im Rennen siehst! 🚴", themeColor:'#ffd21a',
+    headerIcon:`<svg viewBox="0 0 64 64">${jersey(GELB, `<path d="M32 26 l2.2 4.6 5 .4 -3.8 3.4 1.2 5 -4.6 -2.8 -4.6 2.8 1.2 -5 -3.8 -3.4 5 -.4 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.2"/>`)}</svg>`,
+    pool:POOL_TDF },
+  { id:'fussball', name:'Fußball (TV)', title:'Fußball Bingo',
+    subtitle:"Tippe an, was du im Spiel siehst! ⚽", themeColor:'#35a35f',
+    headerIcon:`<svg viewBox="0 0 64 64">${fussball(32,32,22)}</svg>`,
+    pool:POOL_FUSSBALL }
 ];
 let aktivesThema = 'tdf';
 let POOL = POOL_TDF;
@@ -1615,6 +1615,8 @@ function setzeThema(id){
   const tt = document.getElementById('titelText'); if(tt) tt.textContent = t.title;
   const st = document.getElementById('subtitel');  if(st) st.textContent = t.subtitle;
   const sel = document.getElementById('themaSelect'); if(sel && sel.value !== t.id) sel.value = t.id;
+  const ti = document.getElementById('titelIcon'); if(ti) ti.innerHTML = t.headerIcon || '';
+  const meta = document.querySelector('meta[name="theme-color"]'); if(meta && t.themeColor) meta.setAttribute('content', t.themeColor);
   try{ document.title = t.title; }catch(e){}
   const grid = document.getElementById('motivGrid'); if(grid) grid.innerHTML = '';   // Motiv-Editor fürs neue Thema neu aufbauen
 }
