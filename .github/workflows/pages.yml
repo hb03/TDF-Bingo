@@ -1,0 +1,61 @@
+name: GitHub Pages veroeffentlichen
+
+# Stellt die Spiele als normale Web-Seite bereit (ohne Installation):
+#   https://<user>.github.io/tdf-bingo/           -> TdF Bingo (index.html)
+#   https://<user>.github.io/tdf-bingo/bombe.html -> Bombenspiel
+# Laeuft beim Push auf den Default-Branch, sobald sich Web-Dateien aendern.
+
+on:
+  push:
+    branches:
+      - "claude/tour-de-france-bingo-app-jendbs"
+    paths:
+      - "index.html"
+      - "bombe.html"
+      - "manifest.webmanifest"
+      - "sw.js"
+      - "icons/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Nur ein Deploy gleichzeitig; laufende Deploys nicht abbrechen.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Web-Dateien einsammeln
+        run: |
+          set -e
+          mkdir -p _site/icons
+          cp index.html bombe.html manifest.webmanifest sw.js _site/
+          cp icons/*.png _site/icons/
+          ls -R _site
+
+      - name: Pages einrichten (aktiviert Pages bei Bedarf automatisch)
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Artefakt hochladen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Auf GitHub Pages veroeffentlichen
+        id: deployment
+        uses: actions/deploy-pages@v4
