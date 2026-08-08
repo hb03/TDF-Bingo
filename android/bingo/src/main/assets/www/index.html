@@ -446,6 +446,18 @@
     background:#fff; border:2px solid var(--ink); border-radius:12px; padding:6px 10px; }
   .themaWahl select{ font-family:inherit; font-weight:700; font-size:14px; border:none; background:transparent;
     color:inherit; cursor:pointer; outline:none; padding:2px; }
+  /* Bedienung oberhalb (nur Neues Blatt) mittig, Rest unterhalb mit Abstand */
+  .leiste-top{ justify-content:center; }
+  .leiste-bottom{ margin-top:18px; padding-top:14px; border-top:2px dashed rgba(36,48,58,.18); }
+
+  /* Erststart-Themenauswahl */
+  .theme-choice{ display:grid; grid-template-columns:1fr; gap:10px; margin-top:6px; }
+  .theme-choice-btn{ display:flex; align-items:center; gap:12px; text-align:left; width:100%;
+    border:2px solid var(--ink); background:var(--feld); border-radius:14px; padding:12px 14px;
+    font-family:inherit; font-weight:700; font-size:17px; cursor:pointer; }
+  .theme-choice-btn:active{ transform:translateY(1px); }
+  .theme-choice-btn .tc-ico{ width:40px; height:40px; flex:0 0 auto; display:inline-flex; }
+  .theme-choice-btn .tc-ico svg{ width:100%; height:100%; }
 
   @media (max-width:380px){
     .feld{ border-radius:11px; }
@@ -463,11 +475,24 @@
     <p class="subtitel" id="subtitel">Tippe an, was du im Rennen siehst! 🚴</p>
   </header>
 
-  <div class="leiste">
+  <!-- Über dem Spielfeld: nur Neues Blatt + Zähler -->
+  <div class="leiste leiste-top">
+    <button id="btnNeu" class="primaer">🎲 Neues Blatt (zufällig)</button>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="info">
+    <div class="zaehler">Fertige Blätter: <b id="anzFertig">0</b> / <span id="anzBlaetter">1</span></div>
+  </div>
+
+  <main id="board" class="board einzeln"></main>
+
+  <!-- Unter dem Spielfeld: Thema-Auswahl, Einstellungen & übrige Bedienung -->
+  <div class="leiste leiste-bottom">
     <label class="themaWahl">🎯 Thema:
       <select id="themaSelect" aria-label="Thema wählen"></select>
     </label>
-    <button id="btnNeu" class="primaer">🎲 Neues Blatt (zufällig)</button>
     <button id="btnReset">↺ Markierungen löschen</button>
     <button id="btnSpielerPlus">＋ Blatt</button>
     <button id="btnSpielerMinus">－ Blatt</button>
@@ -475,12 +500,6 @@
     <button id="btnEinstellungen">⚙️ Einstellungen</button>
     <button id="btnCache" title="Service-Worker abmelden, alle Caches löschen und frisch neu laden">🧹 Cache leeren & neu laden</button>
     <button id="btnResetAll" class="gefahr">🗑️ Alles zurücksetzen</button>
-  </div>
-
-  <div class="tabs" id="tabs"></div>
-
-  <div class="info">
-    <div class="zaehler">Fertige Blätter: <b id="anzFertig">0</b> / <span id="anzBlaetter">1</span></div>
   </div>
 
   <!-- Live-Spiel: Raum beitreten und Meldungen der anderen sehen -->
@@ -498,10 +517,8 @@
     </div>
   </div>
 
-  <main id="board" class="board einzeln"></main>
-
   <footer>
-    Ein Spaß-Spiel für vor dem Fernseher · Wähle oben ein Thema und tippe an, was du siehst! 📺
+    Ein Spaß-Spiel für vor dem Fernseher · Tippe an, was du siehst! 📺
     · Zustand bleibt erhalten.
   </footer>
 
@@ -552,6 +569,15 @@
         <button id="setSpeichern" class="gruen">✓ Speichern</button>
         <button id="setSchliessen" class="primaer">Schließen</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Erststart: Themenauswahl, bevor das erste Blatt erscheint -->
+  <div class="overlay" id="themeStartOverlay">
+    <div class="box">
+      <p class="dialogTitel">🎯 Thema wählen</p>
+      <p class="set-intro">Womit möchtest du Bingo spielen? Du kannst das Thema später jederzeit unter dem Spielfeld wechseln.</p>
+      <div id="themeStartGrid" class="theme-choice"></div>
     </div>
   </div>
 
@@ -2751,17 +2777,44 @@ function wechsleThema(id){
   toast('Thema: ' + (t ? t.name : id), 'bingo');
 }
 
+// Erststart: Themenauswahl anzeigen, bevor ein Blatt erscheint
+function zeigeThemenauswahl(){
+  const g = document.getElementById('themeStartGrid'); if(!g) return;
+  g.innerHTML = '';
+  THEMES.forEach(t=>{
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'theme-choice-btn';
+    btn.innerHTML = `<span class="tc-ico" aria-hidden="true">${t.headerIcon || ''}</span><span>${t.name}</span>`;
+    btn.onclick = ()=> startMitThema(t.id);
+    g.appendChild(btn);
+  });
+  document.getElementById('themeStartOverlay').classList.add('an');
+}
+function startMitThema(id){
+  setzeThema(id);
+  state = frischerState();
+  state.ansicht = 'tabs';
+  speichern();
+  document.getElementById('themeStartOverlay').classList.remove('an');
+  renderAlles();
+}
+
 ladeBingoSettings();                 // Motiv-Auswahl (pro Thema) vor dem ersten Blatt laden
 const geladen = laden();
 // Thema des gespeicherten Zustands zuerst aktiv setzen, damit die Feld-Indizes passen
 if(geladen && geladen.thema && themaById(geladen.thema)) setzeThema(geladen.thema);
-state = grundValidieren(geladen) ? geladen : frischerState();
-if(!state.thema || !themaById(state.thema)) state.thema = aktivesThema;
-setzeThema(state.thema);
 befuelleThemaSelect();
-// Ansicht absichern (alte gespeicherte Zustände kennen das Feld evtl. nicht)
-if(state.ansicht !== 'stapel' && state.ansicht !== 'tabs') state.ansicht = 'tabs';
-renderAlles();
+if(grundValidieren(geladen)){
+  state = geladen;
+  if(!state.thema || !themaById(state.thema)) state.thema = aktivesThema;
+  setzeThema(state.thema);
+  // Ansicht absichern (alte gespeicherte Zustände kennen das Feld evtl. nicht)
+  if(state.ansicht !== 'stapel' && state.ansicht !== 'tabs') state.ansicht = 'tabs';
+  renderAlles();
+} else {
+  // Kein gültiger Zustand -> zuerst ein Thema wählen lassen
+  zeigeThemenauswahl();
+}
 
 /* -------------------------------------------------------------------------
    PWA:  Service Worker registrieren (nur über https / localhost aktiv).
