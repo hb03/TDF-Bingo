@@ -3242,6 +3242,759 @@ const POOL_HANDBALL = [
   { t:"Auszeit! (gesagt)", s:`${spruch('Auszeit!', GELB)}`}
 ];
 
+/* ---- Darts-Icon-Bausteine ---- */
+function dartboard(cx,cy,r){ let seg='';
+  for(let i=0;i<20;i++){ const a0=(i/20)*6.283-1.5708, a1=((i+1)/20)*6.283-1.5708; const col=(i%2)?'#e8c27a':'#333';
+    seg+=`<path d="M${cx} ${cy} L${(cx+r*Math.cos(a0)).toFixed(1)} ${(cy+r*Math.sin(a0)).toFixed(1)} A${r} ${r} 0 0 1 ${(cx+r*Math.cos(a1)).toFixed(1)} ${(cy+r*Math.sin(a1)).toFixed(1)} Z" fill="${col}" stroke="${INK}" stroke-width="0.4"/>`; }
+  return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#333"/>${seg}<circle cx="${cx}" cy="${cy}" r="${(r*0.6).toFixed(1)}" fill="none" stroke="${GRUEN}" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="${(r*0.38).toFixed(1)}" fill="none" stroke="${ROT}" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="4" fill="${GRUEN}"/><circle cx="${cx}" cy="${cy}" r="2" fill="${ROT}"/>`; }
+function dartpfeil(){ return `<path d="M8 52 L42 18" stroke="#c7ccd0" stroke-width="4" stroke-linecap="round"/>`+
+  `<path d="M42 18 l9 -9" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`+
+  `<path d="M8 52 l-4 8 l8 -4 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>`+
+  `<path d="M14 46 l-7 2 3 -7 Z M21 39 l-7 2 3 -7 Z" fill="${GELB}" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/>`; }
+
+/* Feld-Pool für das Thema „Darts" (Darts-Abend) */
+const POOL_DARTS = [
+  { t:"Dartscheibe", s:`${dartboard(32,32,20)}`},
+  { t:"Dartpfeil", s:`${dartpfeil()}`},
+  { t:"Bullseye", s:`${dartboard(32,32,20)}${dartpfeil().replace('M8 52 L42 18','M8 52 L32 32').replace('M42 18 l9 -9','M32 32 l6 -6')}`},
+  { t:"Triple 20", s:`
+    ${dartboard(32,32,20)}
+    <path d="M32 14 A18 18 0 0 1 40 16" fill="none" stroke="${ROT}" stroke-width="4"/>
+    <text x="32" y="10" font-size="8" font-weight="800" text-anchor="middle" fill="${INK}" font-family="sans-serif">20</text>`},
+  { t:"Double 20", s:`
+    ${dartboard(32,32,20)}
+    <path d="M30 12 A20 20 0 0 1 40 14" fill="none" stroke="${GRUEN}" stroke-width="4"/>
+    <text x="32" y="9" font-size="8" font-weight="800" text-anchor="middle" fill="${INK}" font-family="sans-serif">D20</text>`},
+  { t:"180!", s:`
+    <rect x="6" y="20" width="52" height="24" rx="4" fill="${ROT}" stroke="${INK}" stroke-width="2.6"/>
+    <text x="32" y="39" font-size="18" font-weight="800" text-anchor="middle" fill="#fff" font-family="sans-serif">180</text>`},
+  { t:"Checkout", s:`
+    <rect x="10" y="20" width="44" height="24" rx="3" fill="${INK}"/>
+    <text x="32" y="37" font-size="13" font-weight="800" text-anchor="middle" fill="${GELB}" font-family="sans-serif">D16</text>
+    <path d="M14 46 h36" stroke="${GRUEN}" stroke-width="3"/>`},
+  { t:"Bust", s:`
+    <rect x="10" y="20" width="44" height="24" rx="3" fill="${INK}"/>
+    <text x="32" y="37" font-size="12" font-weight="800" text-anchor="middle" fill="${ROT}" font-family="sans-serif">BUST</text>`},
+  { t:"Drei Pfeile", s:`
+    ${[0,10,20].map(dx=>`<g transform="translate(${dx-10},${dx*0.3})">${dartpfeil()}</g>`).join('')}`},
+  { t:"Pfeil steckt", s:`${dartboard(32,30,18)}<g transform="translate(8,4) scale(0.7)">${dartpfeil()}</g>`},
+  { t:"Pfeil daneben", s:`
+    ${dartboard(24,30,15)}
+    <g transform="translate(30,10) scale(0.7)">${dartpfeil()}</g>
+    <path d="M50 46 l6 6 M56 46 l-6 6" stroke="${ROT}" stroke-width="2.4" stroke-linecap="round"/>`},
+  { t:"Wurflinie (Oche)", s:`
+    <path d="M8 44 h48" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="24" cy="20" r="5" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <path d="M24 25 V40 M24 28 L40 24 M24 40 L20 44 M24 40 L30 44" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>`},
+  { t:"Flight (Feder)", s:`
+    <path d="M32 8 V54" stroke="${INK}" stroke-width="3"/>
+    <path d="M32 12 L46 20 L32 28 Z M32 12 L18 20 L32 28 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>`},
+  { t:"Barrel", s:`
+    <rect x="20" y="28" width="24" height="8" rx="4" fill="#9aa6ad" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M24 28 v8 M28 28 v8 M32 28 v8 M36 28 v8 M40 28 v8" stroke="${INK}" stroke-width="0.8"/>
+    <path d="M44 32 l8 0" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+  { t:"Wurfhaltung", s:`
+    <circle cx="24" cy="16" r="6" fill="${BLAU}" stroke="${INK}" stroke-width="2"/>
+    <path d="M24 22 V40 M24 26 L42 22 M24 40 L18 52 M24 40 L30 52" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M42 22 l8 -3" stroke="#c7ccd0" stroke-width="3" stroke-linecap="round"/>`},
+  { t:"Anschreibtafel", s:`
+    <rect x="10" y="12" width="44" height="40" rx="2" fill="#2a3a2a" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M32 14 V50 M12 22 h40" stroke="#fff" stroke-width="1"/>
+    <text x="21" y="20" font-size="6" fill="#fff" font-family="sans-serif">501</text>
+    <text x="43" y="20" font-size="6" fill="#fff" font-family="sans-serif">501</text>`},
+  { t:"501", s:`
+    <rect x="10" y="20" width="44" height="24" rx="3" fill="${GRUEN}" stroke="${INK}" stroke-width="2.4"/>
+    <text x="32" y="38" font-size="16" font-weight="800" text-anchor="middle" fill="#fff" font-family="sans-serif">501</text>`},
+  { t:"Restpunkte", s:`
+    <rect x="12" y="20" width="40" height="24" rx="3" fill="${INK}"/>
+    <text x="32" y="38" font-size="16" font-weight="800" text-anchor="middle" fill="${GELB}" font-family="sans-serif">40</text>`},
+  { t:"Average", s:`
+    <path d="M10 44 L24 32 L34 38 L52 20" fill="none" stroke="${GRUEN}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M10 20 V46 h42" stroke="${INK}" stroke-width="2"/>
+    <text x="34" y="16" font-size="8" font-weight="800" fill="${INK}" font-family="sans-serif">98.5</text>`},
+  { t:"Leg gewonnen", s:`
+    <circle cx="32" cy="30" r="14" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M25 30 l5 5 9 -10" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="32" y="52" font-size="8" font-weight="800" text-anchor="middle" fill="${INK}" font-family="sans-serif">LEG</text>`},
+  { t:"Set gewonnen", s:`
+    <path d="M14 46 h36 v-4 l-8 -6 h-20 l-8 6 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <text x="32" y="26" font-size="10" font-weight="800" text-anchor="middle" fill="${INK}" font-family="sans-serif">SET</text>`},
+  { t:"Nine-Darter", s:`
+    <rect x="8" y="22" width="48" height="20" rx="3" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <text x="32" y="37" font-size="12" font-weight="800" text-anchor="middle" fill="#fff" font-family="sans-serif">9-Darter</text>`},
+  { t:"Doppel verfehlt", s:`
+    ${dartboard(28,30,16)}
+    <path d="M44 16 l10 10 M54 16 l-10 10" stroke="${ROT}" stroke-width="3" stroke-linecap="round"/>`},
+  { t:"Jubel-Faust", s:`
+    <circle cx="30" cy="18" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M30 24 V40 M30 30 L44 22 M30 40 L24 52 M30 40 L38 50" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M8 14 l4 4 M16 10 l2 5" stroke="${GELB}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"Pfeil küssen", s:`
+    <circle cx="26" cy="24" r="8" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M32 26 q4 2 8 -2" stroke="${ROT}" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M34 24 L52 8" stroke="#c7ccd0" stroke-width="3" stroke-linecap="round"/>
+    <path d="M50 6 l4 2 -1 4" fill="${GELB}" stroke="${INK}" stroke-width="1"/>`},
+  { t:"Konzentration", s:`
+    <circle cx="32" cy="30" r="14" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M24 26 h6 M34 26 h6" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M28 40 h8" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M22 20 l4 3 M42 20 l-4 3" stroke="${INK}" stroke-width="1.6" stroke-linecap="round"/>`},
+  { t:"High Five", s:`
+    <path d="M20 44 V24 q0 -3 3 -3 t3 3 v-3 q0 -3 3 -3 t3 3 v2 q0 -3 3 -3 t3 3 v2 q0 -3 3 -3 t3 3 v8 q0 8 -8 10 Z" fill="#f3c6a0" stroke="${INK}" stroke-width="2" stroke-linejoin="round" transform="translate(-6,0)"/>
+    <path d="M44 44 V24 q0 -3 -3 -3 t-3 3" fill="#f3c6a0" stroke="${INK}" stroke-width="2" transform="translate(6,0) scale(-1,1) translate(-64,0)"/>
+    <path d="M6 14 l3 4 M56 14 l-3 4" stroke="${GELB}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"Bierglas", s:`
+    <path d="M20 16 h24 l-3 38 h-18 Z" fill="#ffd98a" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M20 16 q12 -8 24 0 q-12 6 -24 0 Z" fill="#fff" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M44 24 q8 2 6 12 q-2 6 -6 4" fill="none" stroke="${INK}" stroke-width="2.2"/>`},
+  { t:"Bierkrug", s:`
+    <rect x="18" y="18" width="22" height="34" rx="3" fill="#ffd98a" stroke="${INK}" stroke-width="2.6"/>
+    <rect x="18" y="18" width="22" height="8" fill="#fff" stroke="${INK}" stroke-width="2"/>
+    <path d="M40 24 q10 2 8 14 q-2 6 -8 4" fill="none" stroke="${INK}" stroke-width="2.6"/>
+    <path d="M23 32 h12 M23 40 h12" stroke="${INK}" stroke-width="1" opacity="0.4"/>`},
+  { t:"Zapfhahn", s:`
+    <rect x="26" y="10" width="8" height="18" fill="#c7ccd0" stroke="${INK}" stroke-width="2"/>
+    <path d="M26 20 h-8 v6 M34 16 h6" stroke="${INK}" stroke-width="2.4" fill="none"/>
+    <path d="M28 28 h4 v6 h-4 Z" fill="#c7ccd0" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M30 34 v10" stroke="#ffd98a" stroke-width="4"/>
+    <path d="M22 44 h16 l-2 8 h-12 Z" fill="#ffd98a" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`},
+  { t:"Bierdeckel", s:`
+    <circle cx="32" cy="32" r="18" fill="#e8c27a" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="32" cy="32" r="12" fill="none" stroke="${ROT}" stroke-width="2"/>
+    <path d="M26 32 h12 M32 26 v12" stroke="${ROT}" stroke-width="2" opacity="0.6"/>`},
+  { t:"Barhocker", s:`
+    <ellipse cx="32" cy="18" rx="12" ry="4" fill="${ROT}" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M24 20 L20 52 M40 20 L44 52 M26 34 h12" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+  { t:"Snack", s:`
+    <path d="M16 24 h32 l-4 26 q-12 4 -24 0 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M16 24 q16 -8 32 0" fill="#e8c27a" stroke="${INK}" stroke-width="2"/>
+    ${[[24,30],[34,32],[28,38],[38,40]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="2.4" fill="#e8c27a"/>`).join('')}`},
+  { t:"E-Dart-Automat", s:`
+    <rect x="14" y="8" width="36" height="48" rx="3" fill="${BLAU}" stroke="${INK}" stroke-width="2.4"/>
+    ${dartboard(32,26,13)}
+    <rect x="20" y="42" width="24" height="8" rx="1.5" fill="${INK}"/>
+    <text x="32" y="48" font-size="6" font-weight="800" text-anchor="middle" fill="${GELB}" font-family="sans-serif">301</text>`},
+  { t:"Publikum", s:`
+    <g fill="${ROT}">${[0,1].flatMap(r=>Array.from({length:7},(_,i)=>`<circle cx="${10+i*7}" cy="${24+r*12}" r="3"/>`)).join('')}</g>
+    <path d="M6 46 h52" stroke="${INK}" stroke-width="2" opacity="0.4"/>`},
+  { t:"Kostümfan", s:`
+    <circle cx="32" cy="34" r="12" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M18 24 L26 8 L32 24 Z" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <path d="M46 24 L38 8 L32 24 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2"/>
+    <circle cx="26" cy="8" r="3" fill="${GELB}"/><circle cx="38" cy="8" r="3" fill="${GELB}"/>
+    <circle cx="27" cy="32" r="1.6" fill="${INK}"/><circle cx="37" cy="32" r="1.6" fill="${INK}"/>
+    <path d="M26 40 q6 5 12 0" fill="none" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>`},
+  { t:"Perücke", s:`
+    <path d="M14 34 q0 -24 18 -24 t18 24 q-6 -6 -8 0 q-4 -8 -10 -2 q-6 -6 -10 2 q-2 -6 -8 0 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M22 34 v14 M42 34 v14" stroke="${GELB}" stroke-width="5" stroke-linecap="round"/>`},
+  { t:"Sombrero", s:`
+    <ellipse cx="32" cy="40" rx="26" ry="8" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M20 40 q0 -20 12 -20 t12 20" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M20 36 q12 4 24 0" fill="none" stroke="${ROT}" stroke-width="2.4"/>`},
+  { t:"Walk-on", s:`
+    <path d="M22 12 v28 a6 6 0 1 1 -6 -6" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M42 8 v28 a6 6 0 1 1 -6 -6" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M22 12 L42 8" stroke="${INK}" stroke-width="3"/>
+    <path d="M50 12 l4 -3 M52 20 l5 -1" stroke="${GELB}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"Nebelmaschine", s:`
+    <rect x="10" y="34" width="24" height="14" rx="2" fill="#5a6b74" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="34" cy="41" r="5" fill="${INK}"/>
+    <g fill="#c7ccd0">${[[42,32],[48,38],[44,44],[52,30]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="4" stroke="${INK}" stroke-width="0.8"/>`).join('')}</g>`},
+  { t:"Konfetti", s:`
+    <g stroke="${INK}" stroke-width="0.8">
+    ${Array.from({length:16},(_,i)=>`<rect x="${8+(i*7)%50}" y="${8+((i*11)%42)}" width="5" height="7" fill="${[ROT,GELB,GRUEN,BLAU][i%4]}" transform="rotate(${(i*40)%360} ${8+(i*7)%50} ${8+((i*11)%42)})"/>`).join('')}
+    </g>`},
+  { t:"Ansager", s:`
+    <circle cx="26" cy="18" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M18 48 V32 q0 -4 8 -4 t8 4 v16 Z" fill="${INK}"/>
+    <rect x="38" y="22" width="7" height="14" rx="3.5" fill="${INK}"/>
+    <path d="M41 36 V46" stroke="${INK}" stroke-width="2"/>
+    <path d="M48 20 q6 6 0 14" fill="none" stroke="${ROT}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"Nickname-Banner", s:`
+    <path d="M8 18 h48 l-6 8 l6 8 H8 l6 -8 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M18 26 h28" stroke="#fff" stroke-width="3" stroke-linecap="round"/>`},
+  { t:"Applaus", s:`
+    <path d="M18 28 q-6 -4 -2 -10 M46 28 q6 -4 2 -10" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M22 40 q-4 4 -10 2 M42 40 q4 4 10 2" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M24 34 q8 8 16 0 q0 -10 -8 -12 q-8 2 -8 12 Z" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>`},
+  { t:"Pokal", s:`
+    <path d="M20 12 h24 v8 a12 12 0 0 1 -24 0 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M20 14 q-8 0 -8 8 q0 6 8 6 M44 14 q8 0 8 8 q0 6 -8 6" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M32 32 V42 M28 42 h8 v6 h-8 Z M24 48 h16 v5 h-16 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`},
+  { t:"Medaille", s:`${medaille(GELB)}`},
+  { t:"Dartkoffer", s:`
+    <rect x="12" y="22" width="40" height="24" rx="3" fill="#8a5a2b" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M26 22 v-4 h12 v4" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M12 32 h40" stroke="${INK}" stroke-width="1.6"/>
+    ${[24,32,40].map(x=>`<path d="M${x} 26 v-4" stroke="#c7ccd0" stroke-width="2.4" stroke-linecap="round"/>`).join('')}`},
+  { t:"Kreide", s:`
+    <rect x="22" y="14" width="8" height="30" rx="2" fill="#fff" stroke="${INK}" stroke-width="2.2" transform="rotate(20 26 30)"/>
+    <path d="M14 50 q8 -6 16 -2" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>`},
+  { t:"Spieler-Grafik", s:`
+    <rect x="8" y="22" width="48" height="20" rx="3" fill="${BLAU}" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="18" cy="32" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="1.4"/>
+    <path d="M30 28 h20 M30 36 h14" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>`},
+  { t:"TV-Kamera", s:`
+    <rect x="12" y="24" width="30" height="18" rx="2" fill="${INK}"/>
+    <path d="M42 28 l10 -4 v14 l-10 -4 Z" fill="${INK}" stroke="${INK}" stroke-width="1"/>
+    <circle cx="20" cy="33" r="4" fill="#bfe0ff"/>
+    <path d="M20 42 v6 h16 v-6 M28 48 v6" stroke="${INK}" stroke-width="2.4" fill="none"/>`},
+  { t:"Wandschutz", s:`
+    ${dartboard(32,30,15)}
+    <circle cx="32" cy="30" r="24" fill="none" stroke="#8a5a2b" stroke-width="6"/>`},
+  { t:"Ersatzpfeil", s:`
+    <g transform="rotate(90 32 32)">${dartpfeil()}</g>
+    <path d="M50 12 l4 4 M54 10 l-2 6" stroke="${GRUEN}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"Daumen hoch", s:`
+    <path d="M20 30 h6 v18 h-6 Z" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M26 32 q2 -14 8 -16 q4 0 2 8 l-1 4 h10 q4 0 3 5 l-3 12 q-1 3 -5 3 H26 Z" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>`},
+  { t:"Sieger-Interview", s:`
+    <circle cx="26" cy="20" r="8" fill="#f3c6a0" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M16 48 V34 q0 -4 10 -4 t10 4 v14 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="40" y="24" width="8" height="16" rx="4" fill="${INK}"/>
+    <rect x="41" y="20" width="6" height="6" rx="3" fill="#9aa6ad"/>`},
+  { t:"Bierbauch-Fan", s:`
+    <circle cx="32" cy="16" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M22 52 q-2 -22 10 -22 t10 22 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M24 30 L14 24 M40 30 L50 24" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+  { t:"Zwei Fans anstoßen", s:`
+    <path d="M12 20 h14 l-2 24 h-10 Z" fill="#ffd98a" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M38 20 h14 l-2 24 h-10 Z" fill="#ffd98a" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M26 24 l12 0" stroke="${INK}" stroke-width="1.4" opacity="0.4"/>
+    <path d="M28 14 l4 6 4 -6" stroke="${GELB}" stroke-width="2" fill="none" stroke-linecap="round"/>`},
+  { t:"Fingerkreide", s:`
+    <circle cx="32" cy="40" r="10" fill="#c7ccd0" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M26 34 q6 -20 4 -26 M32 32 q0 -22 0 -28 M38 34 q-2 -20 -4 -26" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M24 42 h16" stroke="#fff" stroke-width="1" opacity="0.6"/>`},
+  { t:"Bierrunde", s:`
+    <rect x="8" y="40" width="48" height="6" rx="2" fill="#8a5a2b" stroke="${INK}" stroke-width="1.8"/>
+    ${[16,26,36,46].map(x=>`<path d="M${x-4} 22 h8 l-1 18 h-6 Z" fill="#ffd98a" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/><path d="M${x-4} 22 q4 -3 8 0" fill="#fff" stroke="${INK}" stroke-width="1.4"/>`).join('')}`},
+  { t:"180! (gesagt)", s:`${spruch('180!', ROT)}`},
+  { t:"Game on! (gesagt)", s:`${spruch('Game on!', GRUEN)}`},
+  { t:"Game shot! (gesagt)", s:`${spruch('Game shot', GELB)}`}
+];
+
+/* ---- Feste-Icon-Bausteine ---- */
+function luftballon(cx,cy,col){ return `<ellipse cx="${cx}" cy="${cy}" rx="11" ry="13" fill="${col}" stroke="${INK}" stroke-width="2.2"/>`+
+  `<path d="M${cx-2} ${cy+13} l2 3 2 -3 Z" fill="${col}" stroke="${INK}" stroke-width="1.4"/>`+
+  `<path d="M${cx} ${cy+16} q4 8 -2 14 q-6 6 2 12" fill="none" stroke="${INK}" stroke-width="1.4"/>`+
+  `<path d="M${cx-5} ${cy-6} q3 -4 7 -2" fill="none" stroke="#fff" stroke-width="1.6" opacity="0.7"/>`; }
+function torte(){ return `<path d="M14 30 h36 v18 q-18 6 -36 0 Z" fill="#f3c6a0" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`+
+  `<path d="M14 30 q18 -8 36 0 v0 q-18 8 -36 0 Z" fill="#ffb0c8" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>`+
+  `<rect x="30" y="14" width="4" height="12" fill="#fff" stroke="${INK}" stroke-width="1"/><path d="M32 14 q3 3 0 6 q-3 -3 0 -6 Z" fill="${GELB}" stroke="${INK}" stroke-width="0.8"/>`; }
+
+/* Feld-Pool für das Thema „Feste & Party" (Geburtstag · Karneval · Ostern) */
+const POOL_FESTE = [
+  { t:"Geburtstagstorte", s:`${torte()}`},
+  { t:"Kerzen auspusten", s:`${torte().replace('<path d="M32 14 q3 3 0 6 q-3 -3 0 -6 Z" fill="'+GELB,'<path d="M32 14 q3 3 0 6 q-3 -3 0 -6 Z" fill="#c7ccd0')}<path d="M40 12 q4 2 8 0" fill="none" stroke="#c7ccd0" stroke-width="2.4" stroke-linecap="round"/>`},
+  { t:"Zahlenkerze", s:`
+    <text x="32" y="34" font-size="26" font-weight="800" text-anchor="middle" fill="${ROT}" font-family="sans-serif">5</text>
+    <path d="M40 12 v8 M40 8 q3 3 0 6 q-3 -3 0 -6 Z" stroke="${INK}" stroke-width="1.4" fill="${GELB}"/>
+    <path d="M20 44 h24" stroke="${INK}" stroke-width="2"/>`},
+  { t:"Luftballon", s:`${luftballon(32,26,ROT)}`},
+  { t:"Luftballon-Bündel", s:`${luftballon(22,22,ROT)}${luftballon(40,20,BLAU)}${luftballon(32,30,GELB)}`},
+  { t:"Girlande", s:`
+    <path d="M4 16 q14 16 28 0 q14 -16 28 0" fill="none" stroke="${INK}" stroke-width="1.6"/>
+    ${[10,20,30,40,50].map((x,i)=>`<path d="M${x} ${18+(i%2?7:2)} l-4 8 h8 Z" fill="${[ROT,GELB,GRUEN,BLAU,ROT][i]}" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/>`).join('')}`},
+  { t:"Geschenk", s:`
+    <rect x="12" y="26" width="40" height="26" rx="2" fill="${BLAU}" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="28" y="26" width="8" height="26" fill="${GELB}"/>
+    <path d="M12 34 h40" stroke="${GELB}" stroke-width="4"/>
+    <path d="M32 26 q-10 -14 -14 -2 q0 6 14 2 q14 4 14 -2 q-4 -12 -14 2 Z" fill="${GELB}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`},
+  { t:"Partyhut", s:`
+    <path d="M32 8 L46 46 H18 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M22 38 h20 M25 30 h14 M28 22 h8" stroke="${GELB}" stroke-width="2.4"/>
+    <circle cx="32" cy="8" r="4" fill="${GELB}" stroke="${INK}" stroke-width="1.4"/>`},
+  { t:"Konfetti", s:`
+    <g stroke="${INK}" stroke-width="0.8">
+    ${Array.from({length:16},(_,i)=>`<rect x="${8+(i*7)%50}" y="${8+((i*11)%42)}" width="5" height="7" fill="${[ROT,GELB,GRUEN,BLAU][i%4]}" transform="rotate(${(i*40)%360} ${8+(i*7)%50} ${8+((i*11)%42)})"/>`).join('')}
+    </g>`},
+  { t:"Luftschlange", s:`
+    <path d="M12 12 q10 6 4 14 q-6 8 4 14 q10 6 4 14" fill="none" stroke="${ROT}" stroke-width="4" stroke-linecap="round"/>
+    <path d="M40 10 q-8 8 0 16 q8 8 0 16 q-6 6 2 10" fill="none" stroke="${GRUEN}" stroke-width="4" stroke-linecap="round"/>`},
+  { t:"Tröte", s:`
+    <path d="M10 28 L34 22 L34 42 L10 36 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M34 26 q14 6 4 12 q-2 12 -4 -12 Z" fill="${ROT}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M46 20 q10 0 12 14" fill="none" stroke="${BLAU}" stroke-width="2.4" stroke-linecap="round"/>`},
+  { t:"Cupcake", s:`
+    <path d="M18 30 h28 l-4 20 h-20 Z" fill="#e8c27a" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M16 30 q4 -14 16 -14 t16 14 q-6 -6 -8 0 q-4 -8 -8 0 q-4 -8 -8 0 q-2 -6 -8 0 Z" fill="#ffb0c8" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <circle cx="32" cy="14" r="2.4" fill="${ROT}"/>`},
+  { t:"Süßigkeiten", s:`
+    <path d="M18 24 h28 v14 h-28 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M18 31 h28" stroke="${GELB}" stroke-width="2"/>
+    <path d="M18 24 l-8 -4 v18 l8 -4 Z M46 24 l8 -4 v18 l-8 -4 Z" fill="${ROT}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`},
+  { t:"Geburtstagskarte", s:`
+    <rect x="12" y="16" width="40" height="30" rx="2" fill="#fff" stroke="${INK}" stroke-width="2.4"/>
+    ${luftballon(22,26,ROT).replace(/rx="11" ry="13"/,'rx="5" ry="6"')}
+    <path d="M32 22 h16 M32 30 h12 M32 38 h16" stroke="${INK}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"Ständchen singen", s:`
+    <circle cx="24" cy="20" r="8" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="24" cy="24" r="3" fill="${INK}"/>
+    <path d="M40 16 l2 -8 6 2 M42 8 a3 3 0 1 0 0 6 M48 10 a3 3 0 1 0 0 6" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"Piñata", s:`
+    <path d="M18 30 q14 -14 28 0 q4 10 -14 14 q-18 -4 -14 -14 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M20 26 l-6 -8 M44 26 l6 -8 M32 22 v-10" stroke="${GRUEN}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M24 34 l4 8 4 -8 4 8 4 -8" fill="none" stroke="${GELB}" stroke-width="2"/>
+    <path d="M32 44 v10" stroke="${INK}" stroke-width="1.6" stroke-dasharray="2 2"/>`},
+  { t:"Wunderkerze", s:`
+    <path d="M14 52 L40 20" stroke="#c7ccd0" stroke-width="3" stroke-linecap="round"/>
+    <g stroke="${GELB}" stroke-width="1.8" stroke-linecap="round"><path d="M40 20 l4 -6 M40 20 l6 -2 M40 20 l2 6 M40 20 l-4 -4 M40 20 l8 2"/></g>
+    <circle cx="40" cy="20" r="2" fill="${ROT}"/>`},
+  { t:"Topfschlagen", s:`
+    <path d="M20 30 h24 v14 a12 6 0 0 1 -24 0 Z" fill="${INK}"/>
+    <rect x="30" y="26" width="4" height="6" fill="${INK}"/>
+    <circle cx="16" cy="18" r="5" fill="#f3c6a0" stroke="${INK}" stroke-width="1.8"/>
+    <path d="M20 22 L34 16" stroke="#8a5a2b" stroke-width="3" stroke-linecap="round"/>`},
+  { t:"Ballontier", s:`
+    <path d="M14 34 q-6 -8 2 -12 q8 -2 8 6 h14 q0 -8 8 -6 q8 4 2 12 q6 2 0 8 h-6 v6 h-6 v-6 h-6 v6 h-6 v-6 h-6 q-6 -6 0 -8 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <circle cx="18" cy="26" r="1.4" fill="${INK}"/>`},
+  { t:"Narrenkappe", s:`
+    <path d="M14 44 q4 -30 18 -30 t18 30 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M14 44 q4 -30 9 -30 M32 14 v30 M41 14 q5 0 9 30" stroke="${GELB}" stroke-width="2" fill="none"/>
+    <circle cx="14" cy="44" r="4" fill="${GELB}"/><circle cx="32" cy="12" r="4" fill="${GELB}"/><circle cx="50" cy="44" r="4" fill="${GELB}"/>`},
+  { t:"Maske", s:`
+    <path d="M10 26 q22 -10 44 0 q-2 14 -14 14 q-6 0 -8 -6 q-2 6 -8 6 q-12 0 -14 -14 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <circle cx="22" cy="28" r="3" fill="#fff"/><circle cx="42" cy="28" r="3" fill="#fff"/>
+    <path d="M32 20 l4 -8 M28 18 l-2 -8" stroke="${GELB}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"Clown", s:`
+    <circle cx="32" cy="34" r="13" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="32" cy="36" r="4" fill="${ROT}" stroke="${INK}" stroke-width="1.4"/>
+    <path d="M18 26 q-6 -6 0 -10 q6 2 4 8 M46 26 q6 -6 0 -10 q-6 2 -4 8" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <circle cx="27" cy="30" r="1.6" fill="${INK}"/><circle cx="37" cy="30" r="1.6" fill="${INK}"/>
+    <path d="M26 42 q6 5 12 0" fill="none" stroke="${ROT}" stroke-width="2.2" stroke-linecap="round"/>`},
+  { t:"Kostüm", s:`
+    ${jersey(GRUEN, `<circle cx="27" cy="30" r="2" fill="${GELB}"/><circle cx="37" cy="34" r="2" fill="${ROT}"/><circle cx="32" cy="40" r="2" fill="${BLAU}"/>`)}
+    <circle cx="32" cy="12" r="5" fill="#f3c6a0" stroke="${INK}" stroke-width="1.8"/>`},
+  { t:"Umzugswagen", s:`
+    <rect x="8" y="26" width="40" height="18" rx="2" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M14 26 q6 -14 20 -10 q10 2 8 10" fill="${GELB}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <circle cx="18" cy="46" r="5" fill="${INK}"/><circle cx="40" cy="46" r="5" fill="${INK}"/>
+    ${luftballon(52,16,BLAU).replace(/rx="11" ry="13"/,'rx="6" ry="7"')}`},
+  { t:"Kamelle", s:`
+    <g>${[[18,24,ROT],[38,20,GELB],[26,36,GRUEN],[44,38,BLAU],[14,42,ROT]].map(([x,y,c])=>`<g transform="translate(${x},${y})"><ellipse cx="0" cy="0" rx="6" ry="4" fill="${c}" stroke="${INK}" stroke-width="1.4"/><path d="M-6 0 l-4 -3 v6 Z M6 0 l4 -3 v6 Z" fill="${c}" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/></g>`).join('')}</g>`},
+  { t:"Helau!", s:`
+    <rect x="8" y="22" width="48" height="20" rx="4" fill="${GELB}" stroke="${INK}" stroke-width="2.6"/>
+    <text x="32" y="37" font-size="14" font-weight="800" text-anchor="middle" fill="${ROT}" font-family="sans-serif">HELAU</text>`},
+  { t:"Trompete", s:`
+    <path d="M10 30 h20 M14 26 h16" stroke="${GELB}" stroke-width="4" stroke-linecap="round"/>
+    <path d="M30 22 q14 8 4 16 q-2 12 -4 -16 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M16 30 v6 M22 30 v6 M28 30 v6" stroke="${INK}" stroke-width="2"/>`},
+  { t:"Funkenmariechen", s:`
+    <circle cx="32" cy="16" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M32 22 V34 M32 26 L22 20 M32 26 L42 20" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M22 34 h20 l6 12 H16 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M32 34 V46" stroke="${INK}" stroke-width="2"/>`},
+  { t:"Pappnase", s:`
+    <circle cx="32" cy="32" r="12" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M20 32 h-6 M50 32 h-6" stroke="${INK}" stroke-width="1.6" stroke-dasharray="2 2"/>
+    <path d="M28 28 q4 -3 8 0" fill="none" stroke="#fff" stroke-width="1.6"/>`},
+  { t:"Schminke", s:`
+    <circle cx="24" cy="26" r="10" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M18 22 q4 -3 8 0 M20 30 q4 3 6 0" stroke="${ROT}" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M22 26 l-6 -3" stroke="${BLAU}" stroke-width="2" stroke-linecap="round"/>
+    <rect x="40" y="20" width="6" height="24" rx="3" fill="${ROT}" stroke="${INK}" stroke-width="1.8"/>
+    <rect x="41" y="14" width="4" height="6" fill="#8a5a2b"/>`},
+  { t:"Krone", s:`
+    <path d="M14 44 L18 24 L26 34 L32 20 L38 34 L46 24 L50 44 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M14 44 h36" stroke="${INK}" stroke-width="2"/>
+    <circle cx="32" cy="20" r="2.4" fill="${ROT}"/><circle cx="18" cy="24" r="2" fill="${BLAU}"/><circle cx="46" cy="24" r="2" fill="${GRUEN}"/>`},
+  { t:"Osterhase", s:`
+    <ellipse cx="32" cy="40" rx="12" ry="13" fill="#fff" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M24 28 q-4 -20 2 -22 q4 0 3 20 M40 28 q4 -20 -2 -22 q-4 0 -3 20" fill="#fff" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M25 8 q2 8 1 18 M39 8 q-2 8 -1 18" stroke="#ffb0c8" stroke-width="2" fill="none"/>
+    <circle cx="28" cy="38" r="1.6" fill="${INK}"/><circle cx="36" cy="38" r="1.6" fill="${INK}"/>
+    <circle cx="32" cy="44" r="2.4" fill="#ffb0c8"/>`},
+  { t:"Osterei", s:`
+    <ellipse cx="32" cy="34" rx="15" ry="19" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M18 30 q14 -8 28 0 M17 38 q15 8 30 0 M19 46 q13 -6 26 0" fill="none" stroke="${ROT}" stroke-width="2.4"/>
+    ${[[26,24],[38,24],[32,50]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="2" fill="${BLAU}"/>`).join('')}`},
+  { t:"Eier bemalen", s:`
+    <ellipse cx="26" cy="36" rx="12" ry="15" fill="#fff" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M18 34 q8 -5 16 0 M18 42 q8 5 16 0" fill="none" stroke="${GRUEN}" stroke-width="2.2"/>
+    <path d="M44 14 L38 40" stroke="#8a5a2b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M38 40 l-4 3 6 0 Z" fill="${ROT}" stroke="${INK}" stroke-width="1.2"/>`},
+  { t:"Osternest", s:`
+    <path d="M12 36 q20 -10 40 0 q-4 12 -20 12 q-16 0 -20 -12 Z" fill="#8a5a2b" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <g stroke="${INK}" stroke-width="1">${[[24,36,ROT],[32,34,GELB],[40,36,BLAU]].map(([x,y,c])=>`<ellipse cx="${x}" cy="${y}" rx="5" ry="6" fill="${c}"/>`).join('')}</g>`},
+  { t:"Küken", s:`
+    <circle cx="32" cy="36" r="12" fill="${GELB}" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="32" cy="22" r="8" fill="${GELB}" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M32 22 l6 2 -6 2 Z" fill="#ff9b3d" stroke="${INK}" stroke-width="1"/>
+    <circle cx="30" cy="20" r="1.4" fill="${INK}"/><circle cx="35" cy="20" r="1.4" fill="${INK}"/>
+    <path d="M26 48 l-3 4 M38 48 l3 4" stroke="#ff9b3d" stroke-width="2.4" stroke-linecap="round"/>`},
+  { t:"Narzisse", s:`
+    <path d="M32 36 V56" stroke="${GRUEN}" stroke-width="3"/>
+    <path d="M32 44 q-8 -2 -10 4 M32 40 q8 -2 10 4" fill="${GRUEN}" stroke="${INK}" stroke-width="1.4"/>
+    ${Array.from({length:6},(_,i)=>{const a=i/6*6.283;return `<ellipse cx="${(32+9*Math.cos(a)).toFixed(1)}" cy="${(24+9*Math.sin(a)).toFixed(1)}" rx="5" ry="3" fill="${GELB}" stroke="${INK}" stroke-width="1.2" transform="rotate(${(a*57.3).toFixed(0)} ${(32+9*Math.cos(a)).toFixed(1)} ${(24+9*Math.sin(a)).toFixed(1)})"/>`}).join('')}
+    <circle cx="32" cy="24" r="5" fill="#ff9b3d" stroke="${INK}" stroke-width="1.4"/>`},
+  { t:"Schokohase", s:`
+    <ellipse cx="32" cy="40" rx="11" ry="12" fill="#8a5a2b" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M26 30 q-3 -16 2 -18 M38 30 q3 -16 -2 -18" fill="#8a5a2b" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M22 20 q10 4 20 0" fill="none" stroke="${ROT}" stroke-width="3"/>
+    <circle cx="30" cy="38" r="1.4" fill="${GELB}"/><circle cx="36" cy="38" r="1.4" fill="${GELB}"/>`},
+  { t:"Ostereiersuche", s:`
+    <path d="M8 48 q10 -10 20 0 q10 10 20 0" fill="${GRUEN}" stroke="${INK}" stroke-width="2"/>
+    <ellipse cx="18" cy="42" rx="5" ry="6" fill="${ROT}" stroke="${INK}" stroke-width="1.6"/>
+    <ellipse cx="42" cy="44" rx="5" ry="6" fill="${BLAU}" stroke="${INK}" stroke-width="1.6"/>
+    <circle cx="34" cy="18" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M40 22 L52 30" stroke="${INK}" stroke-width="2" stroke-dasharray="2 2"/>`},
+  { t:"Osterkorb", s:`
+    <path d="M14 32 h36 l-4 18 h-28 Z" fill="#c8955a" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M16 32 q16 -18 32 0" fill="none" stroke="#8a5a2b" stroke-width="3"/>
+    <path d="M18 40 h28" stroke="${INK}" stroke-width="0.8"/>
+    <ellipse cx="26" cy="34" rx="4" ry="5" fill="${GELB}" stroke="${INK}" stroke-width="1.2"/>
+    <ellipse cx="38" cy="34" rx="4" ry="5" fill="${ROT}" stroke="${INK}" stroke-width="1.2"/>`},
+  { t:"Lamm", s:`
+    <ellipse cx="30" cy="36" rx="14" ry="11" fill="#fff" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="45" cy="34" r="7" fill="#f3f3f3" stroke="${INK}" stroke-width="2"/>
+    <path d="M20 44 v6 M28 46 v6 M36 46 v6" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="46" cy="32" r="1.4" fill="${INK}"/>`},
+  { t:"Tulpe", s:`
+    <path d="M32 34 V56" stroke="${GRUEN}" stroke-width="3"/>
+    <path d="M32 46 q-9 -3 -11 4 M32 42 q9 -3 11 4" fill="${GRUEN}" stroke="${INK}" stroke-width="1.4"/>
+    <path d="M22 24 q0 -12 10 -12 t10 12 q-4 8 -10 8 q-6 0 -10 -8 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M32 12 v18 M25 18 q3 8 7 10 M39 18 q-3 8 -7 10" stroke="${INK}" stroke-width="1" fill="none" opacity="0.5"/>`},
+  { t:"Marienkäfer", s:`
+    <circle cx="32" cy="36" r="14" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M32 22 V50" stroke="${INK}" stroke-width="2"/>
+    <circle cx="32" cy="20" r="5" fill="${INK}"/>
+    ${[[24,30],[40,30],[24,42],[40,42],[26,36],[38,36]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="2.4" fill="${INK}"/>`).join('')}`},
+  { t:"Schmetterling", s:`
+    <path d="M32 20 V46" stroke="${INK}" stroke-width="3"/>
+    <path d="M32 24 q-16 -14 -20 2 q-2 12 20 8 Z M32 24 q16 -14 20 2 q2 12 -20 8 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M32 34 q-12 0 -16 10 q10 6 16 -2 Z M32 34 q12 0 16 10 q-10 6 -16 -2 Z" fill="${GELB}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M32 20 l-3 -6 M32 20 l3 -6" stroke="${INK}" stroke-width="1.6" stroke-linecap="round"/>`},
+  { t:"Discokugel", s:`
+    <path d="M32 8 V16" stroke="${INK}" stroke-width="2"/>
+    <circle cx="32" cy="34" r="16" fill="#c7ccd0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M32 18 V50 M16 34 H48 M20 24 L44 44 M44 24 L20 44" stroke="${INK}" stroke-width="0.8" opacity="0.5"/>
+    <path d="M52 20 l4 -4 M12 20 l-4 -4" stroke="${GELB}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"Tanzen", s:`
+    <circle cx="24" cy="14" r="5" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <path d="M24 19 L30 32 L24 46 M30 32 L40 26 M24 32 L14 30" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M44 12 l2 -6 M48 18 l6 -2" stroke="${GELB}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"DJ", s:`
+    <rect x="10" y="30" width="44" height="10" rx="2" fill="${INK}"/>
+    <circle cx="22" cy="35" r="6" fill="#c7ccd0" stroke="${INK}" stroke-width="1.6"/>
+    <circle cx="42" cy="35" r="6" fill="#c7ccd0" stroke="${INK}" stroke-width="1.6"/>
+    <circle cx="32" cy="16" r="5" fill="#f3c6a0" stroke="${INK}" stroke-width="1.8"/>
+    <path d="M27 16 a5 5 0 0 1 10 0" fill="none" stroke="${INK}" stroke-width="2"/>`},
+  { t:"Musik", s:`
+    <path d="M26 14 v24 a5 5 0 1 1 -4 -5 V20 l16 -4 v18 a5 5 0 1 1 -4 -5 V12 Z" fill="${ROT}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`},
+  { t:"Sekt anstoßen", s:`
+    <path d="M20 14 q2 12 -2 16 v14 M22 44 h-8 M22 44 h8" stroke="${GELB}" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M44 12 q-2 12 2 16 v14 M46 42 h-8 M46 42 h8" stroke="${GELB}" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M16 16 q4 8 4 12 M48 14 q-4 8 -4 12" stroke="#ffd98a" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M28 12 l4 6 4 -6" stroke="${GELB}" stroke-width="1.8" fill="none" stroke-linecap="round"/>`},
+  { t:"Feuerwerk", s:`
+    <g stroke="${GELB}" stroke-width="2.4" stroke-linecap="round"><path d="M32 32 V16 M32 32 V48 M16 32 H48 M20 20 l24 24 M44 20 L20 44"/></g>
+    <circle cx="32" cy="32" r="3" fill="${ROT}"/>
+    <g fill="${ROT}"><circle cx="32" cy="14" r="2"/><circle cx="14" cy="32" r="2"/><circle cx="50" cy="32" r="2"/><circle cx="32" cy="50" r="2"/></g>`},
+  { t:"Fotobox", s:`
+    <rect x="14" y="20" width="36" height="26" rx="3" fill="${BLAU}" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="32" cy="33" r="8" fill="none" stroke="#fff" stroke-width="2.4"/>
+    <circle cx="32" cy="33" r="3" fill="#fff"/>
+    <rect x="44" y="16" width="8" height="6" fill="${GELB}" stroke="${INK}" stroke-width="1.4"/>`},
+  { t:"Tischdeko", s:`
+    <rect x="10" y="40" width="44" height="6" fill="#c8955a" stroke="${INK}" stroke-width="1.8"/>
+    ${luftballon(18,22,ROT).replace(/rx="11" ry="13"/,'rx="6" ry="7"')}
+    <path d="M30 40 V26 q0 -6 4 -6 t4 6 v14" fill="none" stroke="${GRUEN}" stroke-width="2.4"/>
+    <path d="M34 20 q4 3 0 6 q-4 -3 0 -6 Z" fill="${GELB}"/>`},
+  { t:"Kerze", s:`
+    <rect x="26" y="24" width="12" height="28" rx="2" fill="#fff" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M32 24 V18" stroke="${INK}" stroke-width="2"/>
+    <path d="M32 8 q6 6 0 12 q-6 -6 0 -12 Z" fill="${GELB}" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>`},
+  { t:"Herzballon", s:`
+    <path d="M32 40 q-14 -10 -14 -22 q0 -8 8 -8 q6 0 6 6 q0 -6 6 -6 q8 0 8 8 q0 12 -14 22 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M32 40 q4 8 -2 16" fill="none" stroke="${INK}" stroke-width="1.4"/>`},
+  { t:"Seifenblasen", s:`
+    <g stroke="${INK}" stroke-width="1.4">
+    <circle cx="24" cy="34" r="10" fill="#bfe0ff" opacity="0.6"/>
+    <circle cx="42" cy="24" r="6" fill="#cfe0ff" opacity="0.6"/>
+    <circle cx="46" cy="42" r="4" fill="#cfe0ff" opacity="0.6"/>
+    </g>
+    <path d="M20 30 q2 -3 5 -2" stroke="#fff" stroke-width="1.6" fill="none"/>`},
+  { t:"Sektkorken", s:`
+    <path d="M24 30 h16 l-2 22 h-12 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M22 30 h20 v-4 h-20 Z" fill="${GELB}" stroke="${INK}" stroke-width="1.6"/>
+    <ellipse cx="40" cy="14" rx="4" ry="5" fill="#c8955a" stroke="${INK}" stroke-width="2"/>
+    <path d="M34 22 L40 16" stroke="#c7ccd0" stroke-width="2" stroke-dasharray="2 3"/>
+    <path d="M48 10 l4 -4 M50 18 l6 -2" stroke="${GELB}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"Zauberer", s:`
+    <path d="M18 44 h28 l-6 -26 h-16 Z" fill="${INK}"/>
+    <ellipse cx="32" cy="44" rx="18" ry="4" fill="${INK}"/>
+    <path d="M26 28 h12" stroke="${ROT}" stroke-width="3"/>
+    <path d="M46 20 L58 8" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M58 8 l0 4 M58 8 l-4 0" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+    <path d="M12 18 l3 4 M18 12 l1 5" stroke="${GELB}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"Alles Gute! (gesagt)", s:`${spruch('Alles Gute', ROT)}`},
+  { t:"Helau! (gesagt)", s:`${spruch('Helau!', GELB)}`},
+  { t:"Prost! (gesagt)", s:`${spruch('Prost!', GRUEN)}`}
+];
+
+/* ---- Zug-Icon-Bausteine ---- */
+function waggon(col){ return `<rect x="8" y="26" width="40" height="18" rx="3" fill="${col}" stroke="${INK}" stroke-width="2.4"/>`+
+  `<rect x="12" y="30" width="10" height="8" rx="1.5" fill="#bfe0ff" stroke="${INK}" stroke-width="1.2"/><rect x="26" y="30" width="10" height="8" rx="1.5" fill="#bfe0ff" stroke="${INK}" stroke-width="1.2"/>`+
+  `<circle cx="18" cy="46" r="4" fill="${INK}"/><circle cx="38" cy="46" r="4" fill="${INK}"/><path d="M48 34 h8" stroke="${INK}" stroke-width="2.4"/>`; }
+
+/* Feld-Pool für das Thema „Zug & Bahn" */
+const POOL_ZUG = [
+  { t:"Lokomotive", s:`
+    <path d="M6 44 V24 h20 l6 -8 h14 v28 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="30" y="20" width="12" height="10" rx="1.5" fill="#bfe0ff" stroke="${INK}" stroke-width="1.4"/>
+    <circle cx="16" cy="48" r="5" fill="${INK}"/><circle cx="36" cy="48" r="5" fill="${INK}"/>
+    <rect x="10" y="14" width="6" height="10" fill="${INK}"/>
+    <path d="M46 30 h10" stroke="${INK}" stroke-width="2.4"/>`},
+  { t:"ICE", s:`
+    <path d="M6 30 q0 -6 14 -6 h34 v20 H6 Z" fill="#fff" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M6 30 q0 -6 14 -6 h6 v6 H6 Z" fill="${ROT}"/>
+    <rect x="30" y="30" width="8" height="7" rx="1.5" fill="#bfe0ff"/><rect x="42" y="30" width="8" height="7" rx="1.5" fill="#bfe0ff"/>
+    <path d="M6 40 h48" stroke="${ROT}" stroke-width="3"/>
+    <circle cx="20" cy="46" r="4" fill="${INK}"/><circle cx="44" cy="46" r="4" fill="${INK}"/>`},
+  { t:"Güterwaggon", s:`${waggon('#8a5a2b').replace(/<rect x="12" y="30"[^/]*\/>|<rect x="26" y="30"[^/]*\/>/g,'')}<path d="M12 30 h32 M12 38 h32 M20 26 v18 M36 26 v18" stroke="${INK}" stroke-width="1" opacity="0.4"/>`},
+  { t:"Personenwagen", s:`${waggon(BLAU)}`},
+  { t:"Doppelstockwagen", s:`
+    <rect x="8" y="18" width="42" height="26" rx="3" fill="${GRUEN}" stroke="${INK}" stroke-width="2.4"/>
+    ${[12,24,36].map(x=>`<rect x="${x}" y="22" width="9" height="6" rx="1" fill="#bfe0ff"/><rect x="${x}" y="32" width="9" height="6" rx="1" fill="#bfe0ff"/>`).join('')}
+    <circle cx="18" cy="46" r="4" fill="${INK}"/><circle cx="40" cy="46" r="4" fill="${INK}"/>`},
+  { t:"Straßenbahn", s:`
+    <rect x="10" y="20" width="40" height="24" rx="4" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    ${[14,26,38].map(x=>`<rect x="${x}" y="24" width="9" height="10" rx="1.5" fill="#bfe0ff" stroke="${INK}" stroke-width="1"/>`).join('')}
+    <path d="M30 20 V10 h14" stroke="${INK}" stroke-width="2" fill="none"/>
+    <circle cx="18" cy="46" r="4" fill="${INK}"/><circle cx="42" cy="46" r="4" fill="${INK}"/>`},
+  { t:"U-Bahn", s:`
+    <rect x="10" y="22" width="40" height="22" rx="4" fill="${BLAU}" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="14" y="26" width="14" height="10" rx="1.5" fill="#bfe0ff"/><rect x="32" y="26" width="14" height="10" rx="1.5" fill="#bfe0ff"/>
+    <path d="M8 48 h48" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="18" cy="46" r="3" fill="${INK}"/><circle cx="42" cy="46" r="3" fill="${INK}"/>`},
+  { t:"Bahnhof", s:`
+    <rect x="10" y="26" width="44" height="24" fill="#e8c27a" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M6 26 L32 12 L58 26" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="28" y="36" width="8" height="14" fill="#8a5a2b"/>
+    <rect x="16" y="32" width="6" height="6" fill="#bfe0ff"/><rect x="42" y="32" width="6" height="6" fill="#bfe0ff"/>
+    <circle cx="32" cy="22" r="3" fill="#fff" stroke="${INK}" stroke-width="1"/>`},
+  { t:"Bahnsteig", s:`
+    <path d="M4 40 h56 v6 H4 Z" fill="#c7ccd0" stroke="${INK}" stroke-width="2"/>
+    <path d="M8 46 v8 M56 46 v8" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M4 40 h56" stroke="${GELB}" stroke-width="2.4"/>
+    <rect x="14" y="14" width="4" height="26" fill="${INK}"/>
+    <rect x="8" y="12" width="16" height="7" rx="1.5" fill="${BLAU}" stroke="${INK}" stroke-width="1.4"/>`},
+  { t:"Gleise", s:`
+    <path d="M14 8 L22 56 M50 8 L42 56" stroke="${INK}" stroke-width="3"/>
+    ${[12,22,32,42,52].map(y=>`<path d="M${16+ (y-12)*0.16} ${y} h${28 - (y-12)*0.32}" stroke="#8a5a2b" stroke-width="3"/>`).join('')}`},
+  { t:"Weiche", s:`
+    <path d="M8 50 h48 M8 50 q20 -30 48 -34" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M18 50 q6 -12 16 -16" fill="none" stroke="${INK}" stroke-width="3"/>
+    <rect x="46" y="10" width="4" height="10" fill="${ROT}"/>`},
+  { t:"Signal", s:`
+    <rect x="28" y="14" width="8" height="40" fill="#c7ccd0" stroke="${INK}" stroke-width="1.8"/>
+    <rect x="24" y="12" width="16" height="20" rx="3" fill="${INK}"/>
+    <circle cx="32" cy="18" r="3.4" fill="${ROT}"/><circle cx="32" cy="26" r="3.4" fill="${GRUEN}"/>`},
+  { t:"Bahnschranke", s:`
+    <rect x="10" y="20" width="4" height="30" fill="${INK}"/>
+    <path d="M14 24 L54 40" stroke="${ROT}" stroke-width="5" stroke-linecap="round"/>
+    <path d="M14 24 L54 40" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="6 6"/>
+    <circle cx="12" cy="16" r="3" fill="${ROT}"/>`},
+  { t:"Andreaskreuz", s:`
+    <rect x="30" y="34" width="4" height="20" fill="#9aa6ad"/>
+    <path d="M14 12 L50 32 M50 12 L14 32" stroke="${ROT}" stroke-width="5" stroke-linecap="round"/>`},
+  { t:"Anzeigetafel", s:`
+    <rect x="8" y="14" width="48" height="34" rx="2" fill="${INK}"/>
+    ${[0,1,2,3].map(r=>`<path d="M12 ${20+r*7} h20" stroke="${GELB}" stroke-width="2"/><path d="M40 ${20+r*7} h10" stroke="#fff" stroke-width="2"/>`).join('')}`},
+  { t:"Fahrplan", s:`
+    <rect x="12" y="12" width="40" height="40" rx="2" fill="#fff" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M12 22 h40" stroke="${INK}" stroke-width="2"/>
+    ${[26,32,38,44].map(y=>`<path d="M16 ${y} h12" stroke="${INK}" stroke-width="1.6"/><path d="M34 ${y} h14" stroke="#9aa6ad" stroke-width="1.6"/>`).join('')}`},
+  { t:"Fahrkarte", s:`
+    <rect x="8" y="22" width="48" height="20" rx="3" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="8" cy="32" r="3" fill="${INK}"/><circle cx="56" cy="32" r="3" fill="${INK}"/>
+    <path d="M16 28 h20 M16 34 h14" stroke="${INK}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"Entwerter", s:`
+    <rect x="22" y="14" width="20" height="30" rx="3" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="26" y="18" width="12" height="8" rx="1.5" fill="${INK}"/>
+    <path d="M28 34 h8" stroke="#fff" stroke-width="2"/>
+    <path d="M42 30 h6 v6" fill="none" stroke="${INK}" stroke-width="2"/>`},
+  { t:"Schaffner", s:`
+    <circle cx="32" cy="18" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M25 14 h14 v-3 h-14 Z" fill="${BLAU}" stroke="${INK}" stroke-width="1.4"/>
+    <path d="M22 48 V32 q0 -4 10 -4 t10 4 v16 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M42 34 l8 4" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>`},
+  { t:"Lokführer", s:`
+    <circle cx="32" cy="20" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M24 16 h16 v-3 h-16 Z M32 10 v3" fill="${ROT}" stroke="${INK}" stroke-width="1.4"/>
+    <path d="M22 50 V34 q0 -4 10 -4 t10 4 v16 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>`},
+  { t:"Kofferwagen", s:`
+    <rect x="14" y="30" width="24" height="4" rx="2" fill="${INK}"/>
+    <path d="M18 30 V22 h16 v8" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="18" y="34" width="20" height="14" rx="2" fill="${ROT}" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="22" y="42" width="16" height="10" rx="2" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="20" cy="52" r="2.4" fill="${INK}"/><circle cx="36" cy="52" r="2.4" fill="${INK}"/>`},
+  { t:"Koffer", s:`
+    <rect x="16" y="24" width="32" height="24" rx="3" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M26 24 v-4 h12 v4" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M16 34 h32" stroke="${INK}" stroke-width="1.6"/>
+    <rect x="28" y="30" width="8" height="4" rx="1" fill="${GELB}"/>`},
+  { t:"Rucksack", s:`
+    <path d="M20 22 q0 -8 12 -8 t12 8 v26 q0 4 -4 4 H24 q-4 0 -4 -4 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M26 22 q6 -6 12 0 v10 h-12 Z" fill="#2e7d4f" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M28 40 h8" stroke="${INK}" stroke-width="2"/>`},
+  { t:"Sitzplatz", s:`
+    <path d="M18 48 V22 q0 -4 6 -4 h4 v18 h12 V48 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M40 36 h6 v12 h-6 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>`},
+  { t:"Reservierung", s:`
+    <path d="M22 48 V22 q0 -4 6 -4 h4 v18 h12 V48 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="30" y="12" width="18" height="10" rx="1.5" fill="${GELB}" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M33 17 h12" stroke="${INK}" stroke-width="1.6"/>`},
+  { t:"Notbremse", s:`
+    <rect x="18" y="16" width="28" height="24" rx="3" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M32 22 v-8 M28 18 h8" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M24 44 h16 l-3 8 h-10 Z" fill="#c7ccd0" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`},
+  { t:"Tunnel", s:`
+    <path d="M8 50 V32 a24 24 0 0 1 48 0 V50" fill="#c7ccd0" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M20 50 V36 a12 12 0 0 1 24 0 V50" fill="${INK}"/>
+    <path d="M28 50 h8 v-8 h-8 Z" fill="${GELB}"/>`},
+  { t:"Eisenbahnbrücke", s:`
+    <path d="M4 26 h56" stroke="${INK}" stroke-width="4"/>
+    <path d="M8 26 V44 M20 26 V44 M32 26 V44 M44 26 V44 M56 26 V44" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M8 44 q12 -8 24 0 t24 0" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M4 22 h56" stroke="${ROT}" stroke-width="3"/>`},
+  { t:"Prellbock", s:`
+    <rect x="40" y="24" width="6" height="24" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <path d="M46 30 h8 M46 42 h8" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M8 46 L40 46 M14 40 L40 40" stroke="${INK}" stroke-width="2.4"/>
+    ${[16,26,36].map(x=>`<path d="M${x} 40 v6" stroke="#8a5a2b" stroke-width="3"/>`).join('')}`},
+  { t:"Dampf", s:`
+    <path d="M8 44 V24 h20 l6 -8 h10 v28 Z" fill="${INK}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="16" cy="48" r="4" fill="#c7ccd0"/><circle cx="34" cy="48" r="4" fill="#c7ccd0"/>
+    <rect x="10" y="14" width="5" height="10" fill="${INK}"/>
+    <g fill="#c7ccd0" stroke="${INK}" stroke-width="0.8">${[[16,8],[22,4],[10,4]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="4"/>`).join('')}</g>`},
+  { t:"Pfeife/Signalhorn", s:`
+    <path d="M14 32 h20 l14 -6 v12 l-14 -6" fill="${GELB}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M50 20 q8 4 6 12 M52 16 q12 6 8 18" fill="none" stroke="${BLAU}" stroke-width="2.4" stroke-linecap="round"/>`},
+  { t:"Verspätung", s:`
+    <circle cx="32" cy="32" r="16" fill="#fff" stroke="${INK}" stroke-width="2.6"/>
+    <path d="M32 32 V20 M32 32 L42 38" stroke="${ROT}" stroke-width="3" stroke-linecap="round"/>
+    <text x="32" y="54" font-size="9" font-weight="800" text-anchor="middle" fill="${ROT}" font-family="sans-serif">+10</text>`},
+  { t:"Durchsage", s:`
+    <path d="M14 28 L32 20 L32 44 L14 36 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <rect x="8" y="30" width="8" height="4" fill="${INK}"/>
+    <path d="M40 20 q8 12 0 24 M46 16 q12 16 0 32" fill="none" stroke="${BLAU}" stroke-width="2.6" stroke-linecap="round"/>`},
+  { t:"Gleisnummer", s:`
+    <rect x="14" y="16" width="36" height="20" rx="2" fill="${BLAU}" stroke="${INK}" stroke-width="2.4"/>
+    <text x="32" y="31" font-size="12" font-weight="800" text-anchor="middle" fill="#fff" font-family="sans-serif">Gl. 7</text>
+    <rect x="30" y="36" width="4" height="16" fill="#9aa6ad"/>`},
+  { t:"Uhr am Bahnhof", s:`
+    <circle cx="32" cy="30" r="16" fill="#fff" stroke="${INK}" stroke-width="2.6"/>
+    <path d="M32 30 V18 M32 30 L40 34" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="32" cy="30" r="2" fill="${ROT}"/>
+    <path d="M32 8 V14 M32 46 V52" stroke="${INK}" stroke-width="2"/>`},
+  { t:"Automat", s:`
+    <rect x="16" y="10" width="32" height="44" rx="3" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="20" y="14" width="24" height="14" rx="1.5" fill="#bfe0ff" stroke="${INK}" stroke-width="1.4"/>
+    ${[0,1,2].map(r=>[0,1,2].map(c=>`<rect x="${21+c*8}" y="${32+r*6}" width="5" height="4" rx="1" fill="#fff"/>`).join('')).join('')}
+    <rect x="20" y="50" width="12" height="3" fill="${GELB}"/>`},
+  { t:"Rolltreppe", s:`
+    <path d="M8 50 L48 14 M20 50 L56 18" stroke="${INK}" stroke-width="2.4"/>
+    ${[0,1,2,3].map(i=>`<path d="M${14+i*10} ${44-i*8} h8 v6" fill="none" stroke="${INK}" stroke-width="2"/>`).join('')}`},
+  { t:"Aufzug", s:`
+    <rect x="18" y="12" width="28" height="42" rx="2" fill="#c7ccd0" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M32 12 V54" stroke="${INK}" stroke-width="2"/>
+    <path d="M26 26 l-4 6 h8 Z M38 38 l-4 -6 h8 Z" fill="${INK}"/>`},
+  { t:"Gepäckwagen", s:`
+    <rect x="10" y="30" width="30" height="4" rx="2" fill="${INK}"/>
+    <path d="M14 30 V20 h20 v10" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="16" cy="46" r="6" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="40" cy="46" r="6" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="18" y="34" width="20" height="8" rx="1.5" fill="${ROT}" stroke="${INK}" stroke-width="1.6"/>`},
+  { t:"Fahrrad im Zug", s:`
+    <circle cx="18" cy="42" r="9" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="44" cy="42" r="9" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M18 42 L30 42 L38 28 L44 42 M30 42 L36 28 h6 M30 42 L26 30 h-5" fill="none" stroke="${GRUEN}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`},
+  { t:"Bahnhofsuhr-Zeiger", s:`
+    <circle cx="32" cy="32" r="4" fill="${ROT}"/>
+    <path d="M32 32 V12" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M32 32 L48 40" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="52" cy="44" r="4" fill="none" stroke="${ROT}" stroke-width="2"/>`},
+  { t:"Bahnhofskiosk", s:`
+    <rect x="12" y="26" width="40" height="24" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M8 26 h48 v-4 H8 Z" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <rect x="16" y="32" width="14" height="12" fill="#bfe0ff" stroke="${INK}" stroke-width="1.4"/>
+    <path d="M34 32 h14 M34 38 h14 M34 44 h10" stroke="${INK}" stroke-width="1.6"/>`},
+  { t:"Kaffee to go", s:`
+    <path d="M22 24 h20 l-3 26 h-14 Z" fill="#fff" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="20" y="20" width="24" height="6" rx="2" fill="#8a5a2b" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M32 16 q3 3 0 6" stroke="#c7ccd0" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M26 34 h12" stroke="#8a5a2b" stroke-width="2"/>`},
+  { t:"Winkender Fahrgast", s:`
+    <circle cx="30" cy="16" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2"/>
+    <path d="M30 22 V42 M30 26 L44 16 M30 42 L24 54 M30 42 L36 54 M30 30 L20 34" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+  { t:"Hund im Zug", s:`
+    <ellipse cx="30" cy="38" rx="14" ry="9" fill="#c8955a" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="46" cy="32" r="7" fill="#c8955a" stroke="${INK}" stroke-width="2"/>
+    <path d="M50 26 q4 -4 6 0 v6 Z" fill="#a86b32" stroke="${INK}" stroke-width="1.4"/>
+    <circle cx="48" cy="31" r="1.4" fill="${INK}"/><circle cx="52" cy="34" r="1.6" fill="${INK}"/>
+    <path d="M20 44 v6 M28 46 v6 M36 46 v6" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M16 34 q-6 -2 -8 -8" stroke="#c8955a" stroke-width="4" fill="none" stroke-linecap="round"/>`},
+  { t:"Landschaft am Fenster", s:`
+    <rect x="10" y="12" width="44" height="40" rx="4" fill="#bfe0ff" stroke="${INK}" stroke-width="2.6"/>
+    <path d="M10 40 L24 26 L32 34 L44 22 L54 40 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>
+    <circle cx="44" cy="22" r="5" fill="${GELB}" stroke="${INK}" stroke-width="1.2"/>`},
+  { t:"Schranke offen", s:`
+    <rect x="10" y="18" width="4" height="32" fill="${INK}"/>
+    <path d="M14 22 V6" stroke="${ROT}" stroke-width="5" stroke-linecap="round"/>
+    <path d="M14 22 V6" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="5 5"/>
+    <path d="M22 50 h32" stroke="${INK}" stroke-width="2.4"/>`},
+  { t:"Bahnübergang blinkt", s:`
+    <rect x="28" y="30" width="4" height="24" fill="#9aa6ad"/>
+    <circle cx="24" cy="20" r="6" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <circle cx="38" cy="20" r="6" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <path d="M14 12 L26 22 M26 12 L14 22" stroke="${ROT}" stroke-width="2.4" stroke-linecap="round" transform="translate(4,-8)"/>`},
+  { t:"Waggon kuppeln", s:`
+    <rect x="6" y="28" width="20" height="16" rx="2" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="38" y="28" width="20" height="16" rx="2" fill="${ROT}" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M26 36 h4 v-3 h4 v6 h-4 v-3 M38 36 h-4" stroke="${INK}" stroke-width="2" fill="none"/>
+    <circle cx="12" cy="46" r="3" fill="${INK}"/><circle cx="52" cy="46" r="3" fill="${INK}"/>`},
+  { t:"Nachtzug", s:`
+    <rect x="8" y="26" width="44" height="18" rx="3" fill="#3a4a6a" stroke="${INK}" stroke-width="2.4"/>
+    ${[12,24,36].map(x=>`<rect x="${x}" y="30" width="9" height="8" rx="1.5" fill="${GELB}"/>`).join('')}
+    <circle cx="18" cy="46" r="4" fill="${INK}"/><circle cx="42" cy="46" r="4" fill="${INK}"/>
+    <circle cx="50" cy="14" r="5" fill="${GELB}" stroke="${INK}" stroke-width="1.4"/>
+    <path d="M52 12 a4 4 0 1 0 0 4 Z" fill="#3a4a6a"/>`},
+  { t:"Fahrradmitnahme-Schild", s:`
+    <rect x="14" y="14" width="36" height="36" rx="3" fill="${BLAU}" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="24" cy="36" r="6" fill="none" stroke="#fff" stroke-width="2"/>
+    <circle cx="42" cy="36" r="6" fill="none" stroke="#fff" stroke-width="2"/>
+    <path d="M24 36 L32 36 L38 26 L42 36 M32 36 L36 26 h5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`},
+  { t:"1. Klasse", s:`
+    <rect x="14" y="16" width="36" height="32" rx="3" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    <text x="32" y="38" font-size="18" font-weight="800" text-anchor="middle" fill="${INK}" font-family="sans-serif">1.</text>`},
+  { t:"WLAN im Zug", s:`
+    <path d="M18 34 a20 20 0 0 1 28 0 M23 40 a12 12 0 0 1 18 0 M28 46 a5 5 0 0 1 8 0" fill="none" stroke="${BLAU}" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="32" cy="50" r="2.4" fill="${BLAU}"/>`},
+  { t:"Toilette", s:`
+    <rect x="16" y="12" width="32" height="40" rx="3" fill="#c7ccd0" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="26" cy="24" r="4" fill="${INK}"/><path d="M22 34 h8 v-4 h-8 Z M24 34 v6 M28 34 v6" fill="${INK}"/>
+    <circle cx="40" cy="24" r="4" fill="${INK}"/><path d="M36 40 L40 30 L44 40 Z" fill="${INK}"/>`},
+  { t:"Rangierlok", s:`
+    <rect x="10" y="28" width="34" height="16" rx="2" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="20" y="20" width="14" height="10" rx="1.5" fill="${GELB}" stroke="${INK}" stroke-width="2"/>
+    <path d="M12 30 h30" stroke="${INK}" stroke-width="1" opacity="0.4"/>
+    <circle cx="18" cy="46" r="4" fill="${INK}"/><circle cx="28" cy="46" r="4" fill="${INK}"/><circle cx="38" cy="46" r="4" fill="${INK}"/>
+    <path d="M10 40 h34" stroke="${INK}" stroke-width="2" stroke-dasharray="3 2"/>`},
+  { t:"Fensterplatz", s:`
+    <rect x="12" y="14" width="40" height="36" rx="4" fill="#bfe0ff" stroke="${INK}" stroke-width="2.6"/>
+    <path d="M32 14 V50 M12 32 H52" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M40 40 V26 q0 -3 6 -3 v20 Z" fill="${BLAU}" stroke="${INK}" stroke-width="1.6"/>`},
+  { t:"Zugbegleiter-Kelle", s:`
+    <circle cx="30" cy="22" r="12" fill="${GRUEN}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M30 34 V54" stroke="${INK}" stroke-width="3"/>
+    <circle cx="30" cy="22" r="5" fill="#fff"/>`},
+  { t:"Einfahrt (gesagt)", s:`${spruch('Einfahrt', ROT)}`},
+  { t:"Bitte einsteigen (gesagt)", s:`${spruch('Einsteigen', GRUEN)}`},
+  { t:"Zurückbleiben (gesagt)", s:`${spruch('Zurück!', GELB)}`}
+];
+
 /* -------------------------------------------------------------------------
    THEMEN – jedes Thema hat einen eigenen Feld-Pool. „POOL" zeigt immer auf
    das aktuell gewählte Thema (wird von setzeThema umgehängt).
@@ -3282,7 +4035,19 @@ const THEMES = [
   { id:'handball', name:'Handball', title:'Handball-Bingo',
     subtitle:"Tippe an, was du in der Halle siehst! 🤾", themeColor:'#ff9b3d',
     headerIcon:`<svg viewBox="0 0 64 64">${handball(32,32,20)}</svg>`,
-    pool:POOL_HANDBALL }
+    pool:POOL_HANDBALL },
+  { id:'darts', name:'Darts', title:'Darts-Bingo',
+    subtitle:"Tippe an, was du beim Darts-Abend siehst! 🎯", themeColor:'#e23b45',
+    headerIcon:`<svg viewBox="0 0 64 64">${dartboard(32,32,20)}</svg>`,
+    pool:POOL_DARTS },
+  { id:'feste', name:'Feste & Party', title:'Feste-Bingo',
+    subtitle:"Tippe an, was du auf der Feier siehst! 🎉", themeColor:'#c86bff',
+    headerIcon:`<svg viewBox="0 0 64 64">${luftballon(32,28,ROT)}</svg>`,
+    pool:POOL_FESTE },
+  { id:'zug', name:'Zug & Bahn', title:'Zug-Bingo',
+    subtitle:"Tippe an, was du am Bahnhof siehst! 🚆", themeColor:'#3d8bdd',
+    headerIcon:`<svg viewBox="0 0 64 64">${waggon(ROT)}</svg>`,
+    pool:POOL_ZUG }
 ];
 let aktivesThema = 'tdf';
 let POOL = POOL_TDF;
