@@ -3555,37 +3555,52 @@ function renderAlles(){
    ------------------------------------------------------------------------- */
 function tippe(i, idx){
   state.aktiv = i;                   // dieses Blatt wird das "aktive"
-  const blatt = state.spieler[i].blatt;
-  const z = blatt.zellen[idx];
+  const z = state.spieler[i].blatt.zellen[idx];
   if(z.frei) return;                 // Freifeld bleibt immer markiert
-  z.marked = !z.marked;              // umschalten (markieren / rückgängig)
+  // Dasselbe Motiv (gleicher POOL-Index) auf ALLEN Blättern an-/abhaken:
+  // Passiert das Ereignis, haken es alle Mitspieler auf ihrem Blatt ab.
+  applyMotiv(z.pool, !z.marked, i);
+}
+
+// Markiert/entmarkiert ein Motiv (per POOL-Index) auf allen Blättern gleichzeitig.
+function applyMotiv(poolIdx, marked, aktivBlatt){
+  let aktivWin = null;
+  state.spieler.forEach((sp, j)=>{
+    const bl = sp.blatt;
+    let changed = false;
+    bl.zellen.forEach((c, k)=>{
+      if(!c.frei && c.pool === poolIdx && c.marked !== marked){
+        c.marked = marked; changed = true;
+        const grid = karteGrid(j);                       // nur sichtbare Karten haben ein Grid
+        if(grid && grid.children[k]) grid.children[k].classList.toggle('mark', marked);
+      }
+    });
+    if(!changed) return;
+    const anzB = boardEl.querySelector(`.karte[data-i="${j}"] .k-anz`);
+    if(anzB) anzB.textContent = zellenMarkiert(bl);
+    if(marked){                                           // Abwählen kann keine Linie vervollständigen
+      const linie = pruefeGewinn(bl);
+      if(linie && !bl.gewonnen){
+        bl.gewonnen = true; bl.fertig = true;            // zählt als „fertiges Blatt", Pokal am Tab
+        if(j === aktivBlatt) aktivWin = linie;
+      }
+    }
+  });
   speichern();
+  markiereAktiv();                                        // ruft auch renderTabs (Pokale) auf
+  renderFertig();
 
-  // betroffenes Feld dieser Karte neu darstellen (Klasse toggeln reicht)
-  const grid = karteGrid(i);
-  if(grid) grid.children[idx].classList.toggle('mark', z.marked);
-  // Zähler dieser Karte aktualisieren
-  const anzB = boardEl.querySelector(`.karte[data-i="${i}"] .k-anz`);
-  const anzahl = zellenMarkiert(blatt);
-  if(anzB) anzB.textContent = anzahl;
-  markiereAktiv();
-
-  // Live-Spiel: neues Markieren als Meldung senden, Abwählen nur den Stand aktualisieren
+  // Live-Spiel: neues Markieren melden, Abwählen nur den Stand aktualisieren
   if(LIVE.connected){
-    if(z.marked) liveFundMelden(z.text, anzahl);
-    else         liveCountAktualisieren(anzahl);
+    const anzahl = zellenMarkiert(state.spieler[aktivBlatt].blatt);
+    if(marked) liveFundMelden(POOL[poolIdx] ? POOL[poolIdx].t : '', anzahl);
+    else       liveCountAktualisieren(anzahl);
   }
 
-  // Nach jedem Tipp prüfen, ob eine komplette Linie markiert ist
-  const linie = pruefeGewinn(blatt);
-  if(linie && !blatt.gewonnen){
-    blatt.gewonnen = true;      // löst die einmalige Feier aus
-    blatt.fertig   = true;      // bleibt bestehen -> zählt als "fertiges Blatt"
-    speichern();
-    renderFertig();             // Zähler aktualisieren
-    renderTabs();               // Pokal-Symbol am Tab
-    if(LIVE.connected) liveBingoMelden();   // Bingo in den Raum melden
-    zeigeGewinn(i, linie);
+  // Feier nur fürs aktive (angetippte) Blatt; andere Blätter erhalten still den Pokal
+  if(aktivWin){
+    if(LIVE.connected) liveBingoMelden();
+    zeigeGewinn(aktivBlatt, aktivWin);
   }
 }
 
