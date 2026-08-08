@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#ffd21a">
-<title>Tour-de-France Bingo</title>
+<title>Bingo</title>
 
 <!-- PWA: installierbar + offline -->
 <link rel="manifest" href="./manifest.webmanifest">
@@ -448,6 +448,11 @@
     font-weight:500;
   }
 
+  .themaWahl{ display:inline-flex; align-items:center; gap:6px; font-weight:700; font-size:14px;
+    background:#fff; border:2px solid var(--ink); border-radius:12px; padding:6px 10px; }
+  .themaWahl select{ font-family:inherit; font-weight:700; font-size:14px; border:none; background:transparent;
+    color:inherit; cursor:pointer; outline:none; padding:2px; }
+
   @media (max-width:380px){
     .feld{ border-radius:11px; }
     button{ padding:10px 12px; font-size:14px; }
@@ -459,12 +464,15 @@
   <header>
     <div class="titel">
       <span class="tri" aria-hidden="true"><span style="background:var(--gelb)"></span><span class="punkte"></span><span style="background:var(--gruen)"></span><span style="background:#fff"></span></span>
-      Tour-de-France Bingo
+      <span id="titelText">Tour-de-France Bingo</span>
     </div>
-    <p class="subtitel">Tippe an, was du im Rennen siehst! 🚴</p>
+    <p class="subtitel" id="subtitel">Tippe an, was du im Rennen siehst! 🚴</p>
   </header>
 
   <div class="leiste">
+    <label class="themaWahl">🎯 Thema:
+      <select id="themaSelect" aria-label="Thema wählen"></select>
+    </label>
     <button id="btnNeu" class="primaer">🎲 Neues Blatt (zufällig)</button>
     <button id="btnReset">↺ Markierungen löschen</button>
     <button id="btnSpielerPlus">＋ Blatt</button>
@@ -499,8 +507,8 @@
   <main id="board" class="board einzeln"></main>
 
   <footer>
-    Ein Spaß-Spiel für vor dem Fernseher · Viel Freude beim Etappen-Gucken! 📺🚴
-    · Zustand bleibt in dieser Sitzung erhalten.
+    Ein Spaß-Spiel für vor dem Fernseher · Wähle oben ein Thema und tippe an, was du siehst! 📺
+    · Zustand bleibt erhalten.
   </footer>
 
   <!-- Gewinn-Overlay -->
@@ -614,8 +622,9 @@ function rider(jerseyCol=ROT){
 
 /* -------------------------------------------------------------------------
    2) FELD-POOL  – jedes Feld: { t: Anzeigetext, s: SVG-Innenmarkup (64x64) }
+   Mehrere Themen: jedes Thema hat einen eigenen Pool (siehe THEMES weiter unten).
    ------------------------------------------------------------------------- */
-const POOL = [
+const POOL_TDF = [
   { t:"Sturz", s:`
     <circle cx="20" cy="50" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
     <circle cx="44" cy="52" r="7" fill="none" stroke="${INK}" stroke-width="3"/>
@@ -1153,6 +1162,196 @@ const POOL = [
     <circle cx="13.5" cy="14" r="2.2" fill="#9aa6ad"/><circle cx="17" cy="10" r="1.6" fill="#b9c2c9"/>`},
 ];
 
+/* ---- Fußball-Icon-Bausteine ---- */
+// Fußball (weiß mit dunklem Mittel-Fünfeck + Nähten)
+function fussball(cx,cy,r){
+  const p=r*0.42;
+  return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#fff" stroke="${INK}" stroke-width="2.6"/>`+
+    `<path d="M${cx} ${(cy-p).toFixed(1)} l${(p*0.95).toFixed(1)} ${(p*0.7).toFixed(1)} l${(-p*0.36).toFixed(1)} ${(p*1.12).toFixed(1)} l${(-p*1.18).toFixed(1)} 0 l${(-p*0.36).toFixed(1)} ${(-p*1.12).toFixed(1)} Z" fill="${INK}"/>`+
+    `<path d="M${cx} ${(cy-r).toFixed(1)} V${(cy-p).toFixed(1)} M${(cx+r*0.9).toFixed(1)} ${(cy-r*0.3).toFixed(1)} l${(-r*0.48).toFixed(1)} ${(r*0.4).toFixed(1)} M${(cx-r*0.9).toFixed(1)} ${(cy-r*0.3).toFixed(1)} l${(r*0.48).toFixed(1)} ${(r*0.4).toFixed(1)} M${(cx-r*0.5).toFixed(1)} ${(cy+r*0.82).toFixed(1)} l${(r*0.14).toFixed(1)} ${(-r*0.34).toFixed(1)} M${(cx+r*0.5).toFixed(1)} ${(cy+r*0.82).toFixed(1)} l${(-r*0.14).toFixed(1)} ${(-r*0.34).toFixed(1)}" stroke="${INK}" stroke-width="1.5" fill="none"/>`;
+}
+// Spielkarte (gelb/rot), leicht gekippt
+function karte(fill){ return `<rect x="24" y="13" width="18" height="28" rx="3" fill="${fill}" stroke="${INK}" stroke-width="2.6" transform="rotate(13 33 27)"/>`; }
+// Schiedsrichter-Pfeife
+function pfeife(){
+  return `<path d="M10 28 h20 a9 9 0 1 1 -9 9 v-3 h-11 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`+
+    `<circle cx="30" cy="40" r="3" fill="#fff" stroke="${INK}" stroke-width="1.4"/>`+
+    `<path d="M40 20 l7 -3 M45 27 l7 -1" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>`;
+}
+
+/* Feld-Pool für das Thema „Fußball (TV)" – was man beim Spiel im Fernsehen sieht */
+const POOL_FUSSBALL = [
+  { t:"Tor!", s:`
+    <rect x="8" y="16" width="46" height="28" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M14 16V44 M22 16V44 M30 16V44 M38 16V44 M46 16V44 M8 24H54 M8 32H54 M8 40H54" stroke="${INK}" stroke-width="0.9" opacity="0.55"/>
+    ${fussball(34,34,8)}
+    <path d="M6 52 h52" stroke="${GRUEN}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Elfmeter", s:`
+    <path d="M6 50 h52" stroke="${GRUEN}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M18 50 Q32 28 46 50" fill="none" stroke="${INK}" stroke-width="2" stroke-dasharray="3 4"/>
+    ${fussball(32,44,8)}
+    <circle cx="32" cy="24" r="2.4" fill="${INK}"/>`},
+
+  { t:"Gelbe Karte", s:`${karte(GELB)}`},
+  { t:"Rote Karte", s:`${karte(ROT)}`},
+
+  { t:"Eckball", s:`
+    <path d="M14 10 V54" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M14 12 L36 17 L14 24 Z" fill="${ROT}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M14 54 A40 40 0 0 1 54 54" fill="none" stroke="${INK}" stroke-width="2" stroke-dasharray="3 4"/>
+    ${fussball(44,46,7)}`},
+
+  { t:"Freistoß-Mauer", s:`
+    <g stroke="${INK}" stroke-width="2.2" stroke-linejoin="round">
+    <circle cx="16" cy="20" r="5" fill="#f3c6a0"/><path d="M10 46 V30 h12 v16 Z" fill="${BLAU}"/>
+    <circle cx="30" cy="19" r="5" fill="#f3c6a0"/><path d="M24 46 V29 h12 v17 Z" fill="${ROT}"/>
+    <circle cx="44" cy="20" r="5" fill="#f3c6a0"/><path d="M38 46 V30 h12 v16 Z" fill="${GRUEN}"/>
+    </g>
+    ${fussball(52,52,6)}`},
+
+  { t:"Abseits-Fahne", s:`
+    <path d="M18 8 V56" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <rect x="18" y="8" width="30" height="20" fill="${GELB}" stroke="${INK}" stroke-width="2"/>
+    <path d="M18 8 h7 v7 h-7 Z M32 8 h8 v7 h-8 Z M25 15 h7 v6 h-7 Z M40 15 h8 v6 h-8 Z M18 21 h7 v7 h-7 Z M32 21 h8 v7 h-8 Z" fill="${ROT}"/>`},
+
+  { t:"Torjubel", s:`
+    <circle cx="32" cy="16" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M32 24 V44" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M32 28 L18 16 M32 28 L46 16" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M32 44 L22 56 M32 44 L42 56" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M13 12 l-3 -4 M51 12 l3 -4 M20 8 v-5 M44 8 v-5" stroke="${GELB}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Auswechslung", s:`
+    <path d="M22 12 V46 M22 12 L14 22 M22 12 L30 22" fill="none" stroke="${GRUEN}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M42 52 V18 M42 52 L34 42 M42 52 L50 42" fill="none" stroke="${ROT}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>`},
+
+  { t:"Spieler verletzt", s:`
+    <path d="M6 50 h52" stroke="${GRUEN}" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="16" cy="42" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M22 46 H50 L44 38" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M44 12 h8 M48 8 v8" stroke="${ROT}" stroke-width="3.2" stroke-linecap="round"/>`},
+
+  { t:"Schiri pfeift", s:`${pfeife()}`},
+
+  { t:"Videobeweis (VAR)", s:`
+    <rect x="16" y="18" width="32" height="22" rx="2" fill="${BLAU}" stroke="${INK}" stroke-width="2.6"/>
+    <path d="M22 25 h20 M22 31 h13" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+    <path d="M12 14 h9 M12 14 v9 M52 14 h-9 M52 14 v9 M12 44 h9 M12 44 v-8 M52 44 h-9 M52 44 v-8" stroke="${INK}" stroke-width="3" stroke-linecap="round" fill="none"/>`},
+
+  { t:"La-Ola-Welle", s:`
+    <path d="M6 44 Q16 24 26 44 Q36 24 46 44 Q52 34 58 40" fill="none" stroke="${BLAU}" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="16" cy="30" r="3.4" fill="#f3c6a0" stroke="${INK}" stroke-width="1.6"/>
+    <circle cx="36" cy="30" r="3.4" fill="#f3c6a0" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M10 50 h44" stroke="${INK}" stroke-width="2" stroke-linecap="round" opacity="0.4"/>`},
+
+  { t:"Trainer schimpft", s:`
+    <circle cx="24" cy="18" r="7" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M18 48 V28 h12 v20 Z" fill="${INK}"/>
+    <path d="M30 32 L44 26" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M40 8 q12 -2 13 9 q-1 7 -9 6 l-6 3 l2 -6 q-4 -6 0 -12 Z" fill="#fff" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M45 15 v6 M45 25 v0.5" stroke="${ROT}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Zeitlupe", s:`
+    <rect x="10" y="18" width="5" height="28" fill="${INK}"/>
+    <path d="M36 18 L20 32 L36 46 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M54 18 L38 32 L54 46 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`},
+
+  { t:"Kopfball", s:`
+    ${fussball(32,14,8)}
+    <circle cx="32" cy="38" r="10" fill="#f3c6a0" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M23 36 q9 -7 18 0" fill="none" stroke="${INK}" stroke-width="2"/>
+    <circle cx="28" cy="39" r="1.6" fill="${INK}"/><circle cx="36" cy="39" r="1.6" fill="${INK}"/>`},
+
+  { t:"Fallrückzieher", s:`
+    ${fussball(46,14,7)}
+    <circle cx="18" cy="40" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M22 36 Q34 30 30 20" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M30 24 L44 20 M30 24 L38 34" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Torwart-Parade", s:`
+    ${fussball(48,18,7)}
+    <circle cx="16" cy="18" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M16 24 Q22 40 40 40" fill="none" stroke="${GRUEN}" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="41" cy="30" r="3.6" fill="${GELB}" stroke="${INK}" stroke-width="1.4"/>`},
+
+  { t:"Pfosten getroffen", s:`
+    <path d="M18 8 V54 M18 8 H46" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
+    ${fussball(32,42,7)}
+    <path d="M24 22 l-5 -5 M32 20 v-6 M40 22 l5 -5" stroke="${ROT}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Nachspielzeit", s:`
+    <rect x="20" y="12" width="6" height="8" fill="${INK}"/><rect x="38" y="12" width="6" height="8" fill="${INK}"/>
+    <rect x="12" y="20" width="40" height="24" rx="3" fill="${INK}"/>
+    <text x="32" y="39" font-size="15" font-family="sans-serif" font-weight="800" text-anchor="middle" fill="${GELB}">+3</text>`},
+
+  { t:"Einwurf", s:`
+    ${fussball(32,12,7)}
+    <path d="M32 12 L20 26 M32 12 L44 26" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="32" cy="34" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M32 40 V52 M32 44 L22 54 M32 44 L42 54" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+
+  { t:"Trinkpause", s:`
+    <path d="M22 20 h20 l-2 34 h-16 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <rect x="27" y="9" width="10" height="11" rx="2" fill="${INK}"/>
+    <path d="M26 34 h12 M26 42 h12" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+    <path d="M46 22 q8 5 2 13" fill="none" stroke="${BLAU}" stroke-width="2.4" stroke-linecap="round"/>`},
+
+  { t:"Grätsche", s:`
+    <path d="M6 50 h52" stroke="${GRUEN}" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="14" cy="20" r="6" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M18 24 L34 34 L52 30 M34 34 L50 42" fill="none" stroke="${INK}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+    ${fussball(54,24,6)}
+    <path d="M22 46 l6 -3 M30 48 l6 -3" stroke="#cdbfa0" stroke-width="2" stroke-linecap="round"/>`},
+
+  { t:"Handspiel", s:`
+    ${fussball(44,40,8)}
+    <path d="M12 48 V28 q0 -3 3 -3 t3 3 v-4 q0 -3 3 -3 t3 3 v2 q0 -3 3 -3 t3 3 v2 q0 -3 3 -3 t3 3 v9 q0 9 -9 11 Z" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M28 12 l5 5 l-5 5 M33 17 h-11" stroke="${ROT}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`},
+
+  { t:"Trikottausch", s:`
+    <g transform="rotate(-10 32 32) scale(0.86) translate(2,6)">${jersey(ROT)}</g>
+    <g transform="rotate(10 32 32) scale(0.86) translate(10,10)">${jersey(BLAU)}</g>`},
+
+  { t:"Anzeigetafel", s:`
+    <rect x="8" y="18" width="48" height="26" rx="3" fill="${INK}"/>
+    <text x="32" y="39" font-size="16" font-family="sans-serif" font-weight="800" text-anchor="middle" fill="${GELB}">1:0</text>
+    <rect x="18" y="44" width="4" height="10" fill="${INK}"/><rect x="42" y="44" width="4" height="10" fill="${INK}"/>`},
+
+  { t:"Fan mit Schal", s:`
+    <circle cx="32" cy="30" r="8" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M32 38 V52" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M32 34 L18 14 M32 34 L46 14" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+    <rect x="12" y="7" width="40" height="9" rx="2" fill="${ROT}" stroke="${INK}" stroke-width="2"/>
+    <path d="M12 11.5 h40" stroke="${GELB}" stroke-width="2"/>`},
+
+  { t:"Anstoß (Mittelkreis)", s:`
+    <circle cx="32" cy="32" r="20" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M8 32 H56" stroke="${INK}" stroke-width="2.4"/>
+    ${fussball(32,32,8)}`}
+];
+
+/* -------------------------------------------------------------------------
+   THEMEN – jedes Thema hat einen eigenen Feld-Pool. „POOL" zeigt immer auf
+   das aktuell gewählte Thema (wird von setzeThema umgehängt).
+   ------------------------------------------------------------------------- */
+const THEMES = [
+  { id:'tdf',      name:'Tour de France', title:'Tour-de-France Bingo', subtitle:"Tippe an, was du im Rennen siehst! 🚴", pool:POOL_TDF },
+  { id:'fussball', name:'Fußball (TV)',   title:'Fußball Bingo',        subtitle:"Tippe an, was du im Spiel siehst! ⚽", pool:POOL_FUSSBALL }
+];
+let aktivesThema = 'tdf';
+let POOL = POOL_TDF;
+function themaById(id){ return THEMES.find(t => t.id === id) || null; }
+function setzeThema(id){
+  const t = themaById(id) || THEMES[0];
+  aktivesThema = t.id; POOL = t.pool;
+  const tt = document.getElementById('titelText'); if(tt) tt.textContent = t.title;
+  const st = document.getElementById('subtitel');  if(st) st.textContent = t.subtitle;
+  const sel = document.getElementById('themaSelect'); if(sel && sel.value !== t.id) sel.value = t.id;
+  try{ document.title = t.title; }catch(e){}
+  const grid = document.getElementById('motivGrid'); if(grid) grid.innerHTML = '';   // Motiv-Editor fürs neue Thema neu aufbauen
+}
+
 /* -------------------------------------------------------------------------
    3) STATE
    Wir halten den Zustand im JavaScript (In-Memory).  Damit er auch ein
@@ -1185,23 +1384,33 @@ function laden(){
    Blättern vorkommen. Dauerhaft in localStorage.
    ------------------------------------------------------------------------- */
 const BINGO_SET_KEY = 'tdf-bingo-settings';
-let bingoSettings = { excluded: [] };   // Liste ausgeschlossener POOL-Indizes
+// Ausgeschlossene Motive werden PRO THEMA gespeichert: { excluded: { tdf:[…], fussball:[…] } }
+let bingoSettings = { excluded: {} };
 
 function ladeBingoSettings(){
   try{
     const s = JSON.parse(localStorage.getItem(BINGO_SET_KEY) || 'null');
-    if(s && Array.isArray(s.excluded)){
-      // nur gültige Indizes übernehmen
-      bingoSettings.excluded = s.excluded.filter(i => Number.isInteger(i) && i>=0 && i<POOL.length);
+    if(s && s.excluded){
+      // Migration: früher war excluded eine flache Liste (galt fürs TdF-Thema)
+      if(Array.isArray(s.excluded)) bingoSettings.excluded = { tdf: s.excluded.slice() };
+      else if(typeof s.excluded === 'object') bingoSettings.excluded = s.excluded;
     }
   }catch(e){}
+  // pro Thema nur gültige Indizes behalten
+  THEMES.forEach(t=>{
+    const arr = bingoSettings.excluded[t.id];
+    bingoSettings.excluded[t.id] = Array.isArray(arr)
+      ? arr.filter(i => Number.isInteger(i) && i>=0 && i<t.pool.length) : [];
+  });
 }
 function speichereBingoSettings(){
   try{ localStorage.setItem(BINGO_SET_KEY, JSON.stringify(bingoSettings)); }catch(e){}
 }
+// Ausgeschlossene Indizes des AKTUELLEN Themas
+function exListe(){ const e = bingoSettings.excluded[aktivesThema]; return Array.isArray(e) ? e : []; }
 // POOL-Indizes, die genutzt werden dürfen
 function aktiveMotive(){
-  const ex = new Set(bingoSettings.excluded);
+  const ex = new Set(exListe());
   return [...POOL.keys()].filter(i => !ex.has(i));
 }
 
@@ -1241,7 +1450,7 @@ function neuerSpieler(nr){
 
 // Grundzustand herstellen (frisch)
 function frischerState(){
-  return { spieler:[ neuerSpieler(1) ], aktiv:0, ansicht:'tabs' };
+  return { spieler:[ neuerSpieler(1) ], aktiv:0, ansicht:'tabs', thema: aktivesThema };
 }
 
 /* -------------------------------------------------------------------------
@@ -1661,7 +1870,7 @@ function motivFilter(txt){
 
 function oeffneEinstellungen(){
   if(!motivGridEl.children.length) baueMotivGrid();
-  setEntwurf = new Set(bingoSettings.excluded);
+  setEntwurf = new Set(exListe());
   document.getElementById('motivFilter').value = '';
   motivFilter('');
   spiegleMotivEntwurf();
@@ -1675,7 +1884,7 @@ document.getElementById('motivAlle').onclick  = ()=>{ setEntwurf.clear(); spiegl
 document.getElementById('motivKeine').onclick = ()=>{ setEntwurf = new Set(POOL.keys()); spiegleMotivEntwurf(); };
 document.getElementById('motivFilter').addEventListener('input', e=> motivFilter(e.target.value));
 document.getElementById('setSpeichern').onclick = ()=>{
-  bingoSettings.excluded = [...setEntwurf];
+  bingoSettings.excluded[aktivesThema] = [...setEntwurf];
   speichereBingoSettings();
   schliesseEinstellungen();
   toast('Einstellungen gespeichert – gilt für neue Blätter', 'bingo');
@@ -1922,9 +2131,37 @@ function grundValidieren(s){
   );
 }
 
-ladeBingoSettings();                 // Motiv-Auswahl vor dem ersten Blatt laden
+// Thema-Auswahl (Dropdown) füllen und Wechsel verdrahten
+function befuelleThemaSelect(){
+  const sel = document.getElementById('themaSelect'); if(!sel) return;
+  sel.innerHTML = THEMES.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  sel.value = aktivesThema;
+  sel.onchange = ()=> wechsleThema(sel.value);
+}
+// Thema umschalten – ersetzt die Blätter durch ein frisches aus dem neuen Pool
+function wechsleThema(id){
+  if(id === aktivesThema) return;
+  const t = themaById(id);
+  const hatFortschritt = state.spieler.length > 1 || state.spieler.some(sp => zellenMarkiert(sp.blatt) > 0);
+  if(hatFortschritt && !window.confirm('Thema auf „' + (t ? t.name : id) + '" wechseln?\nAlle aktuellen Blätter werden durch ein neues ersetzt.')){
+    const sel = document.getElementById('themaSelect'); if(sel) sel.value = aktivesThema;   // Auswahl zurücksetzen
+    return;
+  }
+  setzeThema(id);
+  state = frischerState();                 // frisches Blatt aus dem neuen Pool
+  speichern();
+  renderAlles();
+  toast('Thema: ' + (t ? t.name : id), 'bingo');
+}
+
+ladeBingoSettings();                 // Motiv-Auswahl (pro Thema) vor dem ersten Blatt laden
 const geladen = laden();
+// Thema des gespeicherten Zustands zuerst aktiv setzen, damit die Feld-Indizes passen
+if(geladen && geladen.thema && themaById(geladen.thema)) setzeThema(geladen.thema);
 state = grundValidieren(geladen) ? geladen : frischerState();
+if(!state.thema || !themaById(state.thema)) state.thema = aktivesThema;
+setzeThema(state.thema);
+befuelleThemaSelect();
 // Ansicht absichern (alte gespeicherte Zustände kennen das Feld evtl. nicht)
 if(state.ansicht !== 'stapel' && state.ansicht !== 'tabs') state.ansicht = 'tabs';
 renderAlles();
