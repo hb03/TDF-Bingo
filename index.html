@@ -2522,6 +2522,266 @@ const POOL_WINTER = [
   { t:"Bestzeit! (gesagt)", s:`${spruch('Bestzeit!', ROT)}`}
 ];
 
+/* ---- Autofahrt-Icon-Bausteine ---- */
+function auto(col){ return `<path d="M6 40 q2 -10 12 -10 l6 -7 h16 l8 7 h8 q4 0 4 6 v4 H6 Z" fill="${col}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`+
+  `<rect x="24" y="26" width="9" height="8" rx="1.5" fill="#bfe0ff" stroke="${INK}" stroke-width="1.4"/><rect x="35" y="26" width="8" height="8" rx="1.5" fill="#bfe0ff" stroke="${INK}" stroke-width="1.4"/>`+
+  `<circle cx="20" cy="45" r="6" fill="${INK}"/><circle cx="44" cy="45" r="6" fill="${INK}"/><circle cx="20" cy="45" r="2.4" fill="#9aa6ad"/><circle cx="44" cy="45" r="2.4" fill="#9aa6ad"/>`; }
+function schild(fill, inner, stroke){ return `<rect x="26" y="34" width="4" height="22" fill="#9aa6ad"/>`+
+  `<rect x="10" y="8" width="44" height="30" rx="4" fill="${fill}" stroke="${stroke||INK}" stroke-width="2.6"/>${inner}`; }
+
+/* Feld-Pool für das Thema „Autofahrt" (Reise-Bingo) */
+const POOL_AUTOFAHRT = [
+  { t:"Rotes Auto", s:`${auto(ROT)}`},
+  { t:"Bus", s:`
+    <rect x="6" y="20" width="48" height="24" rx="4" fill="${GRUEN}" stroke="${INK}" stroke-width="2.4"/>
+    ${[10,20,30,40].map(x=>`<rect x="${x}" y="24" width="7" height="8" rx="1" fill="#bfe0ff" stroke="${INK}" stroke-width="1.2"/>`).join('')}
+    <circle cx="16" cy="46" r="5" fill="${INK}"/><circle cx="44" cy="46" r="5" fill="${INK}"/>`},
+  { t:"Schulbus", s:`
+    <rect x="6" y="20" width="48" height="24" rx="4" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    ${[10,20,30,40].map(x=>`<rect x="${x}" y="24" width="7" height="7" rx="1" fill="#bfe0ff" stroke="${INK}" stroke-width="1.2"/>`).join('')}
+    <path d="M6 38 h48" stroke="${INK}" stroke-width="1.6"/>
+    <circle cx="16" cy="46" r="5" fill="${INK}"/><circle cx="44" cy="46" r="5" fill="${INK}"/>`},
+  { t:"LKW", s:`
+    <path d="M6 24 h26 v20 H6 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M32 30 h12 l8 8 v6 H32 Z" fill="#c7ccd0" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="36" y="32" width="8" height="6" fill="#bfe0ff" stroke="${INK}" stroke-width="1.2"/>
+    <circle cx="16" cy="46" r="5" fill="${INK}"/><circle cx="42" cy="46" r="5" fill="${INK}"/>`},
+  { t:"Wohnmobil", s:`
+    <path d="M6 22 h34 l12 8 v14 H6 Z" fill="#fff" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="10" y="26" width="10" height="9" rx="1.5" fill="#bfe0ff"/><rect x="24" y="26" width="10" height="9" rx="1.5" fill="#bfe0ff"/>
+    <path d="M6 40 h46" stroke="${GRUEN}" stroke-width="3"/>
+    <circle cx="18" cy="46" r="5" fill="${INK}"/><circle cx="42" cy="46" r="5" fill="${INK}"/>`},
+  { t:"Wohnwagen", s:`
+    <path d="M14 24 q0 -4 6 -4 h30 q4 0 4 6 v16 H10 Z" fill="#fff" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="16" y="28" width="12" height="9" rx="1.5" fill="#bfe0ff" stroke="${INK}" stroke-width="1.2"/>
+    <path d="M10 42 h44 M6 42 h8" stroke="${INK}" stroke-width="2"/>
+    <circle cx="26" cy="46" r="5" fill="${INK}"/>`},
+  { t:"Traktor", s:`
+    <circle cx="44" cy="42" r="12" fill="${INK}"/><circle cx="44" cy="42" r="5" fill="#c7ccd0"/>
+    <circle cx="15" cy="46" r="7" fill="${INK}"/><circle cx="15" cy="46" r="3" fill="#c7ccd0"/>
+    <path d="M9 40 V30 h18 l2 -9 h10 l3 19 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <rect x="30" y="24" width="8" height="6" rx="1" fill="#bfe0ff"/>`},
+  { t:"Motorrad", s:`
+    <circle cx="14" cy="42" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <circle cx="48" cy="42" r="9" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M14 42 L30 42 L40 30 h8 M30 42 L38 30" stroke="${INK}" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M24 30 h10" stroke="${ROT}" stroke-width="3" stroke-linecap="round"/>`},
+  { t:"Cabrio", s:`
+    <path d="M6 42 q2 -8 12 -8 h6 q4 -6 12 -6 h6 q10 0 12 14 Z" fill="#e8556d" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <circle cx="20" cy="46" r="6" fill="${INK}"/><circle cx="44" cy="46" r="6" fill="${INK}"/>
+    <circle cx="34" cy="30" r="3" fill="#f3c6a0" stroke="${INK}" stroke-width="1.4"/>`},
+  { t:"Polizeiauto", s:`
+    ${auto('#fff')}
+    <rect x="24" y="16" width="7" height="5" rx="1.5" fill="${BLAU}" stroke="${INK}" stroke-width="1"/>
+    <rect x="32" y="16" width="7" height="5" rx="1.5" fill="${ROT}" stroke="${INK}" stroke-width="1"/>
+    <path d="M14 38 h36" stroke="${BLAU}" stroke-width="3"/>`},
+  { t:"Krankenwagen", s:`
+    <path d="M6 22 h30 l14 10 v12 H6 Z" fill="#fff" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M16 28 h5 M18 25 v11 M12 32 h16" stroke="${ROT}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M6 40 h44" stroke="${ROT}" stroke-width="3"/>
+    <circle cx="18" cy="46" r="5" fill="${INK}"/><circle cx="42" cy="46" r="5" fill="${INK}"/>`},
+  { t:"Feuerwehr", s:`
+    <rect x="6" y="24" width="48" height="20" rx="2" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="10" y="28" width="10" height="8" rx="1.5" fill="#bfe0ff"/>
+    <path d="M30 24 V16 h20" stroke="${INK}" stroke-width="2.4" fill="none"/>
+    <circle cx="16" cy="46" r="5" fill="${INK}"/><circle cx="44" cy="46" r="5" fill="${INK}"/>
+    <rect x="34" y="14" width="6" height="4" rx="1.5" fill="${GELB}"/>`},
+  { t:"Taxi", s:`
+    ${auto(GELB)}
+    <rect x="26" y="16" width="12" height="6" rx="1.5" fill="${INK}"/>
+    <text x="32" y="21" font-size="5" font-weight="800" text-anchor="middle" fill="${GELB}" font-family="sans-serif">TAXI</text>`},
+  { t:"Sportwagen", s:`
+    <path d="M4 42 q4 -12 22 -12 h10 q14 0 24 12 Z" fill="#ff7a4d" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M22 32 h12 l6 6 H18 Z" fill="#bfe0ff" stroke="${INK}" stroke-width="1.4" stroke-linejoin="round"/>
+    <circle cx="18" cy="44" r="6" fill="${INK}"/><circle cx="46" cy="44" r="6" fill="${INK}"/>`},
+  { t:"Elektroauto", s:`
+    ${auto(GRUEN)}
+    <path d="M50 20 l-5 8 h4 l-5 8" fill="none" stroke="${GELB}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`},
+  { t:"Ladesäule", s:`
+    <rect x="22" y="12" width="20" height="34" rx="3" fill="#c7ccd0" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="26" y="16" width="12" height="10" rx="1.5" fill="${INK}"/>
+    <path d="M33 18 l-4 6 h4 l-4 6" fill="none" stroke="${GELB}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M42 24 q6 0 6 6 v6" fill="none" stroke="${INK}" stroke-width="2.4"/>`},
+  { t:"Fahrrad", s:`
+    <circle cx="16" cy="40" r="11" fill="none" stroke="${INK}" stroke-width="3"/>
+    <circle cx="46" cy="40" r="11" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M16 40 L28 40 L36 26 L46 40 M28 40 L34 26 h8 M28 40 L22 28 h-6" fill="none" stroke="${BLAU}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`},
+  { t:"Roller", s:`
+    <circle cx="16" cy="44" r="8" fill="none" stroke="${INK}" stroke-width="3"/>
+    <circle cx="46" cy="44" r="8" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M16 44 h20 q6 0 8 -8 l2 -10 M36 44 l6 -18" fill="none" stroke="${ROT}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M40 16 h8" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+  { t:"Bagger", s:`
+    <rect x="8" y="34" width="26" height="14" rx="2" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="12" y="26" width="12" height="8" rx="1.5" fill="#bfe0ff" stroke="${INK}" stroke-width="1.6"/>
+    <path d="M30 34 L48 20 M42 26 l8 8 q2 4 -2 6 l-8 -6 Z" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <ellipse cx="21" cy="50" rx="16" ry="5" fill="none" stroke="${INK}" stroke-width="3"/>`},
+  { t:"Betonmischer", s:`
+    <path d="M6 26 h8 v18 H6 Z" fill="${BLAU}" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M16 44 q-2 -22 20 -22 q20 0 22 12 l-4 10 Z" fill="#c7ccd0" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M22 40 q6 -12 18 -12 M26 44 q6 -14 20 -12" fill="none" stroke="${INK}" stroke-width="1.4"/>
+    <circle cx="18" cy="48" r="5" fill="${INK}"/><circle cx="44" cy="48" r="5" fill="${INK}"/>`},
+  { t:"Abschleppwagen", s:`
+    <path d="M6 26 h20 v18 H6 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="10" y="30" width="10" height="7" fill="#bfe0ff"/>
+    <path d="M26 44 V22 h6 l16 12" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M48 34 v6" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="16" cy="48" r="5" fill="${INK}"/><circle cx="40" cy="48" r="5" fill="${INK}"/>`},
+  { t:"Müllwagen", s:`
+    <rect x="14" y="22" width="34" height="22" rx="2" fill="${GRUEN}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M14 22 l-8 8 v14 h8 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <rect x="8" y="34" width="6" height="6" fill="#bfe0ff"/>
+    <rect x="46" y="30" width="8" height="14" rx="1.5" fill="#8a8f94" stroke="${INK}" stroke-width="1.6"/>
+    <circle cx="22" cy="48" r="5" fill="${INK}"/><circle cx="40" cy="48" r="5" fill="${INK}"/>`},
+  { t:"Brücke", s:`
+    <path d="M6 40 q26 -26 52 0" fill="none" stroke="${INK}" stroke-width="3"/>
+    <path d="M6 40 h52 M16 40 V30 M26 40 V25 M38 40 V25 M48 40 V30" stroke="${INK}" stroke-width="2"/>
+    <path d="M6 47 h52" stroke="${BLAU}" stroke-width="4"/>`},
+  { t:"Tunnel", s:`
+    <path d="M8 50 V32 a24 24 0 0 1 48 0 V50" fill="#c7ccd0" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M20 50 V36 a12 12 0 0 1 24 0 V50" fill="${INK}"/>
+    <path d="M6 50 h52" stroke="${INK}" stroke-width="2.4"/>`},
+  { t:"Ampel", s:`
+    <rect x="24" y="8" width="16" height="40" rx="4" fill="${INK}"/>
+    <circle cx="32" cy="18" r="4.5" fill="${ROT}"/><circle cx="32" cy="28" r="4.5" fill="${GELB}"/><circle cx="32" cy="38" r="4.5" fill="${GRUEN}"/>
+    <path d="M32 48 v8" stroke="${INK}" stroke-width="3"/>`},
+  { t:"Kreisverkehr", s:`${schild('#fff', `<g stroke="${BLAU}" stroke-width="3" fill="none"><circle cx="32" cy="23" r="8"/><path d="M32 15 l0 -4 M40 23 l4 0 M24 23 l-4 0" stroke-linecap="round"/></g>`, ROT)}`},
+  { t:"Autobahnschild", s:`
+    <rect x="26" y="34" width="4" height="22" fill="#9aa6ad"/>
+    <rect x="8" y="10" width="48" height="26" rx="4" fill="${BLAU}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M18 30 L26 16 h4 l-4 14 Z M30 30 l6 -14 h4 l-2 14 Z" fill="#fff"/>
+    <path d="M14 30 h36" stroke="#fff" stroke-width="1.4"/>`},
+  { t:"Ortsschild", s:`
+    <rect x="26" y="34" width="4" height="22" fill="#9aa6ad"/>
+    <rect x="6" y="14" width="52" height="18" rx="2" fill="${GELB}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M14 20 h30 M14 26 h20" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>`},
+  { t:"Tankstelle", s:`
+    <rect x="16" y="16" width="20" height="30" rx="2" fill="${ROT}" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="20" y="20" width="12" height="8" fill="#fff"/>
+    <path d="M36 24 q6 0 6 6 v8 q0 4 4 4 t4 -4 v-8" fill="none" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="46" cy="22" r="2" fill="${INK}"/>
+    <path d="M12 46 h28" stroke="${INK}" stroke-width="2.4"/>`},
+  { t:"Raststätte", s:`${schild(BLAU, `<path d="M20 14 v14 M20 20 h-4 v-6 M44 14 q-4 0 -4 8 t4 6 v8 M40 14 v8" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>`)}`},
+  { t:"Stau", s:`
+    ${[[0,ROT],[16,BLAU],[0,GELB]].map(([x,c],i)=>`<g transform="translate(${x},${i*15}) scale(0.72)">${auto(c)}</g>`).join('')}`},
+  { t:"Baustelle", s:`
+    <path d="M32 12 L52 48 H12 Z" fill="${GELB}" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M26 40 l6 -18 l6 18 M28 32 h8" stroke="${INK}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`},
+  { t:"Verkehrskegel", s:`
+    <path d="M24 50 L30 18 h4 l6 32 Z" fill="#ff7a4d" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M27 34 h10 M28 42 h8" stroke="#fff" stroke-width="3"/>
+    <rect x="18" y="50" width="28" height="5" rx="2" fill="#ff7a4d" stroke="${INK}" stroke-width="1.6"/>`},
+  { t:"Blitzer", s:`
+    <rect x="16" y="24" width="24" height="18" rx="2" fill="#5a6b74" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="28" cy="33" r="6" fill="${INK}"/><circle cx="28" cy="33" r="2.4" fill="#bfe0ff"/>
+    <path d="M40 28 h10 v-4 M40 34 h8" stroke="${GELB}" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+    <path d="M20 24 v-8 h8" stroke="${INK}" stroke-width="2.4" fill="none"/>`},
+  { t:"Stoppschild", s:`
+    <rect x="30" y="36" width="4" height="20" fill="#9aa6ad"/>
+    <path d="M24 8 h16 l11 11 v16 l-11 11 H24 L13 35 V19 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <text x="32" y="31" font-size="10" font-weight="800" text-anchor="middle" fill="#fff" font-family="sans-serif">STOP</text>`},
+  { t:"Tempolimit", s:`
+    <rect x="30" y="40" width="4" height="16" fill="#9aa6ad"/>
+    <circle cx="32" cy="24" r="18" fill="#fff" stroke="${ROT}" stroke-width="4"/>
+    <text x="32" y="30" font-size="15" font-weight="800" text-anchor="middle" fill="${INK}" font-family="sans-serif">50</text>`},
+  { t:"Zebrastreifen", s:`
+    <path d="M12 50 L20 14 M24 50 L30 14 M36 50 L40 14 M48 50 L50 14" stroke="${INK}" stroke-width="5"/>`},
+  { t:"Bahnübergang", s:`
+    <rect x="30" y="34" width="4" height="22" fill="#9aa6ad"/>
+    <path d="M14 12 L50 32 M50 12 L14 32" stroke="${ROT}" stroke-width="5" stroke-linecap="round"/>`},
+  { t:"Parkplatz-Schild", s:`${schild(BLAU, `<text x="32" y="30" font-size="20" font-weight="800" text-anchor="middle" fill="#fff" font-family="sans-serif">P</text>`)}`},
+  { t:"Kuh", s:`
+    <ellipse cx="30" cy="36" rx="20" ry="13" fill="#fff" stroke="${INK}" stroke-width="2.6"/>
+    <ellipse cx="24" cy="34" rx="5" ry="4" fill="${INK}"/><ellipse cx="38" cy="40" rx="4" ry="3" fill="${INK}"/>
+    <path d="M46 30 q10 -4 8 6 q-2 6 -8 2 Z" fill="#f3c6a0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M18 48 v6 M28 48 v6 M40 48 v6 M50 46 v6" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+  { t:"Schaf", s:`
+    <ellipse cx="30" cy="34" rx="16" ry="12" fill="#fff" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="46" cy="32" r="7" fill="#333" stroke="${INK}" stroke-width="2"/>
+    <path d="M20 44 v6 M28 46 v6 M36 46 v6" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`},
+  { t:"Pferd", s:`
+    <path d="M12 50 V34 q0 -10 12 -12 l4 -8 q4 6 0 10 q10 2 10 12 v14" fill="#a86b32" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M26 16 q-4 6 -2 10" stroke="#7a4a1e" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <circle cx="26" cy="18" r="1.6" fill="${INK}"/>
+    <path d="M14 50 v-6 M24 50 v-6 M34 50 v-6 M40 50 v-6" stroke="${INK}" stroke-width="2.4"/>`},
+  { t:"Windrad", s:`
+    <path d="M32 30 V54" stroke="#c7ccd0" stroke-width="4"/>
+    ${[0,120,240].map(a=>`<path d="M32 30 L32 10" stroke="#fff" stroke-width="5" stroke-linecap="round" transform="rotate(${a} 32 30)"/><path d="M32 30 L32 10" stroke="${INK}" stroke-width="1.4" transform="rotate(${a} 32 30)"/>`).join('')}
+    <circle cx="32" cy="30" r="3" fill="${INK}"/>`},
+  { t:"Solarpark", s:`
+    ${[[10,28],[34,28],[10,42],[34,42]].map(([x,y])=>`<path d="M${x} ${y+8} L${x+4} ${y} h16 l-4 8 Z" fill="${BLAU}" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/><path d="M${x+6} ${y+8} l3 -8 M${x+12} ${y+8} l3 -8" stroke="#bfe0ff" stroke-width="1"/>`).join('')}`},
+  { t:"Sonnenblumenfeld", s:`
+    <g stroke="${INK}" stroke-width="1.6">
+    <circle cx="22" cy="24" r="6" fill="${INK}"/>
+    ${Array.from({length:8},(_,i)=>{const a=i/8*6.283;return `<ellipse cx="${(22+10*Math.cos(a)).toFixed(1)}" cy="${(24+10*Math.sin(a)).toFixed(1)}" rx="4" ry="2.4" fill="${GELB}" transform="rotate(${(a*57.3).toFixed(0)} ${(22+10*Math.cos(a)).toFixed(1)} ${(24+10*Math.sin(a)).toFixed(1)})"/>`}).join('')}
+    <circle cx="44" cy="34" r="5" fill="${INK}"/>
+    ${Array.from({length:8},(_,i)=>{const a=i/8*6.283;return `<ellipse cx="${(44+8*Math.cos(a)).toFixed(1)}" cy="${(34+8*Math.sin(a)).toFixed(1)}" rx="3" ry="2" fill="${GELB}" transform="rotate(${(a*57.3).toFixed(0)} ${(44+8*Math.cos(a)).toFixed(1)} ${(34+8*Math.sin(a)).toFixed(1)})"/>`}).join('')}
+    </g>
+    <path d="M22 32 V56 M44 40 V56" stroke="${GRUEN}" stroke-width="3" stroke-linecap="round"/>`},
+  { t:"Heuballen", s:`
+    <circle cx="20" cy="42" r="12" fill="#e0b34a" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="20" cy="42" r="7" fill="none" stroke="${INK}" stroke-width="1.2"/>
+    <circle cx="44" cy="44" r="10" fill="#e0b34a" stroke="${INK}" stroke-width="2.4"/>
+    <circle cx="44" cy="44" r="5" fill="none" stroke="${INK}" stroke-width="1.2"/>
+    <path d="M6 54 h52" stroke="${GRUEN}" stroke-width="3"/>`},
+  { t:"Storchennest", s:`
+    <rect x="30" y="30" width="4" height="24" fill="#8a5a2b"/>
+    <ellipse cx="32" cy="30" rx="14" ry="6" fill="#8a5a2b" stroke="${INK}" stroke-width="2"/>
+    <path d="M28 28 q-2 -10 6 -12 l8 -2 -6 4 q4 4 -2 8 Z" fill="#fff" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M42 16 l6 -2" stroke="${ROT}" stroke-width="2" stroke-linecap="round"/>`},
+  { t:"Kirche", s:`
+    <path d="M28 54 V24 L36 24 V54 Z" fill="#c7ccd0" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M28 24 L32 14 L36 24 Z" fill="${ROT}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M32 6 V14 M29 9 h6" stroke="${INK}" stroke-width="2"/>
+    <path d="M12 54 V34 h16 V54 Z" fill="#e8c27a" stroke="${INK}" stroke-width="2.2"/>
+    <rect x="30" y="30" width="4" height="8" fill="${BLAU}"/>`},
+  { t:"Schloss", s:`
+    <path d="M12 54 V26 h6 v-6 h6 v6 h6 v-6 h6 v6 h6 v-6 h6 v6 h6 V54 Z" fill="#c9b79c" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <rect x="27" y="40" width="10" height="14" fill="${INK}"/>
+    <rect x="18" y="34" width="6" height="6" fill="${BLAU}"/><rect x="40" y="34" width="6" height="6" fill="${BLAU}"/>`},
+  { t:"Bauernhof", s:`
+    <path d="M10 54 V28 L32 14 L54 28 V54 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M10 28 L32 14 L54 28" fill="none" stroke="${INK}" stroke-width="2"/>
+    <rect x="27" y="40" width="10" height="14" fill="#8a5a2b"/>
+    <path d="M22 30 h6 v6 h-6 Z M36 30 h6 v6 h-6 Z" fill="#fff" stroke="${INK}" stroke-width="1.4"/>`},
+  { t:"Silo", s:`
+    <rect x="22" y="18" width="20" height="36" rx="2" fill="#c7ccd0" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M22 18 a10 8 0 0 1 20 0" fill="#9aa6ad" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M22 28 h20 M22 38 h20 M22 48 h20" stroke="${INK}" stroke-width="1" opacity="0.5"/>`},
+  { t:"See", s:`
+    <ellipse cx="32" cy="38" rx="24" ry="12" fill="${BLAU}" stroke="${INK}" stroke-width="2.4"/>
+    <path d="M18 36 h8 M34 40 h10 M24 44 h6" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+    <path d="M44 26 l4 -8 4 8 Z" fill="${GRUEN}" stroke="${INK}" stroke-width="1.4"/>`},
+  { t:"Wald", s:`
+    ${[[14,ROT],[32,GRUEN],[48,GRUEN]].map(([x],i)=>`<path d="M${x} 12 L${x+10} 34 H${x-10} Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/><path d="M${x} 26 L${x+11} 46 H${x-11} Z" fill="${GRUEN}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/><rect x="${x-2}" y="46" width="4" height="8" fill="#8a5a2b"/>`).join('')}`},
+  { t:"Flugzeug", s:`
+    <path d="M6 34 L46 28 L58 22 q4 4 -2 8 L28 40 L20 52 L16 50 L20 38 L10 40 Z" fill="#c7ccd0" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M30 34 l6 8" stroke="${INK}" stroke-width="1.6"/>`},
+  { t:"Heißluftballon", s:`
+    <path d="M20 30 a12 14 0 1 1 24 0 q0 8 -12 14 q-12 -6 -12 -14 Z" fill="${ROT}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M32 16 V44 M24 20 q4 20 0 24 M40 20 q-4 20 0 24" stroke="${GELB}" stroke-width="1.6" fill="none" opacity="0.7"/>
+    <path d="M27 44 L29 52 h6 l2 -8" fill="none" stroke="${INK}" stroke-width="1.8"/>
+    <rect x="28" y="50" width="8" height="6" rx="1" fill="#8a5a2b" stroke="${INK}" stroke-width="1.6"/>`},
+  { t:"Regenbogen", s:`
+    ${[ROT,GELB,GRUEN,BLAU].map((c,i)=>`<path d="M${10+i*3} 50 a${22-i*3} ${22-i*3} 0 0 1 ${44-i*6} 0" fill="none" stroke="${c}" stroke-width="3.4"/>`).join('')}
+    <path d="M6 50 h52" stroke="${GRUEN}" stroke-width="3"/>`},
+  { t:"Gewitter", s:`
+    <path d="M16 24 a10 10 0 0 1 20 -2 a8 8 0 0 1 6 14 H18 a9 9 0 0 1 -2 -12 Z" fill="#8a8f94" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M30 34 L24 44 h6 l-4 10 L40 40 h-6 l4 -8 Z" fill="${GELB}" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>`},
+  { t:"Navi", s:`
+    <rect x="14" y="14" width="36" height="28" rx="3" fill="${INK}"/>
+    <path d="M20 36 L32 18 L38 30 L32 28 L28 34 Z" fill="${GRUEN}" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="M28 42 v8 M36 42 v8" stroke="${INK}" stroke-width="3"/>`},
+  { t:"Nummernschild", s:`
+    <rect x="8" y="24" width="48" height="16" rx="3" fill="#fff" stroke="${INK}" stroke-width="2.4"/>
+    <rect x="10" y="26" width="8" height="12" fill="${BLAU}"/>
+    <text x="12" y="34" font-size="4" fill="${GELB}" font-family="sans-serif">D</text>
+    <text x="36" y="37" font-size="12" font-weight="800" text-anchor="middle" fill="${INK}" font-family="sans-serif">B·MW</text>`},
+  { t:"Sind wir bald da? (gesagt)", s:`${spruch('bald da?', GELB)}`},
+  { t:"Stau! (gesagt)", s:`${spruch('Stau!', ROT)}`},
+  { t:"Nächste Ausfahrt (gesagt)", s:`${spruch('Ausfahrt', BLAU)}`}
+];
+
 /* -------------------------------------------------------------------------
    THEMEN – jedes Thema hat einen eigenen Feld-Pool. „POOL" zeigt immer auf
    das aktuell gewählte Thema (wird von setzeThema umgehängt).
@@ -2550,7 +2810,11 @@ const THEMES = [
   { id:'winter', name:'Wintersport', title:'Wintersport-Bingo',
     subtitle:"Tippe an, was du im Schnee siehst! 🎿", themeColor:'#3d8bdd',
     headerIcon:`<svg viewBox="0 0 64 64">${berg()}</svg>`,
-    pool:POOL_WINTER }
+    pool:POOL_WINTER },
+  { id:'autofahrt', name:'Autofahrt', title:'Autofahrt-Bingo',
+    subtitle:"Tippe an, was du unterwegs siehst! 🚗", themeColor:'#3d8bdd',
+    headerIcon:`<svg viewBox="0 0 64 64">${auto(ROT)}</svg>`,
+    pool:POOL_AUTOFAHRT }
 ];
 let aktivesThema = 'tdf';
 let POOL = POOL_TDF;
