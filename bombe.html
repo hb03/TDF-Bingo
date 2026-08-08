@@ -218,6 +218,15 @@
   .cat-row .cflag.on{ opacity:1; filter:none; background:rgba(70,211,138,.18); box-shadow:0 0 0 1px var(--ok) inset; }
   .cat-row .cdel{ flex:0 0 auto; width:34px; height:34px; border:none; border-radius:9px; background:rgba(255,90,60,.16); color:var(--accent); font-size:1.05rem; cursor:pointer; }
   .board .r .team{ font-size:.72rem; color:var(--muted); background:rgba(255,255,255,.1); border-radius:6px; padding:1px 6px; }
+  /* Punkte-Korrektur */
+  .board .r .corr-wrap{ display:flex; align-items:center; gap:8px; }
+  .board .r .corr{ width:32px; height:32px; border-radius:9px; border:1px solid var(--line); background:var(--panel);
+    color:var(--ink); font-size:1.2rem; font-weight:800; cursor:pointer; line-height:1; }
+  .board .r .corr:active{ transform:translateY(1px); }
+  .board .r .corr-wrap .pt{ min-width:1.4em; text-align:center; }
+  .board .r .corr-out{ border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:9px;
+    padding:6px 10px; font-weight:700; cursor:pointer; font-size:.82rem; }
+  .board .r .corr-out:active{ transform:translateY(1px); }
   .board .r.head{ background:transparent; border:none; font-weight:800; opacity:.7; padding-bottom:0; margin-bottom:2px; }
 
   /* Konfetti (H1) */
@@ -500,6 +509,7 @@
   <div id="boomWinLabel" class="boom-winlabel">Punkt für</div>
   <div id="boomWinners" class="boom-winners">–</div>
   <div id="board" class="board"></div>
+  <button id="boomCorrect" class="linkbtn" type="button" data-i18n="correct_points">✏️ Punkte korrigieren</button>
   <div id="boomHint" class="boom-hint">👆 Tippen für die nächste Runde</div>
 </div>
 
@@ -531,6 +541,7 @@
 <div id="peekScreen" class="overlay">
   <div class="win-title" data-i18n="standings">Punktestand</div>
   <div id="peekBoard" class="board"></div>
+  <button id="peekCorrect" class="linkbtn" type="button" style="margin-bottom:10px" data-i18n="correct_points">✏️ Punkte korrigieren</button>
   <button id="peekClose" class="btn ghost" type="button" style="max-width:280px" data-i18n="close">Schließen</button>
 </div>
 
@@ -626,7 +637,8 @@
       bad_prompt:"Nicht lösbare Buchstaben (durch Leerzeichen getrennt):",
       set_mode:"Spielmodus", set_mode_hint:"(bestimmt, was auf jeden zukommt)",
       mode_normal:"💣 Normal – einfach die Bombe weitergeben", mode_category:"🗂️ Kategorien – Wort nennen & weitergeben",
-      mode_math:"➗ Rechnen – richtige Antwort antippen", set_jokers_note:"Joker gelten im Kategorien- und im Rechen-Modus."
+      mode_math:"➗ Rechnen – richtige Antwort antippen", set_jokers_note:"Joker gelten im Kategorien- und im Rechen-Modus.",
+      correct_points:"✏️ Punkte korrigieren", correct_done:"✓ Fertig", out_btn:"raus", back_in:"zurück ins Spiel"
     },
     en:{
       sub:"Enter names and go. Whoever holds it at the boom gets a point.",
@@ -665,7 +677,8 @@
       bad_prompt:"Unsolvable letters (separated by spaces):",
       set_mode:"Game mode", set_mode_hint:"(sets what each player faces)",
       mode_normal:"💣 Normal – just pass the bomb", mode_category:"🗂️ Categories – say a word & pass",
-      mode_math:"➗ Math – tap the correct answer", set_jokers_note:"Jokers apply in category and math mode."
+      mode_math:"➗ Math – tap the correct answer", set_jokers_note:"Jokers apply in category and math mode.",
+      correct_points:"✏️ Fix points", correct_done:"✓ Done", out_btn:"out", back_in:"back in"
     }
   };
   function t(key, vars){ let s=(I18N[LANG]&&I18N[LANG][key]); if(s==null) s=I18N.de[key]; if(s==null) s=key;
@@ -1430,7 +1443,8 @@
       boomWinnersEl.innerHTML=winners.map(p=>`<span style="color:${p.color}">${escapeHtml(p.name)}</span><span class="win-time"> · ${t("held")} ${fmt(p.roundMs)} s</span>`).join("<br>");
       pendingWin = S.pointLimit>0 && players.some(p=>p.points>=S.pointLimit);   // Spielende? (E1)
     }
-    renderBoard(boardEl);
+    boomEdit=false; $("#boomCorrect").textContent=t("correct_points");
+    renderBoard(boardEl); refreshTopbarPoints();
     saveGame();
 
     boomReadyAt=Date.now()+BOOM_LOCK_MS;
@@ -1520,8 +1534,10 @@
   }
   $("#introScreen").addEventListener("click", ()=>{ $("#introScreen").classList.remove("show"); beginRound(); });
 
-  $("#boardBtn").addEventListener("click", e=>{ e.stopPropagation(); renderBoard($("#peekBoard")); $("#peekScreen").classList.add("show"); });
+  $("#boardBtn").addEventListener("click", e=>{ e.stopPropagation(); peekEdit=false; $("#peekCorrect").textContent=t("correct_points");
+    renderBoard($("#peekBoard")); $("#peekScreen").classList.add("show"); });
   $("#peekClose").addEventListener("click", e=>{ e.stopPropagation(); $("#peekScreen").classList.remove("show"); });
+  $("#peekCorrect").addEventListener("click", e=>{ e.stopPropagation(); togglePeekEdit(); });
 
   // =======================================================
   //  Erfolge (Achievements)
@@ -1652,6 +1668,43 @@
       el.appendChild(r); });
   }
 
+  // ---------- Punkte-Korrektur (falls z. B. ein falsches Wort durchging) ----------
+  let boomEdit=false, peekEdit=false;
+  function refreshTopbarPoints(){
+    [...topbarEl.children].forEach((c,i)=>{ if(!players[i]) return;
+      const pt=c.querySelector(".pts"); if(pt) pt.textContent=players[i].points;
+      c.classList.toggle("out", !!players[i].out); });
+  }
+  function renderEditableBoard(el){
+    el.innerHTML="";
+    const sorted = S.eliminate
+      ? [...players].sort((a,b)=> ((a.out?1:0)-(b.out?1:0)) || (b.points-a.points))
+      : [...players].sort((a,b)=>b.points-a.points);
+    sorted.forEach(p=>{ const r=document.createElement("div"); r.className="r"; if(p.out) r.style.opacity=".55";
+      const head=`<span class="dot" style="background:${p.color}"></span><span class="nm">${escapeHtml(p.name)}</span>`;
+      if(S.eliminate){
+        r.innerHTML=head+`<span class="corr-wrap"><button class="corr-out" type="button">${p.out?("↩︎ "+t("back_in")):("💀 "+t("out_btn"))}</button></span>`;
+        r.querySelector(".corr-out").addEventListener("click", e=>{ e.stopPropagation(); p.out=!p.out; afterCorrection(el); });
+      } else {
+        r.innerHTML=head+`<span class="corr-wrap"><button class="corr minus" type="button">−</button><span class="pt">${p.points}</span><button class="corr plus" type="button">＋</button></span>`;
+        r.querySelector(".minus").addEventListener("click", e=>{ e.stopPropagation(); p.points=Math.max(0,p.points-1); afterCorrection(el); });
+        r.querySelector(".plus").addEventListener("click", e=>{ e.stopPropagation(); p.points++; afterCorrection(el); });
+      }
+      el.appendChild(r); });
+  }
+  function afterCorrection(el){
+    saveGame(); refreshTopbarPoints();
+    pendingWin = S.eliminate ? (aliveCount()<=1) : (S.pointLimit>0 && players.some(p=>p.points>=S.pointLimit));
+    if(el===boardEl && Date.now()>=boomReadyAt) boomHintEl.textContent = pendingWin ? t("tap_winner") : t("tap_next");
+    renderEditableBoard(el);
+  }
+  function toggleBoomEdit(){ boomEdit=!boomEdit;
+    if(boomEdit) renderEditableBoard(boardEl); else renderBoard(boardEl);
+    $("#boomCorrect").textContent = boomEdit ? t("correct_done") : t("correct_points"); }
+  function togglePeekEdit(){ peekEdit=!peekEdit; const el=$("#peekBoard");
+    if(peekEdit) renderEditableBoard(el); else renderBoard(el);
+    $("#peekCorrect").textContent = peekEdit ? t("correct_done") : t("correct_points"); }
+
   // =======================================================
   //  Eingaben
   // =======================================================
@@ -1675,6 +1728,7 @@
   bombEl.addEventListener("click", e=>{ if(!bombMode()||S.mathMode) return; e.stopPropagation();
     if(S.control==="bombTap") repositionBomb(); tryAdvance(); });
 
+  $("#boomCorrect").addEventListener("click", e=>{ e.stopPropagation(); toggleBoomEdit(); });
   boomEl.addEventListener("click", ()=>{ if(Date.now()<boomReadyAt) return; audioInit();
     if(pendingWin){ showWinner(); return; }
     curIdx = S.eliminate ? nextAliveFrom(curIdx) : (curIdx+1)%players.length; newRound(false); });
